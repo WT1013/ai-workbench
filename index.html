@@ -1278,6 +1278,175 @@ table.report th {
 .btn {
   background: rgba(118, 118, 128, 0.12);
 }
+
+.tab-btn[data-view="shops"]::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 9l1.5-4h15L21 9'/%3E%3Cpath d='M4 9v11h16V9'/%3E%3Cpath d='M9 20v-6h6v6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 9l1.5-4h15L21 9'/%3E%3Cpath d='M4 9v11h16V9'/%3E%3Cpath d='M9 20v-6h6v6'/%3E%3C/svg%3E");
+}
+
+.shops-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+}
+
+.shops-tab {
+  flex: 1;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-soft);
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.shops-tab.active {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.28);
+}
+
+.shops-date {
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.shop-add-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.shop-add-row .input {
+  flex: 1 1 180px;
+}
+
+.shop-list, .shop-daily-list {
+  display: grid;
+  gap: 12px;
+}
+
+.shop-card {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.shop-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 72px;
+  gap: 10px;
+  align-items: center;
+}
+
+.shop-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.shop-metric label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.shop-remove {
+  height: 32px;
+}
+
+.shops-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 28px 12px;
+}
+
+.shop-month-panel {
+  min-width: 0;
+}
+
+.shop-month-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.shop-month-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.shop-metric-seg {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--surface-inset);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.shop-metric-seg .seg-btn {
+  height: 28px;
+  padding: 0 12px;
+}
+
+.shop-month-table {
+  min-width: 1200px;
+}
+
+.shop-month-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.shop-month-avg {
+  font-weight: 700;
+  color: var(--blue);
+}
+
+@media (max-width: 720px) {
+  .shop-card-head {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .shop-card-head input[data-field="owner"] {
+    grid-column: 1 / -1;
+  }
+
+  .shop-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shops-tab {
+    font-size: 13px;
+  }
+}
 </style>
 </head>
 <body>
@@ -1568,6 +1737,40 @@ table.report th {
     "a", "xiu", "a", "a", "a", "a", "a", "a", "xiu", "a", "a"
   ];
 
+  const SHOP_METRICS = [
+    { key: "adoptionRate", label: "采纳率 %" },
+    { key: "generationRate", label: "生成率 %" },
+    { key: "conversionRate", label: "转化率 %" },
+    { key: "experienceScore", label: "消费者服务体验分" }
+  ];
+
+  const DEFAULT_SHOPS = [
+    { name: "松迅医疗器械专营店" },
+    { name: "祥佳健康企业店" },
+    { name: "PANAPOPO居家官方旗舰店" },
+    { name: "PANAPOPO旗舰店（众创）" },
+    { name: "个人护理海外购" },
+    { name: "PANAPOPO医疗器械旗舰店" },
+    { name: "moffe筑越专卖店" },
+    { name: "panapopo居家日用旗舰店" },
+    { name: "PANAPOPO家居官方旗舰店" },
+    { name: "精进器械保健专营店" },
+    { name: "伊藤源健康生活企业店" },
+    { name: "Luffy居家日用企业店" },
+    { name: "PANAPOPO健康用品官方旗舰店" },
+    { name: "御足康生活保健馆" },
+    { name: "康健理疗馆" },
+    { name: "PANAPOPO保健按摩旗舰店" },
+    { name: "PANAPOPO生活用品官方旗舰店" },
+    { name: "PANAPOPO护理旗舰" },
+    { name: "Sung居家生活企业店" },
+    { name: "PANAPOPO居家日化官方旗舰店" },
+    { name: "桑桃企业店" },
+    { name: "PANAPOPO医疗用品官方旗舰店" },
+    { name: "PANAPOPO家居生活官方旗舰店" },
+    { name: "PANAPOPO保健器械官方旗舰店" }
+  ];
+
   const state = { days: {}, shifts: {} };
   var showClosed = false;
   var openNoteRowEl = null;
@@ -1633,6 +1836,7 @@ table.report th {
       state.shifts = {};
       seedDefaultShifts();
     }
+    ensureShopLibrary(true);
   }
 
   function loadState() {
@@ -1656,9 +1860,13 @@ table.report th {
   }
 
   function fetchCloudState() {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 8000);
     fetch(CLOUD_URL + "/rest/v1/state?select=days,shifts&id=eq.1", {
-      headers: { apikey: CLOUD_KEY, Authorization: "Bearer " + CLOUD_KEY }
+      headers: { apikey: CLOUD_KEY, Authorization: "Bearer " + CLOUD_KEY },
+      signal: controller.signal
     }).then(function (r) { return r.json(); }).then(function (rows) {
+      clearTimeout(timer);
       if (rows && rows.length > 0) {
         state.days = rows[0].days || {};
         state.shifts = rows[0].shifts || {};
@@ -1668,8 +1876,10 @@ table.report th {
         seedDefaultShifts();
         saveState();
       }
+      ensureShopLibrary(true);
       renderToday();
     }).catch(function () {
+      clearTimeout(timer);
       loadLocal();
     });
   }
@@ -1707,6 +1917,7 @@ table.report th {
 
   function saveState() {
     try {
+      state.days["__library__"] = { shops: state.shopLibrary || [] };
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days: state.days, shifts: state.shifts }));
       if (location.protocol.indexOf("http") === 0) {
         queueSync();
@@ -1719,12 +1930,13 @@ table.report th {
 
   function dayData(key) {
     if (!state.days[key]) {
-      state.days[key] = { tasks: {}, metrics: {}, difficulty: "" };
+      state.days[key] = { tasks: {}, metrics: {}, difficulty: "", shopData: {} };
     }
     var day = state.days[key];
     if (!day.tasks) { day.tasks = {}; }
     if (!day.metrics) { day.metrics = {}; }
     if (day.difficulty === undefined) { day.difficulty = ""; }
+    if (!day.shopData) { day.shopData = {}; }
     return day;
   }
 
@@ -1739,7 +1951,16 @@ table.report th {
   function dayHasData(key) {
     var day = state.days[key];
     if (!day) { return false; }
+    if (key === "__library__") { return false; }
     if (day.difficulty && day.difficulty.trim()) { return true; }
+    var shopData = day.shopData || {};
+    var shopKeys = Object.keys(shopData);
+    for (var si = 0; si < shopKeys.length; si += 1) {
+      var sd = shopData[shopKeys[si]] || {};
+      if (sd.adoptionRate || sd.generationRate || sd.conversionRate || sd.experienceScore) {
+        return true;
+      }
+    }
     var tasks = day.tasks || {};
     for (var id in tasks) {
       var t = tasks[id] || {};
@@ -1989,6 +2210,7 @@ table.report th {
     renderMetrics(key);
     $("difficulty").value = dayData(key).difficulty || "";
     updateProgress(key);
+    renderShopsView();
   }
 
   function currentKey() {
@@ -2072,13 +2294,272 @@ table.report th {
     });
   }
 
+  var shopsTab = "roster";
+  var shopsMetric = "adoptionRate";
+
+  function ensureShopLibrary(persist) {
+    if (state.days["__library__"] && Array.isArray(state.days["__library__"].shops)) {
+      state.shopLibrary = state.days["__library__"].shops;
+    } else {
+      state.shopLibrary = DEFAULT_SHOPS.map(function (s, index) {
+        return { id: "s" + (index + 1), name: s.name, owner: "远山", adoptionRate: "", generationRate: "", conversionRate: "", experienceScore: "", note: "" };
+      });
+      state.days["__library__"] = { shops: state.shopLibrary };
+      if (persist) {
+        saveState();
+      }
+    }
+  }
+
+  function renderShopsView() {
+    if (!$("viewShops")) { return; }
+    setShopsTabUI();
+    if (shopsTab === "roster") {
+      renderShopRoster();
+    } else if (shopsTab === "daily") {
+      renderShopDaily();
+    } else {
+      renderShopMonth();
+    }
+  }
+
+  function renderShopRoster() {
+    var list = $("shopList");
+    var shops = state.shopLibrary || [];
+    $("shopSummary").textContent = "共 " + shops.length + " 家店铺";
+    list.innerHTML = "";
+    shops.forEach(function (shop, index) {
+      var card = document.createElement("div");
+      card.className = "shop-card";
+      card.setAttribute("data-shop-index", index);
+
+      var head = document.createElement("div");
+      head.className = "shop-card-head";
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.className = "input";
+      nameInput.setAttribute("data-field", "name");
+      nameInput.value = shop.name || "";
+      nameInput.placeholder = "店名";
+      var ownerInput = document.createElement("input");
+      ownerInput.type = "text";
+      ownerInput.className = "input";
+      ownerInput.setAttribute("data-field", "owner");
+      ownerInput.value = shop.owner || "";
+      ownerInput.placeholder = "负责人";
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn danger shop-remove";
+      removeBtn.setAttribute("data-action", "remove-shop");
+      removeBtn.textContent = "移除";
+      head.appendChild(nameInput);
+      head.appendChild(ownerInput);
+      head.appendChild(removeBtn);
+
+      var noteInput = document.createElement("input");
+      noteInput.type = "text";
+      noteInput.className = "input shop-note-input";
+      noteInput.setAttribute("data-field", "note");
+      noteInput.value = shop.note || "";
+      noteInput.placeholder = "备注";
+
+      card.appendChild(head);
+      card.appendChild(noteInput);
+      list.appendChild(card);
+    });
+    if (shops.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "shops-empty";
+      empty.textContent = "暂无店铺";
+      list.appendChild(empty);
+    }
+  }
+
+  function addShop() {
+    var name = $("shopNameInput").value.trim();
+    if (!name) { showToast("请输入店铺名称"); return; }
+    var owner = $("shopOwnerInput").value.trim() || "远山";
+    state.shopLibrary.push({ id: "s" + Date.now(), name: name, owner: owner, adoptionRate: "", generationRate: "", conversionRate: "", experienceScore: "", note: "" });
+    $("shopNameInput").value = "";
+    saveState();
+    renderShopRoster();
+    showToast("店铺已添加");
+  }
+
+  function renderShopDaily() {
+    var key = currentKey();
+    var day = dayData(key);
+    var shops = state.shopLibrary || [];
+    $("shopsDateText").textContent = key + " " + weekdayLabel(key);
+    var list = $("shopDailyList");
+    list.innerHTML = "";
+    shops.forEach(function (shop, index) {
+      var data = day.shopData[shop.id] || {};
+      day.shopData[shop.id] = data;
+      var card = document.createElement("div");
+      card.className = "shop-card";
+      card.setAttribute("data-shop-index", index);
+      var head = document.createElement("div");
+      head.className = "shop-card-head";
+      var name = document.createElement("div");
+      name.className = "shop-name";
+      name.textContent = shop.name;
+      head.appendChild(name);
+      var metrics = document.createElement("div");
+      metrics.className = "shop-metrics";
+      SHOP_METRICS.forEach(function (m) {
+        var wrap = document.createElement("div");
+        wrap.className = "shop-metric";
+        var label = document.createElement("label");
+        label.textContent = m.label;
+        var input = document.createElement("input");
+        input.type = "number";
+        input.step = "any";
+        input.className = "input";
+        input.setAttribute("data-field", m.key);
+        input.setAttribute("data-shop-id", shop.id);
+        input.value = data[m.key] !== undefined && data[m.key] !== null ? data[m.key] : "";
+        wrap.appendChild(label);
+        wrap.appendChild(input);
+        metrics.appendChild(wrap);
+      });
+      card.appendChild(head);
+      card.appendChild(metrics);
+      list.appendChild(card);
+    });
+    if (shops.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "shops-empty";
+      empty.textContent = "暂无店铺";
+      list.appendChild(empty);
+    }
+  }
+
+  function renderShopMonth() {
+    var key = currentKey();
+    var parts = key.split("-").map(Number);
+    var y = viewYear !== null ? viewYear : parts[0];
+    var m = viewMonth !== null ? viewMonth : parts[1] - 1;
+    $("shopMonthTitle").textContent = y + "年" + (m + 1) + "月";
+    $("shopMonthTableHead").innerHTML = "";
+    $("shopMonthTableBody").innerHTML = "";
+
+    var shops = state.shopLibrary || [];
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var headRow = document.createElement("tr");
+    var thName = document.createElement("th");
+    thName.textContent = "店铺";
+    headRow.appendChild(thName);
+    var i;
+    for (i = 1; i <= daysInMonth; i += 1) {
+      var th = document.createElement("th");
+      th.textContent = i;
+      headRow.appendChild(th);
+    }
+    var thAvg = document.createElement("th");
+    thAvg.textContent = "月均";
+    headRow.appendChild(thAvg);
+    $("shopMonthTableHead").appendChild(headRow);
+
+    shops.forEach(function (shop) {
+      var tr = document.createElement("tr");
+      var tdName = document.createElement("td");
+      tdName.className = "shop-month-name";
+      tdName.textContent = shop.name;
+      tr.appendChild(tdName);
+      var values = [];
+      for (i = 1; i <= daysInMonth; i += 1) {
+        var dateKey = toKey(new Date(y, m, i));
+        var day = state.days[dateKey];
+        var val = "";
+        if (day && day.shopData && day.shopData[shop.id]) {
+          val = day.shopData[shop.id][shopsMetric];
+        }
+        var td = document.createElement("td");
+        td.textContent = val !== undefined && val !== null && String(val).trim() !== "" ? val : "—";
+        tr.appendChild(td);
+        if (val !== undefined && val !== null && String(val).trim() !== "" && !isNaN(Number(val))) {
+          values.push(Number(val));
+        }
+      }
+      var avg = values.length > 0 ? (values.reduce(function (a, b) { return a + b; }, 0) / values.length) : "";
+      var tdAvg = document.createElement("td");
+      tdAvg.className = "shop-month-avg";
+      tdAvg.textContent = avg === "" ? "—" : Math.round(avg * 100) / 100;
+      tr.appendChild(tdAvg);
+      $("shopMonthTableBody").appendChild(tr);
+    });
+  }
+
+  function buildShopsView() {
+    var section = document.createElement("section");
+    section.id = "viewShops";
+    section.hidden = true;
+    section.innerHTML =
+      '<div class="shops-tabs" id="shopsTabs">' +
+      '  <button type="button" class="shops-tab active" id="shopTabRoster" data-tab="roster">店铺库</button>' +
+      '  <button type="button" class="shops-tab" id="shopTabDaily" data-tab="daily">每日数据</button>' +
+      '  <button type="button" class="shops-tab" id="shopTabMonth" data-tab="month">月度汇总</button>' +
+      '</div>' +
+      '<div class="panel">' +
+      '  <div class="panel-head"><h2><span class="panel-icon blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-4h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg></span>分配店铺</h2><div class="progress-line"><span id="shopSummary"></span></div></div>' +
+      '  <div class="panel-body">' +
+      '    <div class="shops-date" id="shopsDateText"></div>' +
+      '    <div class="shop-add-row" id="shopAddRow">' +
+      '      <input type="text" id="shopNameInput" class="input" placeholder="新店铺名称">' +
+      '      <input type="text" id="shopOwnerInput" class="input" value="远山" placeholder="负责人">' +
+      '      <button type="button" class="btn primary" id="addShopBtn">添加店铺</button>' +
+      '    </div>' +
+      '    <div class="shop-list" id="shopList"></div>' +
+      '    <div class="shop-daily-list" id="shopDailyList"></div>' +
+      '    <div class="shop-month-panel" id="shopMonthPanel">' +
+      '      <div class="shop-month-head">' +
+      '        <button type="button" class="icon-btn" id="shopMonthPrev" aria-label="上个月" title="上个月"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+      '        <div class="shop-month-title" id="shopMonthTitle"></div>' +
+      '        <button type="button" class="icon-btn" id="shopMonthNext" aria-label="下个月" title="下个月"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>' +
+      '        <div class="shop-metric-seg" id="shopMetricSeg"></div>' +
+      '      </div>' +
+      '      <div class="table-wrap"><table class="report shop-month-table"><thead id="shopMonthTableHead"></thead><tbody id="shopMonthTableBody"></tbody></table></div>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>';
+    document.querySelector("main").appendChild(section);
+
+    var metricSeg = $("shopMetricSeg");
+    SHOP_METRICS.forEach(function (m) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "seg-btn" + (m.key === shopsMetric ? " active" : "");
+      btn.setAttribute("data-metric", m.key);
+      btn.textContent = m.label.replace(" %", "");
+      metricSeg.appendChild(btn);
+    });
+  }
+
+  function buildShopsTab() {
+    var nav = document.querySelector(".tabs");
+    if (!nav || document.getElementById("tabShops")) { return; }
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab-btn";
+    btn.id = "tabShops";
+    btn.setAttribute("data-view", "shops");
+    btn.textContent = "分配店铺";
+    nav.appendChild(btn);
+  }
+
   function switchTab(view) {
     $("viewToday").hidden = view !== "today";
     $("viewReport").hidden = view !== "report";
+    $("viewShops").hidden = view !== "shops";
     $("tabToday").classList.toggle("active", view === "today");
     $("tabReport").classList.toggle("active", view === "report");
+    $("tabShops").classList.toggle("active", view === "shops");
     if (view === "report") {
       renderReport();
+    }
+    if (view === "shops") {
+      renderShopsView();
     }
   }
 
@@ -2170,9 +2651,21 @@ table.report th {
       state.days = {};
       saveState();
       renderReport();
-      renderToday();
+        ensureShopLibrary(true);
+        renderToday();
       showToast("已清空历史记录");
     }
+  }
+
+  function setShopsTabUI() {
+    document.querySelectorAll(".shops-tab").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-tab") === shopsTab);
+    });
+    $("shopAddRow").hidden = shopsTab !== "roster";
+    $("shopsDateText").hidden = shopsTab !== "daily";
+    $("shopList").hidden = shopsTab !== "roster";
+    $("shopDailyList").hidden = shopsTab !== "daily";
+    $("shopMonthPanel").hidden = shopsTab !== "month";
   }
 
   function bindEvents() {
@@ -2235,6 +2728,81 @@ table.report th {
 
     $("tabToday").addEventListener("click", function () { switchTab("today"); });
     $("tabReport").addEventListener("click", function () { switchTab("report"); });
+
+    $("tabShops").addEventListener("click", function () { switchTab("shops"); });
+
+    $("shopTabRoster").addEventListener("click", function () {
+      shopsTab = "roster";
+      renderShopsView();
+    });
+    $("shopTabDaily").addEventListener("click", function () {
+      shopsTab = "daily";
+      renderShopsView();
+    });
+    $("shopTabMonth").addEventListener("click", function () {
+      shopsTab = "month";
+      renderShopsView();
+    });
+
+    $("addShopBtn").addEventListener("click", addShop);
+    $("shopNameInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { addShop(); }
+    });
+
+    $("shopList").addEventListener("input", function (e) {
+      var field = e.target.getAttribute("data-field");
+      if (!field) { return; }
+      var card = e.target.closest(".shop-card");
+      if (!card) { return; }
+      var index = Number(card.getAttribute("data-shop-index"));
+      var shop = state.shopLibrary[index];
+      if (!shop) { return; }
+      shop[field] = e.target.value;
+      saveState();
+    });
+
+    $("shopList").addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-action='remove-shop']");
+      if (!btn) { return; }
+      var card = btn.closest(".shop-card");
+      var index = Number(card.getAttribute("data-shop-index"));
+      if (!confirm("确定移除该店铺吗？")) { return; }
+      state.shopLibrary.splice(index, 1);
+      saveState();
+      renderShopRoster();
+    });
+
+    $("shopDailyList").addEventListener("input", function (e) {
+      var field = e.target.getAttribute("data-field");
+      if (!field) { return; }
+      var shopId = e.target.getAttribute("data-shop-id");
+      var day = dayData(currentKey());
+      if (!day.shopData[shopId]) { day.shopData[shopId] = {}; }
+      day.shopData[shopId][field] = e.target.value;
+      saveState();
+    });
+
+    $("shopMetricSeg").addEventListener("click", function (e) {
+      var btn = e.target.closest(".seg-btn");
+      if (!btn) { return; }
+      shopsMetric = btn.getAttribute("data-metric");
+      document.querySelectorAll("#shopMetricSeg .seg-btn").forEach(function (b) {
+        b.classList.toggle("active", b === btn);
+      });
+      renderShopMonth();
+    });
+
+    $("shopMonthPrev").addEventListener("click", function () {
+      viewMonth -= 1;
+      if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
+      renderShopMonth();
+    });
+
+    $("shopMonthNext").addEventListener("click", function () {
+      viewMonth += 1;
+      if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
+      renderShopMonth();
+    });
 
     $("taskList").addEventListener("click", function (e) {
       var row = e.target.closest(".task-row");
@@ -2309,6 +2877,9 @@ table.report th {
 
   function init() {
     loadState();
+    buildShopsView();
+    buildShopsTab();
+    ensureShopLibrary();
     $("dateInput").value = todayKey();
     renderToday();
     bindEvents();
