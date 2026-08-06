@@ -1,0 +1,2322 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>客服AI训练师工作台</title>
+<style>
+:root {
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --surface-soft: #f7f7fa;
+  --surface-inset: #e9e9eb;
+  --hairline: rgba(60, 60, 67, 0.1);
+  --hairline-strong: rgba(60, 60, 67, 0.18);
+  --text: #1c1c1e;
+  --text-soft: #48484a;
+  --muted: #8e8e93;
+  --blue: #0a84ff;
+  --blue-deep: #0071e3;
+  --blue-soft: #e6f1ff;
+  --teal: #30b0c7;
+  --teal-soft: #e4f4f8;
+  --green: #34c759;
+  --green-soft: #e7f8ec;
+  --orange: #ff9500;
+  --orange-soft: #fff1dd;
+  --red: #ff3b30;
+  --red-soft: #ffeceb;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.05);
+  --radius-card: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  letter-spacing: 0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: linear-gradient(165deg, #a9cdf9 0%, #d7e9ff 50%, #f3f8ff 100%);
+  min-height: 100vh;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+::selection {
+  background: rgba(10, 132, 255, 0.22);
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px 24px 56px;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.topbar-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, #0a84ff 0%, #4aa8ff 55%, #7cc4ff 100%);
+  box-shadow: 0 4px 10px rgba(10, 132, 255, 0.28);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.brand small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 1px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.save-indicator::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.18);
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.icon-btn:hover {
+  background: var(--blue-soft);
+  color: var(--blue);
+  border-color: rgba(10, 132, 255, 0.35);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
+}
+
+.today-btn {
+  height: 32px;
+  border: 0;
+  background: var(--blue);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.28);
+}
+
+.today-btn:hover {
+  background: var(--blue-deep);
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(30, 64, 175, 0.1);
+  position: sticky;
+  top: 76px;
+}
+
+.tab-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-start;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tab-btn::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  background-color: currentColor;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.tab-btn[data-view="today"]::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6h11M9 12h11M9 18h11'/%3E%3Cpath d='M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6h11M9 12h11M9 18h11'/%3E%3Cpath d='M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2'/%3E%3C/svg%3E");
+}
+
+.tab-btn[data-view="report"]::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M9 10v10'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M9 10v10'/%3E%3C/svg%3E");
+}
+
+.tab-btn.active {
+  background: rgba(10, 132, 255, 0.92);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(10, 132, 255, 0.28);
+}
+
+.today-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid rgba(60, 60, 67, 0.14);
+  border-radius: 18px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--hairline);
+  background: transparent;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.panel-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+}
+
+.panel-icon.blue {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.panel-icon.teal {
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.panel-icon.red {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.panel-icon.orange {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+.panel-icon.green {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.panel-body {
+  padding: 14px 18px 18px;
+}
+
+.progress-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.progress-bar {
+  width: 130px;
+  height: 7px;
+  background: var(--surface-inset);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #0a84ff, #4aa8ff);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.calendar-panel {
+  margin-bottom: 18px;
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px 4px;
+}
+
+.calendar-month {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.calendar-date-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 18px 8px;
+}
+
+.calendar-date-line strong {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.calendar-date-line .weekday {
+  font-size: 14px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  padding: 4px 10px 0;
+}
+
+.cal-weekdays span {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px 2px;
+  padding: 8px 10px 12px;
+}
+
+.cal-day {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  transition: background 0.15s ease;
+}
+
+.cal-day:hover {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.cal-day.today {
+  box-shadow: 0 0 0 1.5px var(--blue);
+}
+
+.cal-day.selected {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.35);
+}
+
+.cal-day.selected .shift-chip {
+  box-shadow: 0 0 0 2px var(--blue);
+}
+
+.cal-day.has-data::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+
+.cal-day.selected.has-data::before {
+  background: #fff;
+  box-shadow: 0 0 0 1.5px var(--blue);
+}
+
+.shift-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.shift-zhong {
+  background: var(--blue);
+}
+
+.shift-a {
+  background: var(--orange);
+}
+
+.shift-xiu {
+  background: var(--green);
+}
+
+.shift-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--hairline);
+  margin-top: 4px;
+  padding: 18px 18px 20px;
+}
+
+.shift-toolbar-label {
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.shift-edit-btn {
+  height: 48px;
+  min-width: 84px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 0 26px;
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+
+.shift-edit-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.shift-edit-btn.shift-none {
+  background: var(--surface-inset);
+  color: var(--muted);
+}
+
+.task-row {
+  display: grid;
+  grid-template-columns: 264px minmax(170px, 1.2fr) 84px 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--hairline);
+  transition: background 0.12s ease;
+}
+
+.task-row:hover {
+  background: #fafafc;
+}
+
+.task-row:last-child {
+  border-bottom: 0;
+}
+
+.task-row.is-closed-hidden {
+  display: none;
+}
+
+.task-name {
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--surface-inset);
+  border-radius: 999px;
+  padding: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.seg-btn {
+  flex: 1;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0 4px;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.seg-btn:active {
+  transform: scale(0.96);
+}
+
+.seg-btn.active[data-value="done"] {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(52, 199, 89, 0.3);
+}
+
+.seg-btn.active[data-value="doing"] {
+  background: var(--orange);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(255, 149, 0, 0.3);
+}
+
+.seg-btn.active[data-value="todo"] {
+  background: var(--muted);
+  color: #fff;
+}
+
+.seg-btn.active[data-value="closed"] {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(255, 59, 48, 0.3);
+}
+
+.task-row.closed {
+  background: #fafafa;
+}
+
+.task-row.closed:hover {
+  background: #fafafa;
+}
+
+.task-row.closed .task-name {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.note-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.note-btn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.note-btn:hover {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.note-btn:active {
+  transform: scale(0.92);
+}
+
+.note-btn.has-note::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--blue);
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.note-input.open {
+  grid-column: 1 / -1;
+}
+
+.closed-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 11px 14px;
+  transition: background 0.15s ease;
+}
+
+.closed-toggle:hover {
+  background: #fafafc;
+}
+
+.closed-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+.closed-toggle.expanded svg {
+  transform: rotate(180deg);
+}
+
+.select, .input {
+  width: 100%;
+  height: 34px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-inset);
+  padding: 0 11px;
+  outline: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input {
+  min-width: 0;
+}
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+
+.select:focus, .input:focus, textarea:focus {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22);
+}
+
+.side {
+  display: grid;
+  gap: 18px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.metric-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.metric-field label::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--blue);
+}
+
+.metric-field[data-metric="labelCount"] label::before {
+  background: var(--blue);
+}
+
+.metric-field[data-metric="scriptCount"] label::before {
+  background: var(--teal);
+}
+
+.metric-field[data-metric="badcaseCount"] label::before {
+  background: var(--orange);
+}
+
+.metric-field[data-metric="kbCount"] label::before {
+  background: var(--green);
+}
+
+.metric-field input {
+  width: 100%;
+  height: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-inset);
+  padding: 0 11px;
+  outline: none;
+  font-weight: 600;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.metric-field input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22);
+}
+
+textarea {
+  width: 100%;
+  min-height: 104px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-inset);
+  padding: 10px 12px;
+  resize: vertical;
+  outline: none;
+  line-height: 1.55;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.summary-cell {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.12s ease;
+}
+
+.summary-cell:hover {
+  transform: translateY(-1px);
+}
+
+.summary-cell .num {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface);
+  border: 2px solid #d1d1d6;
+}
+
+.summary-cell .label {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.summary-cell .num.accent {
+  color: var(--blue);
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.report-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  color: var(--text);
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.btn:hover {
+  background: #dfe0e4;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn.primary {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.28);
+}
+
+.btn.primary:hover {
+  background: var(--blue-deep);
+}
+
+.btn.block {
+  width: 100%;
+  height: 42px;
+  font-size: 14px;
+}
+
+.btn.ghost {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.btn.ghost:hover {
+  background: #d8eaff;
+}
+
+.btn.danger {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.btn.danger:hover {
+  background: #ffdcd9;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table.report {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1080px;
+  font-size: 13.5px;
+}
+
+table.report th, table.report td {
+  border-bottom: 1px solid var(--hairline);
+  padding: 11px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.report th {
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+table.report tbody tr:hover {
+  background: #fafafc;
+}
+
+.date-cell {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.date-cell small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.status-summary {
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.status-summary .ok {
+  color: var(--green);
+}
+
+.status-summary .warn {
+  color: var(--orange);
+}
+
+.status-summary .muted {
+  color: var(--muted);
+}
+
+.status-summary .closed {
+  color: #aeaeb2;
+}
+
+.metric-num {
+  min-width: 64px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.difficulty-cell {
+  min-width: 180px;
+  max-width: 280px;
+  overflow-wrap: break-word;
+}
+
+.empty-row td {
+  color: var(--muted);
+  text-align: center;
+  padding: 42px 12px;
+  font-size: 13.5px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(28, 28, 30, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 11px 20px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.table-wrap::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #c7c7cc;
+  border-radius: 999px;
+}
+
+@media (max-width: 1100px) {
+  .today-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .task-row {
+    grid-template-columns: 264px 1fr 84px 48px;
+  }
+
+  .note-input.open {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .app {
+    padding: 14px 12px 40px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabs, main {
+    min-width: 0;
+  }
+
+  .tabs {
+    flex-direction: row;
+    position: static;
+    top: auto;
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .topbar-inner {
+    padding: 10px 12px 8px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .brand h1 {
+    font-size: 21px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .calendar-date-line strong {
+    font-size: 20px;
+  }
+
+  .cal-day {
+    width: 44px;
+    height: 44px;
+  }
+
+  .shift-chip {
+    height: 22px;
+    min-width: 26px;
+    font-size: 13px;
+  }
+
+  .calendar-grid, .cal-weekdays {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .task-row {
+    grid-template-columns: minmax(0, 1fr) 84px;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .task-name {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .seg {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .priority-select {
+    grid-column: 1 / 2;
+    grid-row: 3;
+  }
+
+  .note-cell {
+    grid-column: 2 / 3;
+    grid-row: 3;
+    justify-content: flex-end;
+  }
+
+  .note-input.open {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
+  .shift-toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .shift-toolbar-label {
+    flex-basis: 100%;
+    margin-right: 0;
+  }
+
+  .shift-edit-btn {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 0;
+    height: 44px;
+    font-size: 16px;
+    padding: 0 14px;
+  }
+
+  .metric-grid, .summary-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .report-actions {
+    width: 100%;
+  }
+
+  .save-indicator {
+    display: none;
+  }
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px rgba(30, 64, 175, 0.1);
+}
+
+.seg {
+  background: rgba(118, 118, 128, 0.14);
+}
+
+.select, .input, textarea {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.metric-field input {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.summary-cell {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+table.report th {
+  background: rgba(247, 247, 250, 0.65);
+}
+
+.task-row:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.task-row.closed, .task-row.closed:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.closed-toggle:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.btn {
+  background: rgba(118, 118, 128, 0.16);
+}
+
+.btn:hover {
+  background: rgba(118, 118, 128, 0.24);
+}
+
+.btn.primary {
+  background: rgba(10, 132, 255, 0.9);
+}
+
+.btn.ghost {
+  background: rgba(10, 132, 255, 0.12);
+}
+
+.btn.danger {
+  background: rgba(255, 59, 48, 0.12);
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.seg {
+  background: rgba(118, 118, 128, 0.1);
+}
+
+.select, .input, textarea {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.metric-field input {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.summary-cell {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+table.report th {
+  background: rgba(247, 247, 250, 0.4);
+}
+
+.task-row:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.task-row.closed, .task-row.closed:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.closed-toggle:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.btn {
+  background: rgba(118, 118, 128, 0.12);
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+      </div>
+      <div>
+        <h1>客服AI训练师工作台</h1>
+        <small>任务记录 · 数据统计 · 日报表格</small>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span class="save-indicator" id="saveIndicator">数据已保存</span>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <nav class="tabs" aria-label="视图切换">
+    <button type="button" class="tab-btn active" id="tabToday" data-view="today">今日工作台</button>
+    <button type="button" class="tab-btn" id="tabReport" data-view="report">日报表格</button>
+  </nav>
+
+  <main>
+    <section id="viewToday">
+      <div class="panel calendar-panel">
+        <div class="calendar-head">
+          <button type="button" class="icon-btn" id="monthPrev" aria-label="上个月" title="上个月">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          <div class="calendar-month" id="calendarMonth"></div>
+          <button type="button" class="icon-btn" id="monthNext" aria-label="下个月" title="下个月">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+          <button type="button" class="today-btn" id="todayBtn">今天</button>
+        </div>
+        <div class="calendar-date-line">
+          <strong id="selectedDateText"></strong>
+          <span class="weekday" id="weekday"></span>
+        </div>
+        <div class="cal-weekdays">
+          <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="shift-toolbar" id="shiftToolbar">
+          <span class="shift-toolbar-label">班次</span>
+          <button type="button" class="shift-edit-btn shift-zhong" data-shift="zhong">中</button>
+          <button type="button" class="shift-edit-btn shift-a" data-shift="a">A</button>
+          <button type="button" class="shift-edit-btn shift-xiu" data-shift="xiu">休</button>
+          <button type="button" class="shift-edit-btn shift-none" data-shift="none">无</button>
+        </div>
+      </div>
+
+      <div class="today-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>
+              <span class="panel-icon blue" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 6h11M9 12h11M9 18h11"/>
+                  <path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>
+                </svg>
+              </span>
+              今日任务
+            </h2>
+            <div class="progress-line">
+              <span id="progressText">已完成 0 / 9</span>
+              <span class="progress-bar"><span class="progress-fill" id="progressFill"></span></span>
+            </div>
+          </div>
+          <div id="taskList"></div>
+          <button type="button" class="closed-toggle" id="closedToggle" hidden>
+            <span id="closedToggleText">已关闭 0 项</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+        </div>
+
+        <aside class="side">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>
+                <span class="panel-icon teal" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 20V10M10 20V4M16 20v-6"/>
+                  </svg>
+                </span>
+                今日数据
+              </h2>
+            </div>
+            <div class="panel-body">
+              <div class="metric-grid" id="metricGrid"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>
+                <span class="panel-icon red" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <path d="M4 22v-7"/>
+                  </svg>
+                </span>
+                今日难点
+              </h2>
+            </div>
+            <div class="panel-body">
+              <textarea id="difficulty" placeholder="今天遇到的难点"></textarea>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>
+                <span class="panel-icon orange" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 14l3.5-3.5"/>
+                    <path d="M20.5 15.5A9 9 0 1 0 3.5 15.5"/>
+                  </svg>
+                </span>
+                概览
+              </h2>
+            </div>
+            <div class="panel-body">
+              <div class="summary-grid">
+                <div class="summary-cell">
+                  <div class="num accent" id="doneCount">0</div>
+                  <div class="label">今日已完成</div>
+                </div>
+                <div class="summary-cell">
+                  <div class="num" id="doingCount">0</div>
+                  <div class="label">今日进行中</div>
+                </div>
+                <div class="summary-cell">
+                  <div class="num" id="weekDaysCount">0</div>
+                  <div class="label">本周已记录</div>
+                </div>
+                <div class="summary-cell">
+                  <div class="num" id="totalDaysCount">0</div>
+                  <div class="label">累计记录天数</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>
+                <span class="panel-icon green" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                    <path d="M3 10h18M9 10v10"/>
+                  </svg>
+                </span>
+                日报
+              </h2>
+            </div>
+            <div class="panel-body">
+              <button type="button" class="btn primary block" id="copyTodayBtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                复制当天日报表格
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="viewReport" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>
+            <span class="panel-icon green" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                <path d="M3 10h18M9 10v10"/>
+              </svg>
+            </span>
+            日报表格
+          </h2>
+          <div class="report-actions">
+            <button type="button" class="btn ghost" id="exportCsvBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <path d="M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              导出CSV
+            </button>
+            <button type="button" class="btn danger" id="clearBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              </svg>
+              清空历史
+            </button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="report">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>任务状态</th>
+                <th>重点店铺打标处理数量</th>
+                <th>未生成话术处理量</th>
+                <th>badcase 数</th>
+                <th>知识库更新条目数</th>
+                <th>今日难点</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="reportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<input type="date" id="dateInput" hidden aria-hidden="true">
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "csa-workbench-v1";
+
+  var CLOUD_URL = "https://kocuowtqklojxkhzlwpe.supabase.co";
+  var CLOUD_KEY = "sb_publishable_EinGWbe2S8hHl0kqngnmIg_uyZ5xRnp";
+  var useCloud = location.protocol.indexOf("http") === 0;
+
+  const TASKS = [
+    { id: "data-update", name: "数据更新" },
+    { id: "pre-reception", name: "前置接待监控" },
+    { id: "label-scene", name: "调优工坊-打标场景处理" },
+    { id: "script-missing", name: "调优工坊-未生成话术处理" },
+    { id: "tuling-qa", name: "探域-图灵问答（链接营销配置）" },
+    { id: "appeal", name: "申诉处理" },
+    { id: "others", name: "其他事项" },
+    { id: "kb-update", name: "产品知识库更新" },
+    { id: "rpa", name: "售后智能体维护（RPA）" }
+  ];
+
+  const METRICS = [
+    { id: "labelCount", label: "重点店铺打标处理数量" },
+    { id: "scriptCount", label: "未生成话术处理量" },
+    { id: "badcaseCount", label: "badcase 数" },
+    { id: "kbCount", label: "知识库更新条目数" }
+  ];
+
+  const STATUS = {
+    todo: { label: "待处理" },
+    doing: { label: "进行中" },
+    done: { label: "已完成" },
+    closed: { label: "关闭" }
+  };
+
+  const PRIORITY = {
+    high: { label: "高" },
+    mid: { label: "中" },
+    low: { label: "低" }
+  };
+
+  const SHIFT_LABELS = {
+    zhong: "中",
+    a: "A",
+    xiu: "休"
+  };
+
+  const DEFAULT_SHIFTS = [
+    "zhong", "xiu", "xiu", "a", "a", "a", "a", "a", "xiu", "a",
+    "a", "a", "a", "a", "xiu", "xiu", "a", "a", "a", "a",
+    "a", "xiu", "a", "a", "a", "a", "a", "a", "xiu", "a", "a"
+  ];
+
+  const state = { days: {}, shifts: {} };
+  var showClosed = false;
+  var openNoteRowEl = null;
+  var viewYear = null;
+  var viewMonth = null;
+
+  const $ = function (id) { return document.getElementById(id); };
+
+  function toKey(d) {
+    var p = function (n) { return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+  }
+
+  function todayKey() {
+    return toKey(new Date());
+  }
+
+  function fromKey(key) {
+    var parts = key.split("-").map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function weekdayLabel(key) {
+    var labels = ["日", "一", "二", "三", "四", "五", "六"];
+    return "星期" + labels[fromKey(key).getDay()];
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function seedDefaultShifts() {
+    DEFAULT_SHIFTS.forEach(function (shift, i) {
+      var day = i + 1;
+      var key = "2026-08-" + (day < 10 ? "0" + day : String(day));
+      state.shifts[key] = shift;
+    });
+  }
+
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.days) {
+          state.days = parsed.days;
+        }
+        if (parsed && parsed.shifts) {
+          state.shifts = parsed.shifts;
+        } else {
+          seedDefaultShifts();
+        }
+      } else {
+        seedDefaultShifts();
+      }
+    } catch (e) {
+      state.days = {};
+      state.shifts = {};
+      seedDefaultShifts();
+    }
+  }
+
+  function loadState() {
+    if (useCloud) {
+      fetchCloudState();
+    } else if (location.protocol.indexOf("http") === 0) {
+      fetch("/api/state").then(function (r) { return r.json(); }).then(function (data) {
+        state.days = (data && data.days) || {};
+        state.shifts = (data && data.shifts) || {};
+        if (!state.shifts || Object.keys(state.shifts).length === 0) {
+          seedDefaultShifts();
+          saveState();
+        }
+        renderToday();
+      }).catch(function () {
+        loadLocal();
+      });
+    } else {
+      loadLocal();
+    }
+  }
+
+  function fetchCloudState() {
+    fetch(CLOUD_URL + "/rest/v1/state?select=days,shifts&id=eq.1", {
+      headers: { apikey: CLOUD_KEY, Authorization: "Bearer " + CLOUD_KEY }
+    }).then(function (r) { return r.json(); }).then(function (rows) {
+      if (rows && rows.length > 0) {
+        state.days = rows[0].days || {};
+        state.shifts = rows[0].shifts || {};
+      } else {
+        state.days = {};
+        state.shifts = {};
+        seedDefaultShifts();
+        saveState();
+      }
+      renderToday();
+    }).catch(function () {
+      loadLocal();
+    });
+  }
+
+  var syncTimer = null;
+
+  function queueSync() {
+    if (syncTimer) { clearTimeout(syncTimer); }
+    $("saveIndicator").textContent = "同步中";
+    syncTimer = setTimeout(function () {
+      var payload = { id: 1, days: state.days, shifts: state.shifts };
+      var syncUrl = "/api/state";
+      var syncHeaders = { "Content-Type": "application/json" };
+      if (useCloud) {
+        syncUrl = CLOUD_URL + "/rest/v1/state";
+        syncHeaders.apikey = CLOUD_KEY;
+        syncHeaders.Authorization = "Bearer " + CLOUD_KEY;
+        syncHeaders.Prefer = "resolution=merge-duplicates";
+      }
+      fetch(syncUrl, {
+        method: "POST",
+        headers: syncHeaders,
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        if (r.ok) {
+          $("saveIndicator").textContent = "已同步";
+        } else {
+          $("saveIndicator").textContent = "同步失败";
+        }
+      }).catch(function () {
+        $("saveIndicator").textContent = "同步失败";
+      });
+    }, 400);
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days: state.days, shifts: state.shifts }));
+      if (location.protocol.indexOf("http") === 0) {
+        queueSync();
+      }
+      $("saveIndicator").textContent = "数据已保存";
+    } catch (e) {
+      $("saveIndicator").textContent = "保存失败";
+    }
+  }
+
+  function dayData(key) {
+    if (!state.days[key]) {
+      state.days[key] = { tasks: {}, metrics: {}, difficulty: "" };
+    }
+    var day = state.days[key];
+    if (!day.tasks) { day.tasks = {}; }
+    if (!day.metrics) { day.metrics = {}; }
+    if (day.difficulty === undefined) { day.difficulty = ""; }
+    return day;
+  }
+
+  function taskData(key, taskId) {
+    var day = dayData(key);
+    if (!day.tasks[taskId]) {
+      day.tasks[taskId] = { status: "todo", priority: "mid", note: "" };
+    }
+    return day.tasks[taskId];
+  }
+
+  function dayHasData(key) {
+    var day = state.days[key];
+    if (!day) { return false; }
+    if (day.difficulty && day.difficulty.trim()) { return true; }
+    var tasks = day.tasks || {};
+    for (var id in tasks) {
+      var t = tasks[id] || {};
+      if (t.note || (t.status && t.status !== "todo") || (t.priority && t.priority !== "mid")) {
+        return true;
+      }
+    }
+    var metrics = day.metrics || {};
+    for (var mid in metrics) {
+      if (metrics[mid] !== undefined && metrics[mid] !== null && String(metrics[mid]).trim() !== "") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function countStatus(key) {
+    var counts = { done: 0, doing: 0, todo: 0, closed: 0 };
+    TASKS.forEach(function (task) {
+      var status = taskData(key, task.id).status || "todo";
+      if (counts[status] !== undefined) { counts[status] += 1; }
+    });
+    return counts;
+  }
+
+  function updateClosedToggle(key) {
+    var counts = countStatus(key);
+    $("closedToggle").hidden = counts.closed === 0;
+    $("closedToggleText").textContent = "已关闭 " + counts.closed + " 项";
+    $("closedToggle").classList.toggle("expanded", showClosed);
+  }
+
+  function closeNoteEditor() {
+    if (!openNoteRowEl) { return; }
+    var row = openNoteRowEl;
+    var input = row.querySelector(".note-input.open");
+    if (input) {
+      taskData(currentKey(), row.getAttribute("data-task")).note = input.value;
+      saveState();
+      input.remove();
+    }
+    openNoteRowEl = null;
+    var noteBtn = row.querySelector(".note-btn");
+    var note = taskData(currentKey(), row.getAttribute("data-task")).note;
+    if (noteBtn) {
+      noteBtn.classList.toggle("has-note", !!note);
+    }
+  }
+
+  function openNoteEditor(row) {
+    closeNoteEditor();
+    var key = currentKey();
+    var data = taskData(key, row.getAttribute("data-task"));
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "input note-input open";
+    input.value = data.note || "";
+    input.setAttribute("data-field", "note-editor");
+    input.setAttribute("aria-label", "备注");
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        input.blur();
+      }
+    });
+    input.addEventListener("blur", closeNoteEditor);
+    row.appendChild(input);
+    openNoteRowEl = row;
+    input.focus();
+    input.select();
+  }
+
+  function renderTaskRows(key) {
+    openNoteRowEl = null;
+    var list = $("taskList");
+    list.innerHTML = "";
+    TASKS.forEach(function (task) {
+      var data = taskData(key, task.id);
+      var row = document.createElement("div");
+      row.className = "task-row";
+      row.setAttribute("data-task", task.id);
+
+      var seg = document.createElement("div");
+      seg.className = "seg";
+      seg.setAttribute("role", "group");
+      seg.setAttribute("aria-label", "状态");
+      ["todo", "doing", "done", "closed"].forEach(function (status) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "seg-btn" + (data.status === status ? " active" : "");
+        btn.setAttribute("data-value", status);
+        btn.textContent = STATUS[status].label;
+        seg.appendChild(btn);
+      });
+
+      var name = document.createElement("div");
+      name.className = "task-name";
+      name.textContent = task.name;
+      name.title = task.name;
+
+      var priority = document.createElement("select");
+      priority.className = "select priority-select";
+      priority.setAttribute("data-field", "priority");
+      priority.setAttribute("aria-label", task.name + "优先级");
+      ["high", "mid", "low"].forEach(function (p) {
+        var opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = PRIORITY[p].label;
+        if (p === data.priority) { opt.selected = true; }
+        priority.appendChild(opt);
+      });
+
+      var noteCell = document.createElement("div");
+      noteCell.className = "note-cell";
+      var noteBtn = document.createElement("button");
+      noteBtn.type = "button";
+      noteBtn.className = "note-btn" + (data.note ? " has-note" : "");
+      noteBtn.setAttribute("data-action", "open-note");
+      noteBtn.setAttribute("aria-label", task.name + "备注");
+      noteBtn.title = "备注";
+      noteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>';
+      noteCell.appendChild(noteBtn);
+
+      row.classList.toggle("closed", data.status === "closed");
+      row.classList.toggle("is-closed-hidden", data.status === "closed" && !showClosed);
+      row.appendChild(seg);
+      row.appendChild(name);
+      row.appendChild(priority);
+      row.appendChild(noteCell);
+      list.appendChild(row);
+    });
+    updateClosedToggle(key);
+  }
+
+  function renderMetrics(key) {
+    var grid = $("metricGrid");
+    grid.innerHTML = "";
+    var metrics = dayData(key).metrics;
+    METRICS.forEach(function (metric) {
+      var field = document.createElement("div");
+      field.className = "metric-field";
+      field.setAttribute("data-metric", metric.id);
+      var label = document.createElement("label");
+      label.textContent = metric.label;
+      label.setAttribute("for", "metric-" + metric.id);
+      var input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.id = "metric-" + metric.id;
+      input.setAttribute("data-metric", metric.id);
+      input.value = metrics[metric.id] !== undefined && metrics[metric.id] !== null ? metrics[metric.id] : "";
+      field.appendChild(label);
+      field.appendChild(input);
+      grid.appendChild(field);
+    });
+  }
+
+  function updateProgress(key) {
+    var counts = countStatus(key);
+    var total = TASKS.length - counts.closed;
+    $("progressText").textContent = "已完成 " + counts.done + " / " + total;
+    $("progressFill").style.width = total > 0 ? Math.round((counts.done / total) * 100) + "%" : "0%";
+    $("doneCount").textContent = counts.done;
+    $("doingCount").textContent = counts.doing;
+
+    var now = fromKey(key);
+    var monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    var sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    var weekStart = toKey(monday);
+    var weekEnd = toKey(sunday);
+    var weekCount = 0;
+    var totalCount = 0;
+    Object.keys(state.days).forEach(function (k) {
+      if (dayHasData(k)) {
+        totalCount += 1;
+        if (k >= weekStart && k <= weekEnd) {
+          weekCount += 1;
+        }
+      }
+    });
+    $("weekDaysCount").textContent = weekCount;
+    $("totalDaysCount").textContent = totalCount;
+  }
+
+  function renderCalendar() {
+    var key = currentKey();
+    var parts = key.split("-").map(Number);
+    var selY = parts[0];
+    var selM = parts[1] - 1;
+    var selD = parts[2];
+    if (viewYear === null || viewMonth === null) {
+      viewYear = selY;
+      viewMonth = selM;
+    }
+
+    $("calendarMonth").textContent = viewYear + "年" + (viewMonth + 1) + "月";
+    $("selectedDateText").textContent = (selM + 1) + "月" + selD + "日";
+    $("weekday").textContent = weekdayLabel(key);
+
+    var first = new Date(viewYear, viewMonth, 1);
+    var lead = first.getDay();
+    var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    var grid = $("calendarGrid");
+    grid.innerHTML = "";
+    var today = todayKey();
+    var i;
+
+    for (i = 0; i < lead; i += 1) {
+      var blank = document.createElement("span");
+      blank.className = "cal-blank";
+      grid.appendChild(blank);
+    }
+
+    for (i = 1; i <= daysInMonth; i += 1) {
+      var dateKey = toKey(new Date(viewYear, viewMonth, i));
+      var day = document.createElement("button");
+      day.type = "button";
+      day.className = "cal-day";
+      day.setAttribute("data-date", dateKey);
+      day.setAttribute("aria-label", dateKey);
+
+      var num = document.createElement("span");
+      num.textContent = i;
+      day.appendChild(num);
+
+      var shift = state.shifts[dateKey];
+      if (shift && SHIFT_LABELS[shift]) {
+        var chip = document.createElement("span");
+        chip.className = "shift-chip shift-" + shift;
+        chip.textContent = SHIFT_LABELS[shift];
+        day.appendChild(chip);
+      }
+
+      if (dateKey === key) { day.classList.add("selected"); }
+      if (dateKey === today) { day.classList.add("today"); }
+      if (dayHasData(dateKey)) { day.classList.add("has-data"); }
+      grid.appendChild(day);
+    }
+  }
+
+  function renderToday() {
+    var key = $("dateInput").value || todayKey();
+    $("dateInput").value = key;
+    renderCalendar();
+    renderTaskRows(key);
+    renderMetrics(key);
+    $("difficulty").value = dayData(key).difficulty || "";
+    updateProgress(key);
+  }
+
+  function currentKey() {
+    return $("dateInput").value || todayKey();
+  }
+
+  function reportColumns(day) {
+    var metrics = day.metrics || {};
+    return METRICS.map(function (m) {
+      var value = metrics[m.id];
+      return value !== undefined && value !== null && String(value).trim() !== "" ? value : "—";
+    });
+  }
+
+  function renderReport() {
+    var body = $("reportBody");
+    body.innerHTML = "";
+    var keys = Object.keys(state.days).filter(dayHasData).sort().reverse();
+
+    if (keys.length === 0) {
+      var emptyRow = document.createElement("tr");
+      emptyRow.className = "empty-row";
+      var cell = document.createElement("td");
+      cell.colSpan = 8;
+      cell.textContent = "暂无日报记录";
+      emptyRow.appendChild(cell);
+      body.appendChild(emptyRow);
+      return;
+    }
+
+    keys.forEach(function (key) {
+      var day = state.days[key];
+      var counts = countStatus(key);
+      var cols = reportColumns(day);
+      var statusTr = document.createElement("tr");
+
+      var dateCell = document.createElement("td");
+      dateCell.className = "date-cell";
+      var dateMain = document.createElement("div");
+      dateMain.textContent = key;
+      var dateSmall = document.createElement("small");
+      dateSmall.textContent = weekdayLabel(key);
+      dateCell.appendChild(dateMain);
+      dateCell.appendChild(dateSmall);
+
+      var statusCell = document.createElement("td");
+      statusCell.className = "status-summary";
+      statusCell.innerHTML =
+        '<span class="ok">完成 ' + counts.done + '</span> / ' +
+        '<span class="warn">进行中 ' + counts.doing + '</span> / ' +
+        '<span class="muted">待处理 ' + counts.todo + '</span> / ' +
+        '<span class="closed">关闭 ' + counts.closed + '</span>';
+
+      statusTr.appendChild(dateCell);
+      statusTr.appendChild(statusCell);
+      cols.forEach(function (value) {
+        var td = document.createElement("td");
+        td.className = "metric-num";
+        td.textContent = value;
+        statusTr.appendChild(td);
+      });
+
+      var diffTd = document.createElement("td");
+      diffTd.className = "difficulty-cell";
+      diffTd.textContent = day.difficulty || "—";
+      if (day.difficulty) {
+        diffTd.title = day.difficulty;
+      }
+      statusTr.appendChild(diffTd);
+
+      var actionTd = document.createElement("td");
+      var openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "btn ghost";
+      openBtn.setAttribute("data-open-day", key);
+      openBtn.textContent = "打开";
+      actionTd.appendChild(openBtn);
+      statusTr.appendChild(actionTd);
+
+      body.appendChild(statusTr);
+    });
+  }
+
+  function switchTab(view) {
+    $("viewToday").hidden = view !== "today";
+    $("viewReport").hidden = view !== "report";
+    $("tabToday").classList.toggle("active", view === "today");
+    $("tabReport").classList.toggle("active", view === "report");
+    if (view === "report") {
+      renderReport();
+    }
+  }
+
+  var toastTimer = null;
+  function showToast(message) {
+    var toast = $("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () {
+      toast.classList.remove("show");
+    }, 1800);
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+
+  function copyTodayReport() {
+    var key = currentKey();
+    var day = dayData(key);
+    var counts = countStatus(key);
+    var cols = reportColumns(day);
+    var header = ["日期", "完成", "进行中", "待处理", "关闭", "重点店铺打标处理数量", "未生成话术处理量", "badcase 数", "知识库更新条目数", "今日难点"];
+    var values = [key, counts.done, counts.doing, counts.todo, counts.closed].concat(cols);
+    var difficulty = (day.difficulty || "—").replace(/\r?\n/g, " ");
+    values.push(difficulty);
+    var text = header.join("\t") + "\n" + values.map(function (v) {
+      return String(v).replace(/\t/g, " ");
+    }).join("\t");
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast("已复制当日日报表格");
+      }, function () {
+        fallbackCopy(text);
+        showToast("已复制当日日报表格");
+      });
+    } else {
+      fallbackCopy(text);
+      showToast("已复制当日日报表格");
+    }
+  }
+
+  function csvCell(value) {
+    var text = String(value === undefined || value === null ? "" : value);
+    if (/[",\r\n]/.test(text)) {
+      return '"' + text.replace(/"/g, '""') + '"';
+    }
+    return text;
+  }
+
+  function exportCsv() {
+    var header = ["日期", "星期", "完成", "进行中", "待处理", "关闭", "重点店铺打标处理数量", "未生成话术处理量", "badcase 数", "知识库更新条目数", "今日难点"];
+    var keys = Object.keys(state.days).filter(dayHasData).sort().reverse();
+    var rows = [header];
+    keys.forEach(function (key) {
+      var day = state.days[key];
+      var counts = countStatus(key);
+      var cols = reportColumns(day);
+      rows.push([key, weekdayLabel(key), counts.done, counts.doing, counts.todo, counts.closed]
+        .concat(cols)
+        .concat([day.difficulty || ""]));
+    });
+    var csv = "\uFEFF" + rows.map(function (row) {
+      return row.map(csvCell).join(",");
+    }).join("\r\n");
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "工作台日报.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("已导出CSV");
+  }
+
+  function clearHistory() {
+    if (confirm("确定清空所有日报记录吗？此操作不可恢复。")) {
+      state.days = {};
+      saveState();
+      renderReport();
+      renderToday();
+      showToast("已清空历史记录");
+    }
+  }
+
+  function bindEvents() {
+    $("monthPrev").addEventListener("click", function () {
+      viewMonth -= 1;
+      if (viewMonth < 0) {
+        viewMonth = 11;
+        viewYear -= 1;
+      }
+      renderCalendar();
+    });
+
+    $("monthNext").addEventListener("click", function () {
+      viewMonth += 1;
+      if (viewMonth > 11) {
+        viewMonth = 0;
+        viewYear += 1;
+      }
+      renderCalendar();
+    });
+
+    $("todayBtn").addEventListener("click", function () {
+      $("dateInput").value = todayKey();
+      var parts = todayKey().split("-").map(Number);
+      viewYear = parts[0];
+      viewMonth = parts[1] - 1;
+      renderToday();
+      showToast("已回到今天");
+    });
+
+    $("calendarGrid").addEventListener("click", function (e) {
+      var btn = e.target.closest(".cal-day");
+      if (!btn) { return; }
+      var parts = btn.getAttribute("data-date").split("-").map(Number);
+      viewYear = parts[0];
+      viewMonth = parts[1] - 1;
+      $("dateInput").value = btn.getAttribute("data-date");
+      renderToday();
+    });
+
+    $("shiftToolbar").addEventListener("click", function (e) {
+      var btn = e.target.closest(".shift-edit-btn");
+      if (!btn) { return; }
+      var key = currentKey();
+      var value = btn.getAttribute("data-shift");
+      if (value === "none") {
+        delete state.shifts[key];
+      } else {
+        state.shifts[key] = value;
+      }
+      saveState();
+      renderCalendar();
+      showToast("班次已更新");
+    });
+
+    $("closedToggle").addEventListener("click", function () {
+      showClosed = !showClosed;
+      renderTaskRows(currentKey());
+    });
+
+    $("tabToday").addEventListener("click", function () { switchTab("today"); });
+    $("tabReport").addEventListener("click", function () { switchTab("report"); });
+
+    $("taskList").addEventListener("click", function (e) {
+      var row = e.target.closest(".task-row");
+      if (!row) { return; }
+      var taskId = row.getAttribute("data-task");
+      var key = currentKey();
+      var data = taskData(key, taskId);
+
+      var noteBtn = e.target.closest("[data-action='open-note']");
+      if (noteBtn) {
+        openNoteEditor(row);
+        return;
+      }
+
+      var btn = e.target.closest(".seg-btn");
+      if (!btn) { return; }
+      data.status = btn.getAttribute("data-value");
+      saveState();
+      renderTaskRows(key);
+      updateProgress(key);
+    });
+
+    $("taskList").addEventListener("input", function (e) {
+      var field = e.target.getAttribute("data-field");
+      if (!field) { return; }
+      var row = e.target.closest(".task-row");
+      if (!row) { return; }
+      var key = currentKey();
+      var data = taskData(key, row.getAttribute("data-task"));
+      if (field === "note" || field === "note-editor") {
+        data.note = e.target.value;
+        saveState();
+      }
+    });
+
+    $("taskList").addEventListener("change", function (e) {
+      var field = e.target.getAttribute("data-field");
+      if (field !== "priority") { return; }
+      var row = e.target.closest(".task-row");
+      var key = currentKey();
+      var data = taskData(key, row.getAttribute("data-task"));
+      data.priority = e.target.value;
+      saveState();
+    });
+
+    $("metricGrid").addEventListener("input", function (e) {
+      var metricId = e.target.getAttribute("data-metric");
+      if (!metricId) { return; }
+      var day = dayData(currentKey());
+      day.metrics[metricId] = e.target.value;
+      saveState();
+    });
+
+    $("difficulty").addEventListener("input", function () {
+      var day = dayData(currentKey());
+      day.difficulty = $("difficulty").value;
+      saveState();
+    });
+
+    $("copyTodayBtn").addEventListener("click", copyTodayReport);
+    $("exportCsvBtn").addEventListener("click", exportCsv);
+    $("clearBtn").addEventListener("click", clearHistory);
+
+    $("reportBody").addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-open-day]");
+      if (!btn) { return; }
+      $("dateInput").value = btn.getAttribute("data-open-day");
+      switchTab("today");
+      renderToday();
+    });
+  }
+
+  function init() {
+    loadState();
+    $("dateInput").value = todayKey();
+    renderToday();
+    bindEvents();
+    showToast("工作台已加载");
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
