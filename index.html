@@ -1447,6 +1447,134 @@ table.report th {
     font-size: 13px;
   }
 }
+
+.shop-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shop-card {
+  background: #fff;
+  border-color: var(--hairline);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+.shop-card.key-shop {
+  border-color: rgba(255, 149, 0, 0.55);
+  background: linear-gradient(180deg, #fffdf8, #fff8ec);
+}
+
+.shop-card-head {
+  grid-template-columns: minmax(0, 1fr) auto auto 72px;
+}
+
+.shop-card-head-daily {
+  grid-template-columns: auto auto;
+  justify-content: flex-start;
+}
+
+.shop-name-input {
+  font-weight: 600;
+}
+
+.shop-key-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.shop-key-badge.small {
+  height: 20px;
+  font-size: 11px;
+  padding: 0 7px;
+}
+
+.shop-key-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: #fff;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.shop-key-toggle:hover {
+  background: var(--surface-inset);
+}
+
+.shop-key-toggle.active {
+  background: var(--orange-soft);
+  color: var(--orange);
+  border-color: rgba(255, 149, 0, 0.4);
+}
+
+.shop-key-toggle.active svg {
+  fill: currentColor;
+}
+
+.shop-card-foot {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.shop-filter-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.shop-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shop-filter-label input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--orange);
+}
+
+.shop-month-table tr.key-row td {
+  background: rgba(255, 149, 0, 0.06);
+}
+
+.shop-month-table tr.key-row .shop-month-name {
+  color: #b45309;
+}
+
+@media (max-width: 1100px) {
+  .shop-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .shop-card-head {
+    grid-template-columns: minmax(0, 1fr) auto auto 72px;
+  }
+
+  .shop-card-foot {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 </head>
 <body>
@@ -2315,11 +2443,102 @@ table.report th {
     if (!$("viewShops")) { return; }
     setShopsTabUI();
     if (shopsTab === "roster") {
-      renderShopRoster();
+      renderShopRosterNew();
     } else if (shopsTab === "daily") {
       renderShopDaily();
     } else {
       renderShopMonth();
+    }
+  }
+
+  var shopsShowKeyOnly = false;
+
+  var KEY_SHOPS = [
+    "松迅医疗器械专营店",
+    "祥佳健康企业店",
+    "PANAPOPO居家官方旗舰店",
+    "PANAPOPO旗舰店（众创）"
+  ];
+
+  function shopKey(shop) {
+    if (shop && shop.key !== undefined) { return !!shop.key; }
+    var n = shop && shop.name ? shop.name : "";
+    return KEY_SHOPS.indexOf(n) >= 0;
+  }
+
+  function renderShopRosterNew() {
+    var list = $("shopList");
+    var shops = (state.shopLibrary || []).slice().sort(function (a, b) {
+      return (shopKey(b) ? 1 : 0) - (shopKey(a) ? 1 : 0);
+    });
+    var keyCount = shops.filter(shopKey).length;
+    var shown = shopsShowKeyOnly ? shops.filter(shopKey) : shops;
+    $("shopSummary").textContent = "共 " + shops.length + " 家 · 重点 " + keyCount + " 家" + (shopsShowKeyOnly ? " · 显示 " + shown.length + " 家" : "");
+    list.innerHTML = "";
+    shown.forEach(function (shop) {
+      var isKey = shopKey(shop);
+      var card = document.createElement("div");
+      card.className = "shop-card" + (isKey ? " key-shop" : "");
+      card.setAttribute("data-shop-index", state.shopLibrary.indexOf(shop));
+
+      var head = document.createElement("div");
+      head.className = "shop-card-head";
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.className = "input shop-name-input";
+      nameInput.setAttribute("data-field", "name");
+      nameInput.value = shop.name || "";
+      nameInput.placeholder = "店名";
+      head.appendChild(nameInput);
+
+      if (isKey) {
+        var badge = document.createElement("span");
+        badge.className = "shop-key-badge";
+        badge.textContent = "重点";
+        head.appendChild(badge);
+      }
+
+      var toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "shop-key-toggle" + (isKey ? " active" : "");
+      toggle.setAttribute("data-action", "toggle-key");
+      toggle.title = isKey ? "取消重点" : "设为重点";
+      toggle.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>';
+      head.appendChild(toggle);
+
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn danger shop-remove";
+      removeBtn.setAttribute("data-action", "remove-shop");
+      removeBtn.textContent = "移除";
+      head.appendChild(removeBtn);
+
+      var foot = document.createElement("div");
+      foot.className = "shop-card-foot";
+      var ownerInput = document.createElement("input");
+      ownerInput.type = "text";
+      ownerInput.className = "input";
+      ownerInput.setAttribute("data-field", "owner");
+      ownerInput.value = shop.owner || "";
+      ownerInput.placeholder = "负责人";
+      var noteInput = document.createElement("input");
+      noteInput.type = "text";
+      noteInput.className = "input shop-note-input";
+      noteInput.setAttribute("data-field", "note");
+      noteInput.value = shop.note || "";
+      noteInput.placeholder = "备注";
+      foot.appendChild(ownerInput);
+      foot.appendChild(noteInput);
+
+      card.appendChild(head);
+      card.appendChild(foot);
+      list.appendChild(card);
+    });
+    if (shown.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "shops-empty";
+      empty.textContent = shopsShowKeyOnly ? "暂无重点店铺" : "暂无店铺";
+      list.appendChild(empty);
     }
   }
 
@@ -2382,7 +2601,7 @@ table.report th {
     state.shopLibrary.push({ id: "s" + Date.now(), name: name, owner: owner, adoptionRate: "", generationRate: "", conversionRate: "", experienceScore: "", note: "" });
     $("shopNameInput").value = "";
     saveState();
-    renderShopRoster();
+    renderShopRosterNew();
     showToast("店铺已添加");
   }
 
@@ -2401,10 +2620,17 @@ table.report th {
       card.setAttribute("data-shop-index", index);
       var head = document.createElement("div");
       head.className = "shop-card-head";
+      head.classList.add("shop-card-head-daily");
       var name = document.createElement("div");
       name.className = "shop-name";
       name.textContent = shop.name;
       head.appendChild(name);
+      if (shopKey(shop)) {
+        var keyBadge = document.createElement("span");
+        keyBadge.className = "shop-key-badge small";
+        keyBadge.textContent = "重点";
+        head.appendChild(keyBadge);
+      }
       var metrics = document.createElement("div");
       metrics.className = "shop-metrics";
       SHOP_METRICS.forEach(function (m) {
@@ -2463,6 +2689,9 @@ table.report th {
 
     shops.forEach(function (shop) {
       var tr = document.createElement("tr");
+      if (shopKey(shop)) {
+        tr.classList.add("key-row");
+      }
       var tdName = document.createElement("td");
       tdName.className = "shop-month-name";
       tdName.textContent = shop.name;
@@ -2510,6 +2739,7 @@ table.report th {
       '      <input type="text" id="shopOwnerInput" class="input" value="远山" placeholder="负责人">' +
       '      <button type="button" class="btn primary" id="addShopBtn">添加店铺</button>' +
       '    </div>' +
+      '    <div class="shop-filter-row"><label class="shop-filter-label"><input type="checkbox" id="shopKeyFilter"> 仅看重点店铺</label></div>' +
       '    <div class="shop-list" id="shopList"></div>' +
       '    <div class="shop-daily-list" id="shopDailyList"></div>' +
       '    <div class="shop-month-panel" id="shopMonthPanel">' +
@@ -2745,6 +2975,10 @@ table.report th {
     });
 
     $("addShopBtn").addEventListener("click", addShop);
+    $("shopKeyFilter").addEventListener("change", function () {
+      shopsShowKeyOnly = $("shopKeyFilter").checked;
+      renderShopRosterNew();
+    });
     $("shopNameInput").addEventListener("keydown", function (e) {
       if (e.key === "Enter") { addShop(); }
     });
@@ -2762,6 +2996,17 @@ table.report th {
     });
 
     $("shopList").addEventListener("click", function (e) {
+      var keyBtn = e.target.closest("[data-action='toggle-key']");
+      if (keyBtn) {
+        var keyCard = keyBtn.closest(".shop-card");
+        var keyIndex = Number(keyCard.getAttribute("data-shop-index"));
+        var keyShop = state.shopLibrary[keyIndex];
+        if (!keyShop) { return; }
+        keyShop.key = !shopKey(keyShop);
+        saveState();
+        renderShopRosterNew();
+        return;
+      }
       var btn = e.target.closest("[data-action='remove-shop']");
       if (!btn) { return; }
       var card = btn.closest(".shop-card");
@@ -2769,7 +3014,7 @@ table.report th {
       if (!confirm("确定移除该店铺吗？")) { return; }
       state.shopLibrary.splice(index, 1);
       saveState();
-      renderShopRoster();
+      renderShopRosterNew();
     });
 
     $("shopDailyList").addEventListener("input", function (e) {
