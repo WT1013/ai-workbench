@@ -3541,7 +3541,10 @@ table.report th {
     var syncBtn = $("syncShopBtn");
     if (syncBtn) {
       syncBtn.addEventListener("click", function () {
-        window.location.href = SYNC_URL;
+        var win = window.open(SYNC_URL, "_blank");
+        if (!win) {
+          window.location.href = SYNC_URL;
+        }
       });
     }
 
