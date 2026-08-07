@@ -3554,6 +3554,10 @@ table.report th {
     });
     $("shopTabDaily").addEventListener("click", function () {
       shopsTab = "daily";
+      var d = fromKey(currentKey());
+      d.setDate(d.getDate() - 1);
+      $("dateInput").value = toKey(d);
+      renderToday();
       renderShopsView();
     });
     $("shopTabMonth").addEventListener("click", function () {
