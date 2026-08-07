@@ -1577,6 +1577,228 @@ table.report th {
     grid-template-columns: 1fr;
   }
 }
+
+.tab-btn[data-view="summary"]::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3v18h18'/%3E%3Cpath d='M7 14l4-4 3 3 5-6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3v18h18'/%3E%3Cpath d='M7 14l4-4 3 3 5-6'/%3E%3C/svg%3E");
+}
+
+.summary-metric-panel {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.summary-metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.summary-metric-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.summary-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summary-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--muted);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-legend-chip i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 9px;
+}
+
+.summary-metric-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.summary-chart {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.summary-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.summary-shop-card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.summary-shop-name {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-shop-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 4px 0 6px;
+}
+
+.summary-shop-info {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.delta {
+  font-weight: 700;
+}
+
+.delta.up {
+  color: #e11d48;
+}
+
+.delta.down {
+  color: #059669;
+}
+
+.delta.flat {
+  color: var(--muted);
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #c7c7cc;
+  display: inline-block;
+}
+
+@media (max-width: 900px) {
+  .summary-metric-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .summary-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.summary-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-overview-card {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.summary-overview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(30, 64, 175, 0.14);
+}
+
+.summary-overview-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.summary-overview-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--hairline);
+  font-size: 12.5px;
+}
+
+.summary-overview-row:last-child {
+  border-bottom: 0;
+}
+
+.summary-overview-row strong {
+  font-size: 14px;
+}
+
+.summary-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.summary-detail-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.summary-detail-card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+@media (max-width: 720px) {
+  .summary-overview {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 </head>
 <body>
@@ -2341,6 +2563,9 @@ table.report th {
     $("difficulty").value = dayData(key).difficulty || "";
     updateProgress(key);
     renderShopsView();
+    if ($("viewSummary")) {
+      renderSummary();
+    }
   }
 
   function currentKey() {
@@ -2780,18 +3005,353 @@ table.report th {
     nav.appendChild(btn);
   }
 
+  var SHOP_COLORS = ["#0a84ff", "#ff9500", "#34c759", "#af52de", "#ff3b30", "#30b0c7", "#8e8e93", "#e11d48"];
+
+  function shopMetricVal(dateKey, shopId, metric) {
+    var day = state.days[dateKey];
+    if (!day || !day.shopData || !day.shopData[shopId]) { return null; }
+    var v = day.shopData[shopId][metric];
+    if (v === undefined || v === null || String(v).trim() === "") { return null; }
+    var n = Number(v);
+    return isNaN(n) ? null : n;
+  }
+
+  function collectSummaryDates(shops) {
+    var ids = {};
+    shops.forEach(function (s) { ids[s.id] = true; });
+    return Object.keys(state.days).filter(function (k) {
+      if (k === "__library__") { return false; }
+      var day = state.days[k];
+      if (!day || !day.shopData) { return false; }
+      return Object.keys(day.shopData).some(function (id) { return ids[id]; });
+    }).sort();
+  }
+
+  function buildSummaryTab() {
+    var nav = document.querySelector(".tabs");
+    if (!nav || document.getElementById("tabSummary")) { return; }
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab-btn";
+    btn.id = "tabSummary";
+    btn.setAttribute("data-view", "summary");
+    btn.textContent = "汇总";
+    nav.appendChild(btn);
+  }
+
+  function buildSummaryView() {
+    var section = document.createElement("section");
+    section.id = "viewSummary";
+    section.hidden = true;
+    section.innerHTML =
+      '<div class="panel">' +
+      '  <div class="panel-head"><h2><span class="panel-icon blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>重点店铺汇总</h2><div class="progress-line"><span id="summaryRange"></span></div></div>' +
+      '  <div class="panel-body"><div id="summaryContent"></div></div>' +
+      '</div>';
+    document.querySelector("main").appendChild(section);
+  }
+
+  function summaryChartSvg(metric, dates, shops) {
+    var W = 680;
+    var H = 230;
+    var padL = 42;
+    var padR = 14;
+    var padT = 16;
+    var padB = 30;
+    var vals = [];
+    shops.forEach(function (s) {
+      dates.forEach(function (d) {
+        var v = shopMetricVal(d, s.id, metric);
+        if (v !== null) { vals.push(v); }
+      });
+    });
+    var min = vals.length ? Math.min.apply(null, vals) : 0;
+    var max = vals.length ? Math.max.apply(null, vals) : 1;
+    if (min === max) { min -= 1; max += 1; }
+    var span = max - min;
+    var xf = function (i) {
+      return dates.length === 1 ? (padL + (W - padL - padR) / 2) : padL + ((W - padL - padR) * i) / (dates.length - 1);
+    };
+    var yf = function (v) {
+      return padT + (H - padT - padB) * (1 - (v - min) / span);
+    };
+
+    var lines = "";
+    var dots = "";
+    shops.forEach(function (s, si) {
+      var color = SHOP_COLORS[si % SHOP_COLORS.length];
+      var parts = [];
+      var started = false;
+      dates.forEach(function (d, i) {
+        var v = shopMetricVal(d, s.id, metric);
+        if (v === null) { started = false; return; }
+        var px = xf(i).toFixed(1);
+        var py = yf(v).toFixed(1);
+        if (!started) {
+          parts.push("M" + px + "," + py);
+          started = true;
+        } else {
+          parts.push("L" + px + "," + py);
+        }
+        dots += '<circle cx="' + px + '" cy="' + py + '" r="3.5" fill="' + color + '"/>';
+      });
+      if (parts.length) {
+        lines += '<path d="' + parts.join(" ") + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+      }
+    });
+
+    var grid = "";
+    var labels = "";
+    var gi;
+    for (gi = 0; gi <= 4; gi += 1) {
+      var gv = min + (span * gi) / 4;
+      var gy = yf(gv).toFixed(1);
+      grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="rgba(60,60,67,0.12)" stroke-width="1"/>';
+      labels += '<text x="' + (padL - 8) + '" y="' + (Number(gy) + 4) + '" text-anchor="end" font-size="11" fill="#8e8e93">' + (Math.round(gv * 10) / 10) + '</text>';
+    }
+    dates.forEach(function (d, i) {
+      if (i % 2 === 0 || i === dates.length - 1) {
+        labels += '<text x="' + xf(i) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="#8e8e93">' + d.slice(5) + '</text>';
+      }
+    });
+
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="summary-chart-svg" role="img" aria-label="' + metric + '">' +
+      grid + labels + lines + dots + '</svg>';
+  }
+
+  function summaryDeltaHtml(a, b) {
+    if (a === null || b === null) { return '<span class="delta flat">—</span>'; }
+    var diff = Math.round((b - a) * 100) / 100;
+    if (diff === 0) { return '<span class="delta flat">持平</span>'; }
+    var cls = diff > 0 ? "up" : "down";
+    var arrow = diff > 0 ? "↑" : "↓";
+    return '<span class="delta ' + cls + '">' + arrow + " " + Math.abs(diff).toFixed(2) + "</span>";
+  }
+
+  function buildMetricPanel(metric, shops, dates) {
+    var panel = document.createElement("div");
+    panel.className = "summary-metric-panel";
+
+    var head = document.createElement("div");
+    head.className = "summary-metric-head";
+    var title = document.createElement("h3");
+    title.textContent = metric.label;
+    var legend = document.createElement("div");
+    legend.className = "summary-legend";
+    shops.forEach(function (s, si) {
+      var chip = document.createElement("span");
+      chip.className = "summary-legend-chip";
+      chip.innerHTML = '<i style="background:' + SHOP_COLORS[si % SHOP_COLORS.length] + '"></i>' + (s.name || "");
+      legend.appendChild(chip);
+    });
+    head.appendChild(title);
+    head.appendChild(legend);
+    panel.appendChild(head);
+
+    var body = document.createElement("div");
+    body.className = "summary-metric-body";
+    var chartWrap = document.createElement("div");
+    chartWrap.className = "summary-chart";
+    chartWrap.innerHTML = dates.length ? summaryChartSvg(metric.key, dates, shops) : '<div class="shops-empty">暂无数据</div>';
+    body.appendChild(chartWrap);
+
+    var cards = document.createElement("div");
+    cards.className = "summary-cards";
+    shops.forEach(function (s) {
+      var values = dates.map(function (d) {
+        return { date: d, v: shopMetricVal(d, s.id, metric.key) };
+      }).filter(function (x) { return x.v !== null; });
+      var latest = values.length ? values[values.length - 1] : null;
+      var prev = values.length > 1 ? values[values.length - 2] : null;
+      var first = values.length ? values[0] : null;
+      var card = document.createElement("div");
+      card.className = "summary-shop-card";
+      var name = document.createElement("div");
+      name.className = "summary-shop-name";
+      name.textContent = s.name;
+      var val = document.createElement("div");
+      val.className = "summary-shop-value";
+      val.textContent = latest ? String(latest.v) : "—";
+      var info = document.createElement("div");
+      info.className = "summary-shop-info";
+      info.innerHTML = '较前一日 ' + summaryDeltaHtml(prev ? prev.v : null, latest ? latest.v : null) +
+        ' <span class="dot"></span> 较月初 ' + summaryDeltaHtml(first ? first.v : null, latest ? latest.v : null);
+      card.appendChild(name);
+      card.appendChild(val);
+      card.appendChild(info);
+      cards.appendChild(card);
+    });
+    body.appendChild(cards);
+    panel.appendChild(body);
+    return panel;
+  }
+
+  function renderSummary() {
+    if (!$("viewSummary")) { return; }
+    var shops = (state.shopLibrary || []).filter(shopKey);
+    var dates = collectSummaryDates(shops);
+    $("summaryRange").textContent = dates.length ? dates[0] + " 至 " + dates[dates.length - 1] : "暂无数据";
+    var content = $("summaryContent");
+    content.innerHTML = "";
+    var metrics = [
+      { key: "adoptionRate", label: "采纳率 (%)" },
+      { key: "generationRate", label: "生成率 (%)" },
+      { key: "conversionRate", label: "转化率 (%)" }
+    ];
+    metrics.forEach(function (m) {
+      content.appendChild(buildMetricPanel(m, shops, dates));
+    });
+  }
+
+  var summaryShopId = null;
+
+  function renderSummaryOverview(shops, dates) {
+    var content = $("summaryContent");
+    var grid = document.createElement("div");
+    grid.className = "summary-overview";
+    shops.forEach(function (shop) {
+      var card = document.createElement("div");
+      card.className = "summary-overview-card";
+      card.setAttribute("data-shop-id", shop.id);
+      var name = document.createElement("div");
+      name.className = "summary-overview-name";
+      name.textContent = shop.name;
+      card.appendChild(name);
+      var metrics = [
+        { key: "adoptionRate", label: "采纳率" },
+        { key: "generationRate", label: "生成率" },
+        { key: "conversionRate", label: "转化率" }
+      ];
+      metrics.forEach(function (m) {
+        var values = dates.map(function (d) {
+          return { v: shopMetricVal(d, shop.id, m.key) };
+        }).filter(function (x) { return x.v !== null; });
+        var latest = values.length ? values[values.length - 1].v : null;
+        var prev = values.length > 1 ? values[values.length - 2].v : null;
+        var row = document.createElement("div");
+        row.className = "summary-overview-row";
+        var label = document.createElement("span");
+        label.textContent = m.label;
+        var val = document.createElement("strong");
+        val.textContent = latest === null ? "—" : String(latest);
+        var delta = document.createElement("span");
+        delta.innerHTML = summaryDeltaHtml(prev, latest);
+        row.appendChild(label);
+        row.appendChild(val);
+        row.appendChild(delta);
+        card.appendChild(row);
+      });
+      grid.appendChild(card);
+    });
+    content.appendChild(grid);
+  }
+
+  function buildDetailPanel(metric, shop, dates) {
+    var panel = document.createElement("div");
+    panel.className = "summary-metric-panel";
+    var head = document.createElement("div");
+    head.className = "summary-metric-head";
+    var title = document.createElement("h3");
+    title.textContent = metric.label;
+    var legend = document.createElement("div");
+    legend.className = "summary-legend";
+    var chip = document.createElement("span");
+    chip.className = "summary-legend-chip";
+    chip.innerHTML = '<i style="background:#0a84ff"></i>' + (shop.name || "");
+    legend.appendChild(chip);
+    head.appendChild(title);
+    head.appendChild(legend);
+    panel.appendChild(head);
+
+    var body = document.createElement("div");
+    body.className = "summary-metric-body";
+    var chartWrap = document.createElement("div");
+    chartWrap.className = "summary-chart";
+    chartWrap.innerHTML = dates.length ? summaryChartSvg(metric.key, dates, [shop]) : '<div class="shops-empty">暂无数据</div>';
+    body.appendChild(chartWrap);
+
+    var values = dates.map(function (d) {
+      return { v: shopMetricVal(d, shop.id, metric.key) };
+    }).filter(function (x) { return x.v !== null; });
+    var latest = values.length ? values[values.length - 1].v : null;
+    var prev = values.length > 1 ? values[values.length - 2].v : null;
+    var first = values.length ? values[0].v : null;
+    var card = document.createElement("div");
+    card.className = "summary-detail-card";
+    var val = document.createElement("div");
+    val.className = "summary-shop-value";
+    val.textContent = latest === null ? "—" : String(latest);
+    var info = document.createElement("div");
+    info.className = "summary-shop-info";
+    info.innerHTML = '较前一日 ' + summaryDeltaHtml(prev, latest) + ' <span class="dot"></span> 较月初 ' + summaryDeltaHtml(first, latest);
+    card.appendChild(val);
+    card.appendChild(info);
+    body.appendChild(card);
+    panel.appendChild(body);
+    return panel;
+  }
+
+  function renderSummaryDetail(shop, dates) {
+    var content = $("summaryContent");
+    var head = document.createElement("div");
+    head.className = "summary-detail-head";
+    var back = document.createElement("button");
+    back.type = "button";
+    back.className = "btn ghost";
+    back.setAttribute("data-action", "summary-back");
+    back.textContent = "← 返回";
+    var name = document.createElement("h3");
+    name.textContent = shop.name;
+    head.appendChild(back);
+    head.appendChild(name);
+    content.appendChild(head);
+    var metrics = [
+      { key: "adoptionRate", label: "采纳率 (%)" },
+      { key: "generationRate", label: "生成率 (%)" },
+      { key: "conversionRate", label: "转化率 (%)" }
+    ];
+    metrics.forEach(function (m) {
+      content.appendChild(buildDetailPanel(m, shop, dates));
+    });
+  }
+
+  function renderSummary() {
+    if (!$("viewSummary")) { return; }
+    var shops = (state.shopLibrary || []).filter(shopKey);
+    var dates = collectSummaryDates(shops);
+    $("summaryRange").textContent = dates.length ? dates[0] + " 至 " + dates[dates.length - 1] : "暂无数据";
+    var content = $("summaryContent");
+    content.innerHTML = "";
+    var shop = null;
+    if (summaryShopId) {
+      for (var i = 0; i < shops.length; i += 1) {
+        if (shops[i].id === summaryShopId) { shop = shops[i]; break; }
+      }
+    }
+    if (shop) {
+      renderSummaryDetail(shop, dates);
+    } else {
+      renderSummaryOverview(shops, dates);
+    }
+  }
+
   function switchTab(view) {
     $("viewToday").hidden = view !== "today";
     $("viewReport").hidden = view !== "report";
     $("viewShops").hidden = view !== "shops";
+    $("viewSummary").hidden = view !== "summary";
     $("tabToday").classList.toggle("active", view === "today");
     $("tabReport").classList.toggle("active", view === "report");
     $("tabShops").classList.toggle("active", view === "shops");
+    $("tabSummary").classList.toggle("active", view === "summary");
     if (view === "report") {
       renderReport();
     }
     if (view === "shops") {
       renderShopsView();
+    }
+    if (view === "summary") {
+      renderSummary();
     }
   }
 
@@ -2962,6 +3522,20 @@ table.report th {
     $("tabReport").addEventListener("click", function () { switchTab("report"); });
 
     $("tabShops").addEventListener("click", function () { switchTab("shops"); });
+    $("tabSummary").addEventListener("click", function () { switchTab("summary"); });
+
+    $("summaryContent").addEventListener("click", function (e) {
+      var back = e.target.closest("[data-action='summary-back']");
+      if (back) {
+        summaryShopId = null;
+        renderSummary();
+        return;
+      }
+      var card = e.target.closest("[data-shop-id]");
+      if (!card) { return; }
+      summaryShopId = card.getAttribute("data-shop-id");
+      renderSummary();
+    });
 
     $("shopTabRoster").addEventListener("click", function () {
       shopsTab = "roster";
@@ -3126,6 +3700,8 @@ table.report th {
     loadState();
     buildShopsView();
     buildShopsTab();
+    buildSummaryView();
+    buildSummaryTab();
     ensureShopLibrary();
     $("dateInput").value = todayKey();
     renderToday();
