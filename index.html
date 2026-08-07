@@ -3702,6 +3702,15 @@ table.report th {
     buildShopsTab();
     buildSummaryView();
     buildSummaryTab();
+    document.title = "远山工作台";
+    var brandTitle = document.querySelector(".brand h1");
+    if (brandTitle) { brandTitle.textContent = "远山工作台"; }
+    $("tabToday").textContent = "工作台";
+    $("tabSummary").textContent = "汇总";
+    $("shopTabDaily").textContent = "昨日数据";
+    var tabsNav = document.querySelector(".tabs");
+    tabsNav.insertBefore($("tabSummary"), tabsNav.firstChild);
+    tabsNav.appendChild($("tabReport"));
     ensureShopLibrary();
     $("dateInput").value = todayKey();
     renderToday();
