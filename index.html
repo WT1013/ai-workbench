@@ -2043,6 +2043,7 @@ table.report th {
 
   var CLOUD_URL = "https://kocuowtqklojxkhzlwpe.supabase.co";
   var CLOUD_KEY = "sb_publishable_EinGWbe2S8hHl0kqngnmIg_uyZ5xRnp";
+  var SYNC_URL = "http://10.10.12.157:8080/sync";
   var useCloud = location.protocol.indexOf("http") === 0;
 
   const TASKS = [
@@ -3537,6 +3538,13 @@ table.report th {
       renderSummary();
     });
 
+    var syncBtn = $("syncShopBtn");
+    if (syncBtn) {
+      syncBtn.addEventListener("click", function () {
+        window.location.href = SYNC_URL;
+      });
+    }
+
     $("shopTabRoster").addEventListener("click", function () {
       shopsTab = "roster";
       renderShopsView();
@@ -3702,6 +3710,18 @@ table.report th {
     buildShopsTab();
     buildSummaryView();
     buildSummaryTab();
+    var summaryHead = document.querySelector("#viewSummary .panel-head");
+    if (summaryHead) {
+      var syncActions = document.createElement("div");
+      syncActions.className = "report-actions";
+      var syncBtn = document.createElement("button");
+      syncBtn.type = "button";
+      syncBtn.className = "btn primary";
+      syncBtn.id = "syncShopBtn";
+      syncBtn.textContent = "同步昨日数据";
+      syncActions.appendChild(syncBtn);
+      summaryHead.appendChild(syncActions);
+    }
     document.title = "远山工作台";
     var brandTitle = document.querySelector(".brand h1");
     if (brandTitle) { brandTitle.textContent = "远山工作台"; }
