@@ -1357,6 +1357,16 @@ table.report tbody tr:hover {
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
+:root[data-theme="dark"] .summary-group {
+  background: rgba(44, 44, 46, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+:root[data-theme="dark"] .agg-tile {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 :root[data-theme="dark"] .summary-stat {
   background: rgba(255, 255, 255, 0.06) !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
@@ -2007,10 +2017,18 @@ table.report th {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  margin-top: 14px;
 }
 
 .summary-group {
-  margin-bottom: 22px;
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 18px;
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: 0 8px 28px rgba(30, 64, 175, 0.08);
+  padding: 14px 16px;
+  margin-bottom: 16px;
 }
 
 .summary-group:last-child {
@@ -2020,15 +2038,57 @@ table.report th {
 .summary-group-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 6px 2px 12px;
+  gap: 10px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.summary-group-head:hover h3 {
+.grp-accent {
+  width: 4px;
+  height: 22px;
+  border-radius: 3px;
+  flex: none;
+  background: #0a84ff;
+}
+
+.summary-group:not(.key-group) .grp-accent {
+  background: #8e8e93;
+}
+
+.grp-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.grp-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.14);
   color: #0a84ff;
+}
+
+.summary-group:not(.key-group) .grp-badge {
+  background: rgba(142, 142, 147, 0.18);
+  color: #6b6b70;
+}
+
+.grp-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.grp-count {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .group-chevron {
@@ -2043,29 +2103,37 @@ table.report th {
   transform: rotate(-90deg);
 }
 
-.summary-group.collapsed .summary-overview {
-  display: none;
+.summary-group-agg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
 }
 
-.summary-group-head h3 {
-  margin: 0;
-  font-size: 15px;
+.agg-tile {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.agg-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.agg-value {
+  font-size: 20px;
   font-weight: 700;
+  line-height: 1.1;
   color: var(--text);
 }
 
-.summary-group-head .group-tag {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(10, 132, 255, 0.12);
-  color: #0a84ff;
-}
-
-.summary-group-head .group-tag.other {
-  background: rgba(142, 142, 147, 0.16);
-  color: #6b6b70;
+.summary-group.collapsed .summary-group-agg,
+.summary-group.collapsed .summary-overview {
+  display: none;
 }
 
 .summary-overview-card {
@@ -3554,7 +3622,7 @@ table.report th {
     if (!groupShops.length) { return; }
     var groupKey = isKey ? "key" : "other";
     var sec = document.createElement("div");
-    sec.className = "summary-group";
+    sec.className = "summary-group" + (isKey ? " key-group" : "");
     if (summaryCollapsed[groupKey]) {
       sec.classList.add("collapsed");
     }
@@ -3565,19 +3633,59 @@ table.report th {
     secHead.setAttribute("tabindex", "0");
     secHead.setAttribute("aria-expanded", summaryCollapsed[groupKey] ? "false" : "true");
 
+    var accent = document.createElement("span");
+    accent.className = "grp-accent";
+
+    var titleRow = document.createElement("div");
+    titleRow.className = "grp-title";
+    var titleText = document.createElement("span");
+    titleText.textContent = title;
+    var badge = document.createElement("span");
+    badge.className = "grp-badge";
+    badge.textContent = isKey ? "重点" : "非重点";
+    titleRow.appendChild(titleText);
+    titleRow.appendChild(badge);
+
+    var meta = document.createElement("div");
+    meta.className = "grp-meta";
+    var count = document.createElement("span");
+    count.className = "grp-count";
+    count.textContent = groupShops.length + " 家";
     var chevron = document.createElement("span");
     chevron.className = "group-chevron";
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+    meta.appendChild(count);
+    meta.appendChild(chevron);
 
-    var h = document.createElement("h3");
-    h.textContent = title + "（" + groupShops.length + "）";
-    var tag = document.createElement("span");
-    tag.className = "group-tag" + (isKey ? "" : " other");
-    tag.textContent = isKey ? "重点" : "非重点";
-    secHead.appendChild(chevron);
-    secHead.appendChild(h);
-    secHead.appendChild(tag);
+    secHead.appendChild(accent);
+    secHead.appendChild(titleRow);
+    secHead.appendChild(meta);
     sec.appendChild(secHead);
+
+    var latestDate = dates.length ? dates[dates.length - 1] : null;
+    var aggMetrics = [
+      { key: "adoptionRate", label: "采纳率" },
+      { key: "generationRate", label: "生成率" },
+      { key: "conversionRate", label: "转化率" }
+    ];
+    var agg = document.createElement("div");
+    agg.className = "summary-group-agg";
+    aggMetrics.forEach(function (m) {
+      var vals = groupShops.map(function (s) { return shopMetricVal(latestDate, s.id, m.key); }).filter(function (v) { return v !== null; });
+      var avg = vals.length ? Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length) : null;
+      var tile = document.createElement("div");
+      tile.className = "agg-tile";
+      var lbl = document.createElement("div");
+      lbl.className = "agg-label";
+      lbl.textContent = m.label;
+      var av = document.createElement("div");
+      av.className = "agg-value";
+      av.textContent = avg === null ? "—" : String(avg);
+      tile.appendChild(lbl);
+      tile.appendChild(av);
+      agg.appendChild(tile);
+    });
+    sec.appendChild(agg);
 
     var grid = document.createElement("div");
     grid.className = "summary-overview";
