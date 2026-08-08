@@ -2017,6 +2017,29 @@ table.report th {
   align-items: center;
   gap: 8px;
   margin: 6px 2px 12px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.summary-group-head:hover h3 {
+  color: #0a84ff;
+}
+
+.group-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #8e8e93;
+  transition: transform 0.18s ease;
+}
+
+.summary-group.collapsed .group-chevron {
+  transform: rotate(-90deg);
+}
+
+.summary-group.collapsed .summary-overview {
+  display: none;
 }
 
 .summary-group-head h3 {
@@ -3495,18 +3518,41 @@ table.report th {
 
   var summaryShopId = null;
 
+  var summaryCollapsed = {};
+  try {
+    summaryCollapsed = JSON.parse(localStorage.getItem("summaryCollapsed") || "{}") || {};
+  } catch (e) {
+    summaryCollapsed = {};
+  }
+  function saveSummaryCollapsed() {
+    try { localStorage.setItem("summaryCollapsed", JSON.stringify(summaryCollapsed)); } catch (e) {}
+  }
+
   function appendSummaryGroup(content, title, isKey, groupShops, dates) {
     if (!groupShops.length) { return; }
+    var groupKey = isKey ? "key" : "other";
     var sec = document.createElement("div");
     sec.className = "summary-group";
+    if (summaryCollapsed[groupKey]) {
+      sec.classList.add("collapsed");
+    }
 
     var secHead = document.createElement("div");
     secHead.className = "summary-group-head";
+    secHead.setAttribute("role", "button");
+    secHead.setAttribute("tabindex", "0");
+    secHead.setAttribute("aria-expanded", summaryCollapsed[groupKey] ? "false" : "true");
+
+    var chevron = document.createElement("span");
+    chevron.className = "group-chevron";
+    chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+
     var h = document.createElement("h3");
     h.textContent = title + "（" + groupShops.length + "）";
     var tag = document.createElement("span");
     tag.className = "group-tag" + (isKey ? "" : " other");
     tag.textContent = isKey ? "重点" : "非重点";
+    secHead.appendChild(chevron);
     secHead.appendChild(h);
     secHead.appendChild(tag);
     sec.appendChild(secHead);
@@ -3549,6 +3595,17 @@ table.report th {
     });
     sec.appendChild(grid);
     content.appendChild(sec);
+
+    function toggleGroup() {
+      var collapsed = sec.classList.toggle("collapsed");
+      secHead.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      summaryCollapsed[groupKey] = collapsed;
+      saveSummaryCollapsed();
+    }
+    secHead.addEventListener("click", toggleGroup);
+    secHead.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleGroup(); }
+    });
   }
 
   function renderSummaryOverview(shops, dates) {
