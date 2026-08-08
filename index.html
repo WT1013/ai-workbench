@@ -265,6 +265,23 @@ button {
   box-shadow: 0 4px 14px rgba(10, 132, 255, 0.28);
 }
 
+.tab-btn[draggable="true"] {
+  cursor: grab;
+}
+
+.tab-btn[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.tab-btn.dragging {
+  opacity: 0.45;
+  background: rgba(10, 132, 255, 0.1);
+}
+
+.tab-btn.drag-over {
+  border-left: 3px solid #0a84ff;
+}
+
 .today-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -4000,6 +4017,75 @@ table.report th {
     $("shopMonthPanel").hidden = shopsTab !== "month";
   }
 
+  function saveTabOrder() {
+    var nav = document.querySelector(".tabs");
+    if (!nav) { return; }
+    var order = Array.prototype.map.call(nav.querySelectorAll(".tab-btn"), function (b) {
+      return b.getAttribute("data-view");
+    });
+    try { localStorage.setItem("tabOrder", JSON.stringify(order)); } catch (e) {}
+  }
+
+  function applySavedTabOrder(nav) {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem("tabOrder") || "null"); } catch (e) { saved = null; }
+    if (!saved || !saved.length) { return; }
+    var byView = {};
+    Array.prototype.forEach.call(nav.querySelectorAll(".tab-btn"), function (b) {
+      byView[b.getAttribute("data-view")] = b;
+    });
+    saved.forEach(function (v) {
+      if (byView[v]) { nav.appendChild(byView[v]); }
+    });
+  }
+
+  function initTabDrag(nav) {
+    var dragging = null;
+    var dragOverBtn = null;
+    Array.prototype.forEach.call(nav.querySelectorAll(".tab-btn"), function (btn) {
+      btn.setAttribute("draggable", "true");
+      btn.addEventListener("dragstart", function (e) {
+        dragging = btn;
+        btn.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        try { e.dataTransfer.setData("text/plain", btn.getAttribute("data-view")); } catch (err) {}
+      });
+      btn.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (!dragging || dragging === btn) { return; }
+        dragOverBtn = btn;
+        Array.prototype.forEach.call(nav.querySelectorAll(".tab-btn"), function (b) {
+          b.classList.toggle("drag-over", b === btn);
+        });
+      });
+      btn.addEventListener("drop", function (e) {
+        e.preventDefault();
+        if (!dragging || dragging === btn) { return; }
+        var siblings = Array.prototype.filter.call(nav.children, function (c) { return c.classList && c.classList.contains("tab-btn"); });
+        var from = siblings.indexOf(dragging);
+        var to = siblings.indexOf(btn);
+        if (from > to) {
+          nav.insertBefore(dragging, btn);
+        } else {
+          nav.insertBefore(dragging, btn.nextSibling);
+        }
+        saveTabOrder();
+        showToast("已调整顺序");
+      });
+      btn.addEventListener("dragend", function () {
+        if (dragging) { dragging.classList.remove("dragging"); }
+        dragging = null;
+        Array.prototype.forEach.call(nav.querySelectorAll(".tab-btn"), function (b) {
+          b.classList.remove("drag-over");
+        });
+      });
+      btn.addEventListener("dragleave", function () {
+        btn.classList.remove("drag-over");
+      });
+    });
+  }
+
   function bindEvents() {
     $("themeToggle").addEventListener("click", toggleTheme);
     $("monthPrev").addEventListener("click", function () {
@@ -4290,8 +4376,11 @@ table.report th {
     $("tabSummary").textContent = "汇总";
     $("shopTabDaily").textContent = "昨日数据";
     var tabsNav = document.querySelector(".tabs");
-    tabsNav.insertBefore($("tabSummary"), tabsNav.firstChild);
-    tabsNav.appendChild($("tabReport"));
+    applySavedTabOrder(tabsNav);
+    if (!window.__tabDragInit) {
+      initTabDrag(tabsNav);
+      window.__tabDragInit = true;
+    }
     ensureShopLibrary();
     $("dateInput").value = todayKey();
     renderToday();
