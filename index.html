@@ -4319,7 +4319,8 @@ table.report th {
 
     html += '<div class="report-actions" style="margin-bottom:14px;">' +
       '<button type="button" class="btn ghost" id="reportBackBtn">← 返回主页</button>' +
-      '<button type="button" class="btn primary" id="reportImgBtn">下载图片</button>' +
+      '<button type="button" class="btn primary" id="reportImgCopyBtn">复制图片</button>' +
+      '<button type="button" class="btn" id="reportImgBtn">下载图片</button>' +
       '<button type="button" class="btn" id="reportCopyBtn">复制日报</button>' +
       '<button type="button" class="btn" id="reportSaveBtn">保存草稿</button>' +
       '</div>';
@@ -4402,6 +4403,7 @@ table.report th {
       view.hidden = true;
       $("summaryContent").hidden = false;
     });
+    $("reportImgCopyBtn").addEventListener("click", copyReportImage);
     $("reportImgBtn").addEventListener("click", downloadReportImage);
     $("reportCopyBtn").addEventListener("click", copyDailyReport);
     $("reportSaveBtn").addEventListener("click", saveDailyReport);
@@ -4579,7 +4581,7 @@ table.report th {
     return h;
   }
 
-  function downloadReportImage() {
+  function renderReportCanvas() {
     var shot = $("reportShot");
     if (!shot) {
       shot = document.createElement("div");
@@ -4588,24 +4590,51 @@ table.report th {
       document.body.appendChild(shot);
     }
     shot.innerHTML = buildShotHtml();
+    return new Promise(function (resolve, reject) {
+      var run = function () {
+        html2canvas(shot, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false }).then(function (canvas) {
+          resolve(canvas);
+        }).catch(reject);
+      };
+      if (window.html2canvas) { run(); return; }
+      var s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+      s.onload = run;
+      s.onerror = function () { reject(new Error("load")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function downloadReportImage() {
     showToast("正在生成图片…");
-    var run = function () {
-      html2canvas(shot, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false }).then(function (canvas) {
-        var a = document.createElement("a");
-        a.download = "每日工作日报_" + yesterdayKeyOf(todayKey()) + ".png";
-        a.href = canvas.toDataURL("image/png");
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        showToast("图片已生成");
-      }).catch(function () { showToast("图片生成失败"); });
-    };
-    if (window.html2canvas) { run(); return; }
-    var s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-    s.onload = run;
-    s.onerror = function () { showToast("加载图片库失败，请检查网络"); };
-    document.head.appendChild(s);
+    renderReportCanvas().then(function (canvas) {
+      var a = document.createElement("a");
+      a.download = "每日工作日报_" + yesterdayKeyOf(todayKey()) + ".png";
+      a.href = canvas.toDataURL("image/png");
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast("图片已生成");
+    }).catch(function (err) {
+      showToast(err && err.message === "load" ? "加载图片库失败，请检查网络" : "图片生成失败");
+    });
+  }
+
+  function copyReportImage() {
+    showToast("正在生成图片…");
+    renderReportCanvas().then(function (canvas) {
+      canvas.toBlob(function (blob) {
+        if (!blob) { showToast("图片生成失败"); return; }
+        var item = new ClipboardItem({ "image/png": blob });
+        navigator.clipboard.write([item]).then(function () {
+          showToast("图片已复制，直接粘贴发送即可");
+        }).catch(function () {
+          showToast("复制失败，可改用下载图片");
+        });
+      }, "image/png");
+    }).catch(function (err) {
+      showToast(err && err.message === "load" ? "加载图片库失败，请检查网络" : "图片生成失败");
+    });
   }
 
   function initTheme() {
