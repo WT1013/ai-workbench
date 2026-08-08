@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a84ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="远山工作台">
+<link rel="manifest" href="manifest.json">
 <title>客服AI训练师工作台</title>
 <style>
 :root {
@@ -1032,6 +1037,332 @@ table.report tbody tr:hover {
   transform: translateX(-50%) translateY(0);
 }
 
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.loading-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--surface-inset);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Modal --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  padding: 24px;
+  max-width: 360px;
+  width: 88%;
+  transform: scale(0.92);
+  transition: transform 0.2s ease;
+}
+
+.modal-overlay.show .modal {
+  transform: scale(1);
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.modal-body {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* --- Theme toggle --- */
+.theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+/* --- Dark mode --- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --surface: #1c1c1e;
+    --surface-soft: #2c2c2e;
+    --surface-inset: #3a3a3c;
+    --hairline: rgba(255, 255, 255, 0.1);
+    --hairline-strong: rgba(255, 255, 255, 0.18);
+    --text: #ffffff;
+    --text-soft: #e5e5ea;
+    --muted: #98989f;
+  }
+
+  body {
+    background: linear-gradient(165deg, #0a1628 0%, #0d1f3c 50%, #0a0f1a 100%);
+  }
+
+  .panel {
+    background: rgba(44, 44, 46, 0.5) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .seg {
+    background: rgba(118, 118, 128, 0.24) !important;
+  }
+
+  .select, .input, textarea {
+    background: rgba(58, 58, 60, 0.6) !important;
+    color: var(--text);
+  }
+
+  .metric-field input {
+    background: rgba(58, 58, 60, 0.6) !important;
+    color: var(--text);
+  }
+
+  .summary-cell {
+    background: rgba(44, 44, 46, 0.4) !important;
+  }
+
+  table.report th {
+    background: rgba(44, 44, 46, 0.5) !important;
+    color: var(--muted);
+  }
+
+  .task-row:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .task-row.closed, .task-row.closed:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+
+  .closed-toggle:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .btn {
+    background: rgba(118, 118, 128, 0.24) !important;
+    color: var(--text);
+  }
+
+  .btn:hover {
+    background: rgba(118, 118, 128, 0.36) !important;
+  }
+
+  .topbar {
+    background: rgba(28, 28, 30, 0.72);
+  }
+
+  .tabs {
+    background: rgba(44, 44, 46, 0.45);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .modal {
+    background: rgba(44, 44, 46, 0.95);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .shop-card {
+    background: rgba(44, 44, 46, 0.5) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .shop-card.key-shop {
+    background: linear-gradient(180deg, rgba(255, 149, 0, 0.08), rgba(255, 149, 0, 0.04)) !important;
+  }
+
+  .summary-chart {
+    background: #1c1c1e !important;
+  }
+
+  .summary-shop-card, .summary-overview-card, .summary-detail-card {
+    background: rgba(44, 44, 46, 0.5) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .theme-toggle {
+    background: rgba(44, 44, 46, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--text-soft);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface-soft: #2c2c2e;
+  --surface-inset: #3a3a3c;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --hairline-strong: rgba(255, 255, 255, 0.18);
+  --text: #ffffff;
+  --text-soft: #e5e5ea;
+  --muted: #98989f;
+}
+
+:root[data-theme="dark"] body {
+  background: linear-gradient(165deg, #0a1628 0%, #0d1f3c 50%, #0a0f1a 100%);
+}
+
+:root[data-theme="dark"] .panel {
+  background: rgba(44, 44, 46, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+:root[data-theme="dark"] .seg {
+  background: rgba(118, 118, 128, 0.24) !important;
+}
+
+:root[data-theme="dark"] .select,
+:root[data-theme="dark"] .input,
+:root[data-theme="dark"] textarea {
+  background: rgba(58, 58, 60, 0.6) !important;
+  color: #fff;
+}
+
+:root[data-theme="dark"] .metric-field input {
+  background: rgba(58, 58, 60, 0.6) !important;
+  color: #fff;
+}
+
+:root[data-theme="dark"] .summary-cell {
+  background: rgba(44, 44, 46, 0.4) !important;
+}
+
+:root[data-theme="dark"] table.report th {
+  background: rgba(44, 44, 46, 0.5) !important;
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .task-row:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+:root[data-theme="dark"] .task-row.closed,
+:root[data-theme="dark"] .task-row.closed:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+:root[data-theme="dark"] .closed-toggle:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+:root[data-theme="dark"] .btn {
+  background: rgba(118, 118, 128, 0.24) !important;
+  color: #fff;
+}
+
+:root[data-theme="dark"] .btn:hover {
+  background: rgba(118, 118, 128, 0.36) !important;
+}
+
+:root[data-theme="dark"] .topbar {
+  background: rgba(28, 28, 30, 0.72);
+}
+
+:root[data-theme="dark"] .tabs {
+  background: rgba(44, 44, 46, 0.45);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .modal {
+  background: rgba(44, 44, 46, 0.95);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme="dark"] .shop-card {
+  background: rgba(44, 44, 46, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+:root[data-theme="dark"] .shop-card.key-shop {
+  background: linear-gradient(180deg, rgba(255, 149, 0, 0.08), rgba(255, 149, 0, 0.04)) !important;
+}
+
+:root[data-theme="dark"] .summary-chart {
+  background: #1c1c1e !important;
+}
+
+:root[data-theme="dark"] .summary-shop-card,
+:root[data-theme="dark"] .summary-overview-card,
+:root[data-theme="dark"] .summary-detail-card {
+  background: rgba(44, 44, 46, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+:root[data-theme="dark"] .theme-toggle {
+  background: rgba(44, 44, 46, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #e5e5ea;
+}
+
 .table-wrap::-webkit-scrollbar {
   height: 8px;
 }
@@ -1174,66 +1505,6 @@ table.report tbody tr:hover {
   .save-indicator {
     display: none;
   }
-}
-
-.panel {
-  background: rgba(255, 255, 255, 0.58);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 8px 32px rgba(30, 64, 175, 0.1);
-}
-
-.seg {
-  background: rgba(118, 118, 128, 0.14);
-}
-
-.select, .input, textarea {
-  background: rgba(255, 255, 255, 0.65);
-}
-
-.metric-field input {
-  background: rgba(255, 255, 255, 0.65);
-}
-
-.summary-cell {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-table.report th {
-  background: rgba(247, 247, 250, 0.65);
-}
-
-.task-row:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.task-row.closed, .task-row.closed:hover {
-  background: rgba(255, 255, 255, 0.4);
-}
-
-.closed-toggle:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.btn {
-  background: rgba(118, 118, 128, 0.16);
-}
-
-.btn:hover {
-  background: rgba(118, 118, 128, 0.24);
-}
-
-.btn.primary {
-  background: rgba(10, 132, 255, 0.9);
-}
-
-.btn.ghost {
-  background: rgba(10, 132, 255, 0.12);
-}
-
-.btn.danger {
-  background: rgba(255, 59, 48, 0.12);
 }
 
 .panel {
@@ -1818,6 +2089,11 @@ table.report th {
     </div>
     <div class="topbar-actions">
       <span class="save-indicator" id="saveIndicator">数据已保存</span>
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="切换主题" title="切换深色/浅色">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
     </div>
   </div>
 </header>
@@ -2002,6 +2278,22 @@ table.report th {
               </svg>
               导出CSV
             </button>
+            <button type="button" class="btn ghost" id="exportJsonBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <path d="M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              备份数据
+            </button>
+            <button type="button" class="btn ghost" id="importJsonBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v12"/>
+                <path d="M7 8l5-5 5 5"/>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              </svg>
+              恢复数据
+            </button>
+            <input type="file" id="importFileInput" accept=".json" hidden>
             <button type="button" class="btn danger" id="clearBtn">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -2034,6 +2326,17 @@ table.report th {
 
 <input type="date" id="dateInput" hidden aria-hidden="true">
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 class="modal-title" id="modalTitle"></h3>
+    <p class="modal-body" id="modalBody"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="modalCancel">取消</button>
+      <button type="button" class="btn danger" id="modalConfirm">确定</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -2213,6 +2516,8 @@ table.report th {
   }
 
   function fetchCloudState() {
+    var overlay = $("loadingOverlay");
+    if (overlay) { overlay.classList.add("show"); }
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 8000);
     fetch(CLOUD_URL + "/rest/v1/state?select=days,shifts&id=eq.1", {
@@ -2220,6 +2525,7 @@ table.report th {
       signal: controller.signal
     }).then(function (r) { return r.json(); }).then(function (rows) {
       clearTimeout(timer);
+      if (overlay) { overlay.classList.remove("show"); }
       if (rows && rows.length > 0) {
         state.days = rows[0].days || {};
         state.shifts = rows[0].shifts || {};
@@ -2233,6 +2539,7 @@ table.report th {
       renderToday();
     }).catch(function () {
       clearTimeout(timer);
+      if (overlay) { overlay.classList.remove("show"); }
       loadLocal();
     });
   }
@@ -2680,6 +2987,7 @@ table.report th {
   }
 
   var shopsShowKeyOnly = false;
+  var shopsSearchQuery = "";
 
   var KEY_SHOPS = [
     "松迅医疗器械专营店",
@@ -2701,7 +3009,11 @@ table.report th {
     });
     var keyCount = shops.filter(shopKey).length;
     var shown = shopsShowKeyOnly ? shops.filter(shopKey) : shops;
-    $("shopSummary").textContent = "共 " + shops.length + " 家 · 重点 " + keyCount + " 家" + (shopsShowKeyOnly ? " · 显示 " + shown.length + " 家" : "");
+    if (shopsSearchQuery) {
+      var q = shopsSearchQuery.toLowerCase();
+      shown = shown.filter(function (s) { return (s.name || "").toLowerCase().indexOf(q) >= 0 || (s.owner || "").toLowerCase().indexOf(q) >= 0; });
+    }
+    $("shopSummary").textContent = "共 " + shops.length + " 家 · 重点 " + keyCount + " 家" + (shown.length < shops.length ? " · 显示 " + shown.length + " 家" : "");
     list.innerHTML = "";
     shown.forEach(function (shop) {
       var isKey = shopKey(shop);
@@ -2770,58 +3082,6 @@ table.report th {
     }
   }
 
-  function renderShopRoster() {
-    var list = $("shopList");
-    var shops = state.shopLibrary || [];
-    $("shopSummary").textContent = "共 " + shops.length + " 家店铺";
-    list.innerHTML = "";
-    shops.forEach(function (shop, index) {
-      var card = document.createElement("div");
-      card.className = "shop-card";
-      card.setAttribute("data-shop-index", index);
-
-      var head = document.createElement("div");
-      head.className = "shop-card-head";
-      var nameInput = document.createElement("input");
-      nameInput.type = "text";
-      nameInput.className = "input";
-      nameInput.setAttribute("data-field", "name");
-      nameInput.value = shop.name || "";
-      nameInput.placeholder = "店名";
-      var ownerInput = document.createElement("input");
-      ownerInput.type = "text";
-      ownerInput.className = "input";
-      ownerInput.setAttribute("data-field", "owner");
-      ownerInput.value = shop.owner || "";
-      ownerInput.placeholder = "负责人";
-      var removeBtn = document.createElement("button");
-      removeBtn.type = "button";
-      removeBtn.className = "btn danger shop-remove";
-      removeBtn.setAttribute("data-action", "remove-shop");
-      removeBtn.textContent = "移除";
-      head.appendChild(nameInput);
-      head.appendChild(ownerInput);
-      head.appendChild(removeBtn);
-
-      var noteInput = document.createElement("input");
-      noteInput.type = "text";
-      noteInput.className = "input shop-note-input";
-      noteInput.setAttribute("data-field", "note");
-      noteInput.value = shop.note || "";
-      noteInput.placeholder = "备注";
-
-      card.appendChild(head);
-      card.appendChild(noteInput);
-      list.appendChild(card);
-    });
-    if (shops.length === 0) {
-      var empty = document.createElement("div");
-      empty.className = "shops-empty";
-      empty.textContent = "暂无店铺";
-      list.appendChild(empty);
-    }
-  }
-
   function addShop() {
     var name = $("shopNameInput").value.trim();
     if (!name) { showToast("请输入店铺名称"); return; }
@@ -2869,6 +3129,8 @@ table.report th {
         var input = document.createElement("input");
         input.type = "number";
         input.step = "any";
+        input.min = "0";
+        if (m.key !== "experienceScore") { input.max = "100"; }
         input.className = "input";
         input.setAttribute("data-field", m.key);
         input.setAttribute("data-shop-id", shop.id);
@@ -2967,7 +3229,7 @@ table.report th {
       '      <input type="text" id="shopOwnerInput" class="input" value="远山" placeholder="负责人">' +
       '      <button type="button" class="btn primary" id="addShopBtn">添加店铺</button>' +
       '    </div>' +
-      '    <div class="shop-filter-row"><label class="shop-filter-label"><input type="checkbox" id="shopKeyFilter"> 仅看重点店铺</label></div>' +
+      '    <div class="shop-filter-row"><input type="text" id="shopSearchInput" class="input" placeholder="搜索店铺名称" style="flex:1;margin-right:10px"><label class="shop-filter-label"><input type="checkbox" id="shopKeyFilter"> 仅看重点店铺</label></div>' +
       '    <div class="shop-list" id="shopList"></div>' +
       '    <div class="shop-daily-list" id="shopDailyList"></div>' +
       '    <div class="shop-month-panel" id="shopMonthPanel">' +
@@ -3187,23 +3449,6 @@ table.report th {
     return panel;
   }
 
-  function renderSummary() {
-    if (!$("viewSummary")) { return; }
-    var shops = (state.shopLibrary || []).filter(shopKey);
-    var dates = collectSummaryDates(shops);
-    $("summaryRange").textContent = dates.length ? dates[0] + " 至 " + dates[dates.length - 1] : "暂无数据";
-    var content = $("summaryContent");
-    content.innerHTML = "";
-    var metrics = [
-      { key: "adoptionRate", label: "采纳率 (%)" },
-      { key: "generationRate", label: "生成率 (%)" },
-      { key: "conversionRate", label: "转化率 (%)" }
-    ];
-    metrics.forEach(function (m) {
-      content.appendChild(buildMetricPanel(m, shops, dates));
-    });
-  }
-
   var summaryShopId = null;
 
   function renderSummaryOverview(shops, dates) {
@@ -3367,6 +3612,55 @@ table.report th {
     }, 1800);
   }
 
+  function showConfirm(title, body) {
+    return new Promise(function (resolve) {
+      var overlay = $("modalOverlay");
+      $("modalTitle").textContent = title;
+      $("modalBody").textContent = body;
+      overlay.classList.add("show");
+      var onConfirm = function () { cleanup(); resolve(true); };
+      var onCancel = function () { cleanup(); resolve(false); };
+      function cleanup() {
+        overlay.classList.remove("show");
+        $("modalConfirm").removeEventListener("click", onConfirm);
+        $("modalCancel").removeEventListener("click", onCancel);
+        overlay.removeEventListener("click", onOverlayClick);
+      }
+      function onOverlayClick(e) { if (e.target === overlay) { onCancel(); } }
+      $("modalConfirm").addEventListener("click", onConfirm);
+      $("modalCancel").addEventListener("click", onCancel);
+      overlay.addEventListener("click", onOverlayClick);
+    });
+  }
+
+  function initTheme() {
+    var saved = localStorage.getItem("wb-theme");
+    if (saved === "dark" || saved === "light") {
+      document.documentElement.setAttribute("data-theme", saved);
+    }
+    updateThemeIcon();
+  }
+
+  function updateThemeIcon() {
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark" ||
+      (!document.documentElement.getAttribute("data-theme") && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var icon = $("themeIcon");
+    if (isDark) {
+      icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+    } else {
+      icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    }
+  }
+
+  function toggleTheme() {
+    var current = document.documentElement.getAttribute("data-theme");
+    var isDark = current === "dark" || (!current && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = isDark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("wb-theme", next);
+    updateThemeIcon();
+  }
+
   function fallbackCopy(text) {
     var ta = document.createElement("textarea");
     ta.value = text;
@@ -3439,15 +3733,54 @@ table.report th {
     showToast("已导出CSV");
   }
 
+  function exportJson() {
+    var data = { version: 1, exportDate: new Date().toISOString(), days: state.days, shifts: state.shifts };
+    var json = JSON.stringify(data, null, 2);
+    var blob = new Blob([json], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "工作台备份_" + todayKey() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("已备份全部数据");
+  }
+
+  function importJson(file) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (!data || !data.days) { showToast("文件格式不正确"); return; }
+        showConfirm("恢复数据", "恢复数据将覆盖当前所有数据，确定继续吗？").then(function (ok) {
+          if (!ok) { return; }
+          state.days = data.days;
+          state.shifts = data.shifts || {};
+          saveState();
+          ensureShopLibrary(true);
+          renderToday();
+          renderReport();
+          showToast("数据已恢复");
+        });
+      } catch (err) {
+        showToast("文件解析失败");
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function clearHistory() {
-    if (confirm("确定清空所有日报记录吗？此操作不可恢复。")) {
+    showConfirm("清空历史", "确定清空所有日报记录吗？此操作不可恢复，建议先备份数据。").then(function (ok) {
+      if (!ok) { return; }
       state.days = {};
       saveState();
       renderReport();
-        ensureShopLibrary(true);
-        renderToday();
+      ensureShopLibrary(true);
+      renderToday();
       showToast("已清空历史记录");
-    }
+    });
   }
 
   function setShopsTabUI() {
@@ -3462,6 +3795,7 @@ table.report th {
   }
 
   function bindEvents() {
+    $("themeToggle").addEventListener("click", toggleTheme);
     $("monthPrev").addEventListener("click", function () {
       viewMonth -= 1;
       if (viewMonth < 0) {
@@ -3554,9 +3888,11 @@ table.report th {
     });
     $("shopTabDaily").addEventListener("click", function () {
       shopsTab = "daily";
-      var d = fromKey(currentKey());
-      d.setDate(d.getDate() - 1);
-      $("dateInput").value = toKey(d);
+      if (currentKey() === todayKey()) {
+        var d = fromKey(currentKey());
+        d.setDate(d.getDate() - 1);
+        $("dateInput").value = toKey(d);
+      }
       renderToday();
       renderShopsView();
     });
@@ -3568,6 +3904,10 @@ table.report th {
     $("addShopBtn").addEventListener("click", addShop);
     $("shopKeyFilter").addEventListener("change", function () {
       shopsShowKeyOnly = $("shopKeyFilter").checked;
+      renderShopRosterNew();
+    });
+    $("shopSearchInput").addEventListener("input", function (e) {
+      shopsSearchQuery = e.target.value.trim();
       renderShopRosterNew();
     });
     $("shopNameInput").addEventListener("keydown", function (e) {
@@ -3602,10 +3942,12 @@ table.report th {
       if (!btn) { return; }
       var card = btn.closest(".shop-card");
       var index = Number(card.getAttribute("data-shop-index"));
-      if (!confirm("确定移除该店铺吗？")) { return; }
-      state.shopLibrary.splice(index, 1);
-      saveState();
-      renderShopRosterNew();
+      showConfirm("移除店铺", "确定移除该店铺吗？").then(function (ok) {
+        if (!ok) { return; }
+        state.shopLibrary.splice(index, 1);
+        saveState();
+        renderShopRosterNew();
+      });
     });
 
     $("shopDailyList").addEventListener("input", function (e) {
@@ -3700,6 +4042,11 @@ table.report th {
 
     $("copyTodayBtn").addEventListener("click", copyTodayReport);
     $("exportCsvBtn").addEventListener("click", exportCsv);
+    $("exportJsonBtn").addEventListener("click", exportJson);
+    $("importJsonBtn").addEventListener("click", function () { $("importFileInput").click(); });
+    $("importFileInput").addEventListener("change", function (e) {
+      if (e.target.files && e.target.files[0]) { importJson(e.target.files[0]); e.target.value = ""; }
+    });
     $("clearBtn").addEventListener("click", clearHistory);
 
     $("reportBody").addEventListener("click", function (e) {
@@ -3712,6 +4059,7 @@ table.report th {
   }
 
   function init() {
+    initTheme();
     loadState();
     buildShopsView();
     buildShopsTab();
@@ -3743,6 +4091,9 @@ table.report th {
     renderToday();
     bindEvents();
     showToast("工作台已加载");
+    if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    }
   }
 
   init();
