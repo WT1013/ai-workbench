@@ -1357,6 +1357,11 @@ table.report tbody tr:hover {
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
+:root[data-theme="dark"] .summary-stat {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 :root[data-theme="dark"] .theme-toggle {
   background: rgba(44, 44, 46, 0.6);
   border-color: rgba(255, 255, 255, 0.15);
@@ -2001,7 +2006,7 @@ table.report th {
 .summary-overview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .summary-group {
@@ -2064,52 +2069,69 @@ table.report th {
 }
 
 .summary-overview-card {
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 14px;
-  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+  box-shadow: 0 10px 28px rgba(30, 64, 175, 0.1);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .summary-overview-card.key-shop {
-  border-left: 3px solid #0a84ff;
+  border-left: 4px solid #0a84ff;
 }
 
 .summary-overview-card:not(.key-shop) {
-  opacity: 0.92;
+  opacity: 0.94;
 }
 
 .summary-overview-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(30, 64, 175, 0.14);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px rgba(30, 64, 175, 0.16);
 }
 
 .summary-overview-name {
   font-weight: 700;
-  font-size: 15px;
-  margin-bottom: 10px;
+  font-size: 16px;
+  margin-bottom: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.summary-overview-row {
+.summary-metrics {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
-  gap: 8px;
-  align-items: center;
-  padding: 5px 0;
-  border-bottom: 1px dashed var(--hairline);
-  font-size: 12.5px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
-.summary-overview-row:last-child {
-  border-bottom: 0;
+.summary-stat {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 12px 8px 10px;
+  text-align: center;
 }
 
-.summary-overview-row strong {
-  font-size: 14px;
+.summary-stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.summary-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.summary-stat-delta {
+  margin-top: 5px;
+  font-size: 11px;
 }
 
 .summary-detail-head {
@@ -3572,25 +3594,31 @@ table.report th {
         { key: "generationRate", label: "生成率" },
         { key: "conversionRate", label: "转化率" }
       ];
+      var metricsWrap = document.createElement("div");
+      metricsWrap.className = "summary-metrics";
       metrics.forEach(function (m) {
         var values = dates.map(function (d) {
           return { v: shopMetricVal(d, shop.id, m.key) };
         }).filter(function (x) { return x.v !== null; });
         var latest = values.length ? values[values.length - 1].v : null;
         var prev = values.length > 1 ? values[values.length - 2].v : null;
-        var row = document.createElement("div");
-        row.className = "summary-overview-row";
-        var label = document.createElement("span");
+        var stat = document.createElement("div");
+        stat.className = "summary-stat";
+        var label = document.createElement("div");
+        label.className = "summary-stat-label";
         label.textContent = m.label;
-        var val = document.createElement("strong");
+        var val = document.createElement("div");
+        val.className = "summary-stat-value";
         val.textContent = latest === null ? "—" : String(latest);
-        var delta = document.createElement("span");
+        var delta = document.createElement("div");
+        delta.className = "summary-stat-delta";
         delta.innerHTML = summaryDeltaHtml(prev, latest);
-        row.appendChild(label);
-        row.appendChild(val);
-        row.appendChild(delta);
-        card.appendChild(row);
+        stat.appendChild(label);
+        stat.appendChild(val);
+        stat.appendChild(delta);
+        metricsWrap.appendChild(stat);
       });
+      card.appendChild(metricsWrap);
       grid.appendChild(card);
     });
     sec.appendChild(grid);
