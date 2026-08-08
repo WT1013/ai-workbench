@@ -1,4 +1,4 @@
-var CACHE_NAME = "yuanshan-workbench-v1";
+var CACHE_NAME = "yuanshan-workbench-v2";
 var ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", function (e) {
@@ -23,24 +23,23 @@ self.addEventListener("activate", function (e) {
   );
 });
 
+// 网络优先：在线时始终拉取最新内容，离线才回退缓存。
+// 这样每次部署后用户无需强刷即可看到更新，同时保留离线可用能力。
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") { return; }
   var url = new URL(e.request.url);
   if (url.origin !== location.origin) { return; }
   e.respondWith(
-    caches.match(e.request).then(function (cached) {
-      var fetchPromise = fetch(e.request).then(function (response) {
-        if (response && response.status === 200) {
-          var responseClone = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(e.request, responseClone);
-          });
-        }
-        return response;
-      }).catch(function () {
-        return cached;
-      });
-      return cached || fetchPromise;
+    fetch(e.request).then(function (response) {
+      if (response && response.status === 200) {
+        var copy = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) {
+          cache.put(e.request, copy);
+        });
+      }
+      return response;
+    }).catch(function () {
+      return caches.match(e.request);
     })
   );
 });
