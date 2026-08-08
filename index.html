@@ -1362,11 +1362,6 @@ table.report tbody tr:hover {
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-:root[data-theme="dark"] .agg-tile {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
 :root[data-theme="dark"] .summary-stat {
   background: rgba(255, 255, 255, 0.06) !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
@@ -2103,35 +2098,6 @@ table.report th {
   transform: rotate(-90deg);
 }
 
-.summary-group-agg {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.agg-tile {
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
-  padding: 10px 8px;
-  text-align: center;
-}
-
-.agg-label {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.agg-value {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--text);
-}
-
-.summary-group.collapsed .summary-group-agg,
 .summary-group.collapsed .summary-overview {
   display: none;
 }
@@ -3666,31 +3632,6 @@ table.report th {
     secHead.appendChild(titleRow);
     secHead.appendChild(meta);
     sec.appendChild(secHead);
-
-    var latestDate = dates.length ? dates[dates.length - 1] : null;
-    var aggMetrics = [
-      { key: "adoptionRate", label: "采纳率" },
-      { key: "generationRate", label: "生成率" },
-      { key: "conversionRate", label: "转化率" }
-    ];
-    var agg = document.createElement("div");
-    agg.className = "summary-group-agg";
-    aggMetrics.forEach(function (m) {
-      var vals = groupShops.map(function (s) { return shopMetricVal(latestDate, s.id, m.key); }).filter(function (v) { return v !== null; });
-      var avg = vals.length ? Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length) : null;
-      var tile = document.createElement("div");
-      tile.className = "agg-tile";
-      var lbl = document.createElement("div");
-      lbl.className = "agg-label";
-      lbl.textContent = m.label;
-      var av = document.createElement("div");
-      av.className = "agg-value";
-      av.textContent = avg === null ? "—" : String(avg) + pctSuffix(m.key);
-      tile.appendChild(lbl);
-      tile.appendChild(av);
-      agg.appendChild(tile);
-    });
-    sec.appendChild(agg);
 
     var grid = document.createElement("div");
     grid.className = "summary-overview";
