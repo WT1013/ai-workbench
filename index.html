@@ -2004,6 +2004,42 @@ table.report th {
   gap: 12px;
 }
 
+.summary-group {
+  margin-bottom: 22px;
+}
+
+.summary-group:last-child {
+  margin-bottom: 0;
+}
+
+.summary-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 2px 12px;
+}
+
+.summary-group-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.summary-group-head .group-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.12);
+  color: #0a84ff;
+}
+
+.summary-group-head .group-tag.other {
+  background: rgba(142, 142, 147, 0.16);
+  color: #6b6b70;
+}
+
 .summary-overview-card {
   background: rgba(255, 255, 255, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.7);
@@ -2014,6 +2050,14 @@ table.report th {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.summary-overview-card.key-shop {
+  border-left: 3px solid #0a84ff;
+}
+
+.summary-overview-card:not(.key-shop) {
+  opacity: 0.92;
 }
 
 .summary-overview-card:hover {
@@ -3308,7 +3352,7 @@ table.report th {
     section.hidden = true;
     section.innerHTML =
       '<div class="panel">' +
-      '  <div class="panel-head"><h2><span class="panel-icon blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>重点店铺汇总</h2><div class="progress-line"><span id="summaryRange"></span></div></div>' +
+      '  <div class="panel-head"><h2><span class="panel-icon blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>店铺汇总</h2><div class="progress-line"><span id="summaryRange"></span></div></div>' +
       '  <div class="panel-body"><div id="summaryContent"></div></div>' +
       '</div>';
     document.querySelector("main").appendChild(section);
@@ -3451,13 +3495,27 @@ table.report th {
 
   var summaryShopId = null;
 
-  function renderSummaryOverview(shops, dates) {
-    var content = $("summaryContent");
+  function appendSummaryGroup(content, title, isKey, groupShops, dates) {
+    if (!groupShops.length) { return; }
+    var sec = document.createElement("div");
+    sec.className = "summary-group";
+
+    var secHead = document.createElement("div");
+    secHead.className = "summary-group-head";
+    var h = document.createElement("h3");
+    h.textContent = title + "（" + groupShops.length + "）";
+    var tag = document.createElement("span");
+    tag.className = "group-tag" + (isKey ? "" : " other");
+    tag.textContent = isKey ? "重点" : "非重点";
+    secHead.appendChild(h);
+    secHead.appendChild(tag);
+    sec.appendChild(secHead);
+
     var grid = document.createElement("div");
     grid.className = "summary-overview";
-    shops.forEach(function (shop) {
+    groupShops.forEach(function (shop) {
       var card = document.createElement("div");
-      card.className = "summary-overview-card";
+      card.className = "summary-overview-card" + (shopKey(shop) ? " key-shop" : "");
       card.setAttribute("data-shop-id", shop.id);
       var name = document.createElement("div");
       name.className = "summary-overview-name";
@@ -3489,7 +3547,16 @@ table.report th {
       });
       grid.appendChild(card);
     });
-    content.appendChild(grid);
+    sec.appendChild(grid);
+    content.appendChild(sec);
+  }
+
+  function renderSummaryOverview(shops, dates) {
+    var content = $("summaryContent");
+    var keyList = shops.filter(shopKey);
+    var otherList = shops.filter(function (s) { return !shopKey(s); });
+    appendSummaryGroup(content, "重点店铺", true, keyList, dates);
+    appendSummaryGroup(content, "非重点店铺", false, otherList, dates);
   }
 
   function buildDetailPanel(metric, shop, dates) {
@@ -3563,7 +3630,7 @@ table.report th {
 
   function renderSummary() {
     if (!$("viewSummary")) { return; }
-    var shops = (state.shopLibrary || []).filter(shopKey);
+    var shops = (state.shopLibrary || []).slice();
     var dates = collectSummaryDates(shops);
     $("summaryRange").textContent = dates.length ? dates[0] + " 至 " + dates[dates.length - 1] : "暂无数据";
     var content = $("summaryContent");
