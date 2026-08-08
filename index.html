@@ -2210,6 +2210,185 @@ table.report th {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- 日报 --- */
+.report-hero {
+  background: linear-gradient(135deg, #3b6d11 0%, #639922 55%, #97c459 100%);
+  border-radius: 18px;
+  padding: 22px 24px 18px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.report-hero-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.report-hero-sub {
+  font-size: 12.5px;
+  opacity: 0.85;
+  margin-top: 6px;
+}
+
+.report-hero-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.report-hero-card {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.report-hero-label {
+  font-size: 11.5px;
+  opacity: 0.8;
+}
+
+.report-hero-value {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.report-hero-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 4px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+}
+
+.report-sec {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 20px 0 10px;
+}
+
+.report-table-wrap {
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.report-daily-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.report-daily-table th {
+  background: rgba(247, 247, 250, 0.65);
+  padding: 9px 12px;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.report-daily-table td {
+  padding: 8px 12px;
+  text-align: center;
+  border-top: 1px solid var(--hairline);
+}
+
+.report-daily-table tr.has-down {
+  background: rgba(245, 196, 179, 0.14);
+}
+
+.r-val {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.r-delta {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.r-up { color: #e11d48; }
+.r-down { color: #059669; }
+.r-flat { color: var(--muted); }
+
+.report-textarea {
+  width: 100%;
+  resize: vertical;
+  font-size: 13.5px;
+}
+
+.report-todo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  background: rgba(255, 229, 143, 0.18);
+  border: 1px solid rgba(250, 204, 21, 0.28);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+
+.report-todo-tag {
+  background: #e11d48;
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.report-todo-detail {
+  flex: 1;
+}
+
+.report-todo-priority {
+  color: #e11d48;
+  font-weight: 600;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+.report-todo-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 10px 0;
+}
+
+:root[data-theme="dark"] .report-hero {
+  background: linear-gradient(135deg, #173404 0%, #3b6d11 55%, #639922 100%);
+}
+
+:root[data-theme="dark"] .report-daily-table th {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="dark"] .report-daily-table td {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .report-todo-item {
+  background: rgba(250, 204, 21, 0.08);
+  border-color: rgba(250, 204, 21, 0.2);
+}
+
+:root[data-theme="dark"] .report-hero-name {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
 </style>
 </head>
 <body>
@@ -3443,7 +3622,7 @@ table.report th {
     btn.className = "tab-btn";
     btn.id = "tabSummary";
     btn.setAttribute("data-view", "summary");
-    btn.textContent = "汇总";
+    btn.textContent = "主页";
     nav.appendChild(btn);
   }
 
@@ -3453,8 +3632,8 @@ table.report th {
     section.hidden = true;
     section.innerHTML =
       '<div class="panel">' +
-      '  <div class="panel-head"><h2><span class="panel-icon blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>店铺汇总</h2><div class="progress-line"><span id="summaryRange"></span></div></div>' +
-      '  <div class="panel-body"><div id="summaryContent"></div></div>' +
+      '  <div class="panel-head"><h2><span class="panel-icon blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>主页</h2><div class="progress-line"><span id="summaryRange"></span></div></div>' +
+      '  <div class="panel-body"><div id="summaryContent"></div><div id="dailyReportView" hidden></div></div>' +
       '</div>';
     document.querySelector("main").appendChild(section);
   }
@@ -3856,6 +4035,225 @@ table.report th {
     });
   }
 
+  var REPORT_PROFILE_KEY = "csa-report-profile";
+  var REPORT_DRAFT_KEY = "csa-report-draft-";
+
+  function reportProfile() {
+    try { return JSON.parse(localStorage.getItem(REPORT_PROFILE_KEY) || "null") || { name: "远山" }; }
+    catch (e) { return { name: "远山" }; }
+  }
+
+  function reportDraft(dateKey) {
+    try { return JSON.parse(localStorage.getItem(REPORT_DRAFT_KEY + dateKey) || "null") || {}; }
+    catch (e) { return {}; }
+  }
+
+  function saveReportDraft(dateKey, draft) {
+    try { localStorage.setItem(REPORT_DRAFT_KEY + dateKey, JSON.stringify(draft)); } catch (e) {}
+  }
+
+  function yesterdayKeyOf(dateKey) {
+    var d = fromKey(dateKey);
+    d.setDate(d.getDate() - 1);
+    return toKey(d);
+  }
+
+  function reportDeltaText(prev, latest) {
+    if (prev === null || latest === null) { return "—"; }
+    var diff = Math.round((latest - prev) * 100) / 100;
+    if (diff === 0) { return "持平"; }
+    return (diff > 0 ? "↑ " : "↓ ") + Math.abs(diff);
+  }
+
+  function renderDailyReport() {
+    var view = $("dailyReportView");
+    if (!view) { return; }
+    var dateKey = todayKey();
+    var prevKey = yesterdayKeyOf(dateKey);
+    var shops = (state.shopLibrary || []).filter(shopKey);
+    var profile = reportProfile();
+    var draft = reportDraft(dateKey);
+
+    var html = "";
+
+    html += '<div class="report-actions" style="margin-bottom:14px;">' +
+      '<button type="button" class="btn ghost" id="reportBackBtn">← 返回主页</button>' +
+      '<button type="button" class="btn" id="reportCopyBtn">复制日报</button>' +
+      '<button type="button" class="btn primary" id="reportSaveBtn">保存草稿</button>' +
+      '</div>';
+
+    html += '<div class="report-hero">' +
+      '<div class="report-hero-title">每日工作日报</div>' +
+      '<div class="report-hero-sub">客服 AI 训练师 · ' + dateKey + '（' + weekdayLabel(dateKey) + '）</div>' +
+      '<div class="report-hero-cards">' +
+      '<div class="report-hero-card"><div class="report-hero-label">姓名</div>' +
+      '<input type="text" id="reportName" class="input report-hero-name" value="' + escapeHtml(profile.name || "远山") + '"></div>' +
+      '<div class="report-hero-card"><div class="report-hero-label">重点店铺数</div><div class="report-hero-value">' + shops.length + ' 家</div></div>' +
+      '</div></div>';
+
+    html += '<h3 class="report-sec">一、重点店铺核心指标</h3>';
+    html += '<div class="report-table-wrap"><table class="report-daily-table"><thead><tr>' +
+      '<th style="text-align:left">店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th>' +
+      '</tr></thead><tbody>';
+    var metrics = [
+      { key: "adoptionRate", label: "采纳率" },
+      { key: "generationRate", label: "生成率" },
+      { key: "conversionRate", label: "转化率" }
+    ];
+    var todoItems = [];
+    shops.forEach(function (shop) {
+      var hasDown = false;
+      var downTexts = [];
+      var rowCells = '<td style="text-align:left">' + escapeHtml(shop.name) + '</td>';
+      metrics.forEach(function (m) {
+        var latest = shopMetricVal(dateKey, shop.id, m.key);
+        var prev = shopMetricVal(prevKey, shop.id, m.key);
+        var deltaCls = "";
+        var deltaTxt = reportDeltaText(prev, latest);
+        if (latest !== null && prev !== null) {
+          var diff = Math.round((latest - prev) * 100) / 100;
+          if (diff < 0) {
+            hasDown = true;
+            downTexts.push({ label: m.label, diff: Math.abs(diff) });
+          }
+          if (diff > 0) { deltaCls = " r-up"; } else if (diff < 0) { deltaCls = " r-down"; } else { deltaCls = " r-flat"; }
+        } else { deltaCls = " r-flat"; }
+        var valTxt = latest === null ? "—" : String(latest) + pctSuffix(m.key);
+        rowCells += '<td><div class="r-val">' + valTxt + '</div><div class="r-delta' + deltaCls + '">' + deltaTxt + '</div></td>';
+      });
+      html += '<tr' + (hasDown ? ' class="has-down"' : '') + '>' + rowCells + '</tr>';
+      if (hasDown) {
+        var worst = downTexts.reduce(function (a, b) { return b.diff > a.diff ? b : a; }, downTexts[0]);
+        var detail = downTexts.map(function (d) { return d.label + " ↓ " + d.diff; }).join("、");
+        todoItems.push({ name: shop.name, detail: detail, worst: worst });
+      }
+    });
+    html += '</tbody></table></div>';
+
+    html += '<h3 class="report-sec">二、当日配置总结</h3>';
+    html += '<textarea id="reportSummary" class="input report-textarea" rows="3" placeholder="简要说明当天做了哪些配置：话术调优、知识库更新、打标规则等">' + escapeHtml(draft.summary || "") + '</textarea>';
+
+    html += '<h3 class="report-sec">三、问题反馈</h3>';
+    html += '<textarea id="reportFeedback" class="input report-textarea" rows="3" placeholder="记录前置接待或调优时遇到的问题">' + escapeHtml(draft.feedback || "") + '</textarea>';
+
+    html += '<h3 class="report-sec">四、明日待办 · 调优重点</h3>';
+    if (todoItems.length) {
+      html += '<div class="report-todo">';
+      todoItems.forEach(function (item) {
+        var worstTxt = item.worst.label === "转化率" ? "明日优先调优转化话术" :
+          (item.worst.label === "生成率" ? "明日优先调优生成话术" : "明日优先调优采纳话术");
+        html += '<div class="report-todo-item"><span class="report-todo-tag">' + escapeHtml(item.name) + '</span>' +
+          '<span class="report-todo-detail">' + escapeHtml(item.detail) + '</span>' +
+          (item.worst.diff >= 3 ? '<span class="report-todo-priority">' + worstTxt + '</span>' : '') +
+          '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="report-todo-empty">今日重点店铺指标均未下降，无明日调优重点</div>';
+    }
+
+    view.innerHTML = html;
+    $("summaryContent").hidden = true;
+    view.hidden = false;
+
+    $("reportBackBtn").addEventListener("click", function () {
+      view.hidden = true;
+      $("summaryContent").hidden = false;
+    });
+    $("reportCopyBtn").addEventListener("click", copyDailyReport);
+    $("reportSaveBtn").addEventListener("click", saveDailyReport);
+    $("reportName").addEventListener("change", function () {
+      var p = reportProfile();
+      p.name = $("reportName").value.trim() || "远山";
+      try { localStorage.setItem(REPORT_PROFILE_KEY, JSON.stringify(p)); } catch (e) {}
+      saveDailyReport();
+    });
+  }
+
+  function collectDailyReportText() {
+    var dateKey = todayKey();
+    var prevKey = yesterdayKeyOf(dateKey);
+    var shops = (state.shopLibrary || []).filter(shopKey);
+    var profile = reportProfile();
+    var draft = reportDraft(dateKey);
+    var name = ($("reportName") ? $("reportName").value.trim() : "") || profile.name || "远山";
+    var lines = [];
+    lines.push("每日工作日报");
+    lines.push("客服 AI 训练师 · " + dateKey + "（" + weekdayLabel(dateKey) + "）");
+    lines.push("");
+    lines.push("姓名：" + name + "｜重点店铺：" + shops.length + " 家");
+    lines.push("");
+    lines.push("一、重点店铺核心指标");
+    lines.push("| 店铺 | 采纳率 | 生成率 | 转化率 |");
+    lines.push("| --- | --- | --- | --- |");
+    var metrics = [
+      { key: "adoptionRate", label: "采纳率" },
+      { key: "generationRate", label: "生成率" },
+      { key: "conversionRate", label: "转化率" }
+    ];
+    var todoItems = [];
+    shops.forEach(function (shop) {
+      var cells = ["| " + shop.name];
+      var downTexts = [];
+      metrics.forEach(function (m) {
+        var latest = shopMetricVal(dateKey, shop.id, m.key);
+        var prev = shopMetricVal(prevKey, shop.id, m.key);
+        var valTxt = latest === null ? "—" : String(latest) + pctSuffix(m.key);
+        var deltaTxt = reportDeltaText(prev, latest);
+        cells.push(valTxt + "（" + deltaTxt + "）");
+        if (latest !== null && prev !== null) {
+          var diff = Math.round((latest - prev) * 100) / 100;
+          if (diff < 0) { downTexts.push({ label: m.label, diff: Math.abs(diff) }); }
+        }
+      });
+      cells.push(" |");
+      lines.push(cells.join(" | "));
+      if (downTexts.length) {
+        var worst = downTexts.reduce(function (a, b) { return b.diff > a.diff ? b : a; }, downTexts[0]);
+        todoItems.push({ name: shop.name, detail: downTexts.map(function (d) { return d.label + "↓" + d.diff; }).join("、"), worst: worst });
+      }
+    });
+    lines.push("");
+    lines.push("二、当日配置总结");
+    lines.push(($("reportSummary") ? $("reportSummary").value.trim() : "") || draft.summary || "（无）");
+    lines.push("");
+    lines.push("三、问题反馈");
+    lines.push(($("reportFeedback") ? $("reportFeedback").value.trim() : "") || draft.feedback || "（无）");
+    lines.push("");
+    lines.push("四、明日待办 · 调优重点");
+    if (todoItems.length) {
+      todoItems.forEach(function (item) {
+        var worstTxt = item.worst.label === "转化率" ? "明日优先调优转化话术" :
+          (item.worst.label === "生成率" ? "明日优先调优生成话术" : "明日优先调优采纳话术");
+        lines.push("- " + item.name + "：" + item.detail + (item.worst.diff >= 3 ? "，" + worstTxt : ""));
+      });
+    } else {
+      lines.push("今日重点店铺指标均未下降，无明日调优重点");
+    }
+    return lines.join("\n");
+  }
+
+  function saveDailyReport() {
+    var dateKey = todayKey();
+    var draft = reportDraft(dateKey);
+    if ($("reportSummary")) { draft.summary = $("reportSummary").value; }
+    if ($("reportFeedback")) { draft.feedback = $("reportFeedback").value; }
+    saveReportDraft(dateKey, draft);
+    showToast("日报草稿已保存");
+  }
+
+  function copyDailyReport() {
+    var text = collectDailyReportText();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast("日报已复制");
+      }).catch(function () { fallbackCopy(text); showToast("日报已复制"); });
+    } else {
+      fallbackCopy(text);
+      showToast("日报已复制");
+    }
+  }
+
   function initTheme() {
     var saved = localStorage.getItem("wb-theme");
     if (saved === "dark" || saved === "light") {
@@ -4174,6 +4572,11 @@ table.report th {
       });
     }
 
+    var genReportBtn = $("genReportBtn");
+    if (genReportBtn) {
+      genReportBtn.addEventListener("click", renderDailyReport);
+    }
+
     $("shopTabRoster").addEventListener("click", function () {
       shopsTab = "roster";
       renderShopsView();
@@ -4361,9 +4764,15 @@ table.report th {
     if (summaryHead) {
       var syncActions = document.createElement("div");
       syncActions.className = "report-actions";
+      var reportBtn = document.createElement("button");
+      reportBtn.type = "button";
+      reportBtn.className = "btn primary";
+      reportBtn.id = "genReportBtn";
+      reportBtn.textContent = "生成日报";
+      syncActions.appendChild(reportBtn);
       var syncBtn = document.createElement("button");
       syncBtn.type = "button";
-      syncBtn.className = "btn primary";
+      syncBtn.className = "btn";
       syncBtn.id = "syncShopBtn";
       syncBtn.textContent = "同步昨日数据";
       syncActions.appendChild(syncBtn);
@@ -4373,7 +4782,7 @@ table.report th {
     var brandTitle = document.querySelector(".brand h1");
     if (brandTitle) { brandTitle.textContent = "远山工作台"; }
     $("tabToday").textContent = "工作台";
-    $("tabSummary").textContent = "汇总";
+    $("tabSummary").textContent = "主页";
     $("shopTabDaily").textContent = "昨日数据";
     var tabsNav = document.querySelector(".tabs");
     applySavedTabOrder(tabsNav);
