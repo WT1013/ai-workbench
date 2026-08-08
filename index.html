@@ -2429,31 +2429,18 @@ table.report th {
   left: -10000px;
   top: 0;
   width: 660px;
-  background: linear-gradient(180deg, #f6faf1 0%, #eef5e6 100%);
+  background: linear-gradient(180deg, #3B6D11 0%, #639922 10%, #97C459 18%, #E5DDB8 28%, #FBF2E4 45%, #FFF8EF 100%);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
   overflow: hidden;
-  padding: 16px 16px 18px;
+  padding: 0 0 18px;
   box-sizing: border-box;
 }
 
 .shot-hero {
   position: relative;
-  background: linear-gradient(135deg, #2e5a0e 0%, #4a8418 50%, #76b13c 100%);
-  border-radius: 18px;
   color: #fff;
-  padding: 20px 22px 16px;
+  padding: 22px 24px 0;
   overflow: hidden;
-}
-
-.shot-hero::after {
-  content: "";
-  position: absolute;
-  right: -30px;
-  top: -40px;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .shot-hero-top {
@@ -2483,7 +2470,7 @@ table.report th {
 .shot-meta {
   display: flex;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 12px;
   position: relative;
   z-index: 1;
 }
@@ -2497,7 +2484,14 @@ table.report th {
 }
 
 .shot-body {
-  padding: 16px 4px 4px;
+  padding: 26px 20px 4px;
+}
+
+.shot-note {
+  font-size: 12px;
+  color: #5c4a33;
+  margin: 0 0 12px;
+  padding-left: 2px;
 }
 
 .shot-sec {
@@ -2506,7 +2500,7 @@ table.report th {
   gap: 8px;
   font-size: 14px;
   font-weight: 700;
-  color: #2e5a0e;
+  color: #3B6D11;
   margin: 16px 0 9px;
 }
 
@@ -2523,9 +2517,9 @@ table.report th {
 }
 
 .shot-card {
-  background: #ffffff;
+  background: #FFFDF8;
+  border: 1px solid rgba(99, 153, 34, 0.22);
   border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(46, 90, 14, 0.08);
   overflow: hidden;
 }
 
@@ -2547,7 +2541,7 @@ table.report th {
 .shot-table td {
   padding: 9px 12px;
   text-align: center;
-  border-top: 1px solid #eef2e7;
+  border-top: 1px solid #f2e8da;
 }
 
 .shot-table td:first-child {
@@ -2573,12 +2567,12 @@ table.report th {
 .shot-text {
   font-size: 13px;
   line-height: 1.65;
-  color: #444;
+  color: #5c4a33;
   padding: 13px 16px;
   word-break: break-word;
   white-space: pre-wrap;
-  border-left: 3px solid #76b13c;
-  background: #fafcf7;
+  border-left: 3px solid #639922;
+  background: #FFF8EE;
 }
 
 .shot-todo {
@@ -2592,34 +2586,33 @@ table.report th {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  background: #fff5f2;
-  border: 1px solid #f5d5cb;
+  background: #FBF2E4;
+  border: 1px solid rgba(216, 180, 130, 0.4);
   border-radius: 12px;
   padding: 10px 14px;
 }
 
 .shot-todo-tag {
-  background: linear-gradient(135deg, #e11d48, #d85a30);
+  background: #3B6D11;
   color: #fff;
   border-radius: 7px;
   padding: 3px 10px;
   font-size: 12px;
   font-weight: 600;
   flex: 0 0 auto;
-  box-shadow: 0 1px 4px rgba(225, 29, 72, 0.25);
 }
 
 .shot-todo-detail {
   flex: 1;
-  color: #333;
+  color: #4a3a28;
 }
 
 .shot-todo-priority {
-  color: #d1222b;
+  color: #3B6D11;
   font-weight: 700;
   font-size: 12px;
   flex: 0 0 auto;
-  background: rgba(225, 29, 72, 0.08);
+  background: rgba(99, 153, 34, 0.14);
   border-radius: 999px;
   padding: 3px 10px;
 }
@@ -2632,7 +2625,7 @@ table.report th {
 
 .shot-footer {
   text-align: center;
-  color: #9aa19b;
+  color: #B08968;
   font-size: 11px;
   margin-top: 18px;
   letter-spacing: 1px;
@@ -4516,10 +4509,12 @@ table.report th {
 
     var h = "";
     h += '<div class="shot-hero">' +
-      '<div class="shot-hero-top"><div class="shot-title">每日工作日报</div><div class="shot-date">' + dateKey + '（' + weekdayLabel(dateKey) + '）</div></div>' +
+      '<div class="shot-hero-top"><div class="shot-title">每日工作日报</div><div class="shot-date">' + todayKey() + '（' + weekdayLabel(todayKey()) + '）</div></div>' +
       '<div class="shot-meta"><span>姓名：' + escapeHtml(name) + '</span><span>重点店铺：' + shops.length + ' 家</span></div>' +
       '</div>';
     h += '<div class="shot-body">';
+
+    h += '<div class="shot-note">以下重点店铺数据截至 <b>' + dateKey + '</b>（昨日）</div>';
 
     var metrics = [
       { key: "adoptionRate", label: "采纳率" },
