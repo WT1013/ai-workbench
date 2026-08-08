@@ -4101,7 +4101,7 @@ table.report th {
   function renderDailyReport() {
     var view = $("dailyReportView");
     if (!view) { return; }
-    var dateKey = todayKey();
+    var dateKey = yesterdayKeyOf(todayKey());
     var prevKey = yesterdayKeyOf(dateKey);
     var shops = (state.shopLibrary || []).filter(shopKey);
     var profile = reportProfile();
@@ -4204,7 +4204,7 @@ table.report th {
   }
 
   function collectDailyReportText() {
-    var dateKey = todayKey();
+    var dateKey = yesterdayKeyOf(todayKey());
     var prevKey = yesterdayKeyOf(dateKey);
     var shops = (state.shopLibrary || []).filter(shopKey);
     var profile = reportProfile();
@@ -4267,7 +4267,7 @@ table.report th {
   }
 
   function saveDailyReport() {
-    var dateKey = todayKey();
+    var dateKey = yesterdayKeyOf(todayKey());
     var draft = reportDraft(dateKey);
     if ($("reportSummary")) { draft.summary = $("reportSummary").value; }
     if ($("reportFeedback")) { draft.feedback = $("reportFeedback").value; }
