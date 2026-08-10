@@ -3283,6 +3283,7 @@ table.report th {
     { key: "adoptionRate", label: "采纳率 %" },
     { key: "generationRate", label: "生成率 %" },
     { key: "conversionRate", label: "转化率 %" },
+    { key: "pureAgentRatio", label: "纯智能体接待占比 %" },
     { key: "experienceScore", label: "消费者服务体验分" }
   ];
 
@@ -3503,7 +3504,7 @@ table.report th {
     var shopKeys = Object.keys(shopData);
     for (var si = 0; si < shopKeys.length; si += 1) {
       var sd = shopData[shopKeys[si]] || {};
-      if (sd.adoptionRate || sd.generationRate || sd.conversionRate || sd.experienceScore) {
+      if (sd.adoptionRate || sd.generationRate || sd.conversionRate || sd.pureAgentRatio || sd.experienceScore) {
         return true;
       }
     }
@@ -3907,7 +3908,7 @@ table.report th {
       state.shopLibrary = state.days["__library__"].shops;
     } else {
       state.shopLibrary = DEFAULT_SHOPS.map(function (s, index) {
-        return { id: "s" + (index + 1), name: s.name, owner: "远山", adoptionRate: "", generationRate: "", conversionRate: "", experienceScore: "", note: "" };
+        return { id: "s" + (index + 1), name: s.name, owner: "远山", adoptionRate: "", generationRate: "", conversionRate: "", pureAgentRatio: "", experienceScore: "", note: "" };
       });
       state.days["__library__"] = { shops: state.shopLibrary };
       if (persist) {
@@ -4028,7 +4029,7 @@ table.report th {
     var name = $("shopNameInput").value.trim();
     if (!name) { showToast("请输入店铺名称"); return; }
     var owner = $("shopOwnerInput").value.trim() || "远山";
-    state.shopLibrary.push({ id: "s" + Date.now(), name: name, owner: owner, adoptionRate: "", generationRate: "", conversionRate: "", experienceScore: "", note: "" });
+    state.shopLibrary.push({ id: "s" + Date.now(), name: name, owner: owner, adoptionRate: "", generationRate: "", conversionRate: "", pureAgentRatio: "", experienceScore: "", note: "" });
     $("shopNameInput").value = "";
     saveState();
     renderShopRosterNew();
@@ -4465,7 +4466,8 @@ table.report th {
       var metrics = [
         { key: "adoptionRate", label: "采纳率" },
         { key: "generationRate", label: "生成率" },
-        { key: "conversionRate", label: "转化率" }
+        { key: "conversionRate", label: "转化率" },
+        { key: "pureAgentRatio", label: "纯智能体占比" }
       ];
       var metricsWrap = document.createElement("div");
       metricsWrap.className = "summary-metrics";
@@ -4579,7 +4581,8 @@ table.report th {
     var metrics = [
       { key: "adoptionRate", label: "采纳率 (%)" },
       { key: "generationRate", label: "生成率 (%)" },
-      { key: "conversionRate", label: "转化率 (%)" }
+      { key: "conversionRate", label: "转化率 (%)" },
+      { key: "pureAgentRatio", label: "纯智能体接待占比 (%)" }
     ];
     metrics.forEach(function (m) {
       content.appendChild(buildDetailPanel(m, shop, dates));
@@ -4788,12 +4791,13 @@ table.report th {
 
     html += '<h3 class="report-sec">一、重点店铺核心指标</h3>';
     html += '<div class="report-table-wrap"><table class="report-daily-table"><thead><tr>' +
-      '<th style="text-align:left">店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th>' +
+      '<th style="text-align:left">店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th><th>纯智能体占比</th>' +
       '</tr></thead><tbody>';
     var metrics = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
-      { key: "conversionRate", label: "转化率" }
+      { key: "conversionRate", label: "转化率" },
+      { key: "pureAgentRatio", label: "纯智能体占比" }
     ];
     var todoItems = [];
     shops.forEach(function (shop) {
@@ -4881,12 +4885,13 @@ table.report th {
     lines.push("姓名：" + name + "｜重点店铺：" + shops.length + " 家");
     lines.push("");
     lines.push("一、重点店铺核心指标");
-    lines.push("| 店铺 | 采纳率 | 生成率 | 转化率 |");
-    lines.push("| --- | --- | --- | --- |");
+    lines.push("| 店铺 | 采纳率 | 生成率 | 转化率 | 纯智能体占比 |");
+    lines.push("| --- | --- | --- | --- | --- |");
     var metrics = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
-      { key: "conversionRate", label: "转化率" }
+      { key: "conversionRate", label: "转化率" },
+      { key: "pureAgentRatio", label: "纯智能体占比" }
     ];
     var todoItems = [];
     shops.forEach(function (shop) {
@@ -4978,7 +4983,8 @@ table.report th {
     var metrics = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
-      { key: "conversionRate", label: "转化率" }
+      { key: "conversionRate", label: "转化率" },
+      { key: "pureAgentRatio", label: "纯智能体占比" }
     ];
     var todoItems = [];
 
@@ -4986,7 +4992,7 @@ table.report th {
 
     h += '<div class="shot-card">' +
       '<div class="shot-card-top"><div class="shot-card-head">重点店铺核心指标</div><div class="shot-note">数据截至 ' + dateKey + '（昨日）</div></div>' +
-      '<table class="shot-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th></tr></thead><tbody>';
+      '<table class="shot-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th><th>纯智能体占比</th></tr></thead><tbody>';
     shops.forEach(function (shop) {
       var hasDown = false;
       var downTexts = [];
