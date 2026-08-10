@@ -3726,7 +3726,7 @@ table.report th {
     });
   }
 
-  var reportAllCollapsed = false;
+  var reportAllCollapsed = true;
 
   function toggleReportAll() {
     reportAllCollapsed = !reportAllCollapsed;
@@ -5447,6 +5447,7 @@ table.report th {
 
     var toggleAllBtn = $("toggleAllBtn");
     if (toggleAllBtn) {
+      toggleAllBtn.textContent = reportAllCollapsed ? "全部展开" : "全部折叠";
       toggleAllBtn.addEventListener("click", toggleReportAll);
     }
 
