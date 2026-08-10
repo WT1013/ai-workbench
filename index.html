@@ -2672,6 +2672,123 @@ table.report th {
   margin-top: 18px;
   letter-spacing: 1px;
 }
+
+.report-records-head {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 4px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-records-head::before {
+  content: "";
+  width: 5px;
+  height: 18px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #76B13C, #3B6D11);
+}
+
+.record-card {
+  background: #fff;
+  border: 1px solid rgba(46, 90, 14, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.record-card:hover {
+  border-color: rgba(99, 153, 34, 0.4);
+}
+
+.record-date {
+  flex: 0 0 auto;
+  text-align: center;
+  min-width: 74px;
+}
+
+.record-date strong {
+  display: block;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.record-date small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.record-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.record-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.record-desc {
+  font-size: 12px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.record-ops {
+  font-size: 11px;
+  color: var(--muted);
+  flex: 0 0 auto;
+  text-align: right;
+  line-height: 1.6;
+}
+
+.record-ops .op-tag {
+  display: inline-block;
+  background: rgba(99, 153, 34, 0.12);
+  color: #3B6D11;
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: 4px;
+  font-size: 10.5px;
+}
+
+.record-btn {
+  flex: 0 0 auto;
+}
+
+.record-empty {
+  color: var(--muted);
+  font-size: 12.5px;
+  padding: 14px 4px;
+  text-align: center;
+  border: 1px dashed rgba(46, 90, 14, 0.2);
+  border-radius: 12px;
+}
+
+.report-table-sub {
+  margin-top: 18px;
+}
+
+:root[data-theme="dark"] .record-card {
+  background: rgba(44, 44, 46, 0.4);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .record-empty {
+  border-color: rgba(255, 255, 255, 0.15);
+}
 </style>
 </head>
 <body>
@@ -2904,22 +3021,26 @@ table.report th {
             </button>
           </div>
         </div>
-        <div class="table-wrap">
-          <table class="report">
-            <thead>
-              <tr>
-                <th>日期</th>
-                <th>任务状态</th>
-                <th>重点店铺打标处理数量</th>
-                <th>未生成话术处理量</th>
-                <th>badcase 数</th>
-                <th>知识库更新条目数</th>
-                <th>今日难点</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="reportBody"></tbody>
-          </table>
+        <div class="table-wrap" id="reportRecordsWrap" style="display:none;">
+          <div class="report-records-head">日报记录</div>
+          <div id="reportRecords"></div>
+          <div class="table-wrap report-table-sub">
+            <table class="report">
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>任务状态</th>
+                  <th>重点店铺打标处理数量</th>
+                  <th>未生成话术处理量</th>
+                  <th>badcase 数</th>
+                  <th>知识库更新条目数</th>
+                  <th>今日难点</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="reportBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -3491,6 +3612,7 @@ table.report th {
   }
 
   function renderReport() {
+    renderReportRecords();
     var body = $("reportBody");
     body.innerHTML = "";
     var keys = Object.keys(state.days).filter(dayHasData).sort().reverse();
@@ -4320,6 +4442,7 @@ table.report th {
 
   var REPORT_PROFILE_KEY = "csa-report-profile";
   var REPORT_DRAFT_KEY = "csa-report-draft-";
+  var REPORT_LOG_KEY = "csa-report-log";
 
   function reportProfile() {
     try { return JSON.parse(localStorage.getItem(REPORT_PROFILE_KEY) || "null") || { name: "远山" }; }
@@ -4333,6 +4456,68 @@ table.report th {
 
   function saveReportDraft(dateKey, draft) {
     try { localStorage.setItem(REPORT_DRAFT_KEY + dateKey, JSON.stringify(draft)); } catch (e) {}
+  }
+
+  function reportLog() {
+    try { return JSON.parse(localStorage.getItem(REPORT_LOG_KEY) || "null") || []; }
+    catch (e) { return []; }
+  }
+
+  function logReportAction(dateKey, action) {
+    try {
+      var log = reportLog();
+      log.push({ date: dateKey, action: action, time: new Date().toLocaleString("zh-CN", { hour12: false }) });
+      if (log.length > 200) { log = log.slice(log.length - 200); }
+      localStorage.setItem(REPORT_LOG_KEY, JSON.stringify(log));
+    } catch (e) {}
+  }
+
+  function reportDraftDates() {
+    var dates = [];
+    for (var i = 0; i < localStorage.length; i += 1) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(REPORT_DRAFT_KEY) === 0) {
+        dates.push(k.substring(REPORT_DRAFT_KEY.length));
+      }
+    }
+    return dates.sort().reverse();
+  }
+
+  function renderReportRecords() {
+    var wrap = $("reportRecordsWrap");
+    if (!wrap) { return; }
+    var container = $("reportRecords");
+    if (!container) { return; }
+    var dates = reportDraftDates();
+    var log = reportLog();
+    var profile = reportProfile();
+    var html = "";
+    if (!dates.length) {
+      html += '<div class="record-empty">还没有生成过日报。去「主页」点「生成日报」，保存草稿后会自动记录在这里。</div>';
+      wrap.style.display = "block";
+      container.innerHTML = html;
+      return;
+    }
+    dates.forEach(function (dateKey) {
+      var draft = reportDraft(dateKey);
+      var ops = log.filter(function (l) { return l.date === dateKey; }).slice(-4).reverse();
+      var summary = draft.summary || "";
+      var feedback = draft.feedback || "";
+      var opsHtml = ops.length ? ops.map(function (o) {
+        return '<span>' + o.time.slice(0, 16) + ' <span class="op-tag">' + o.action + '</span></span>';
+      }).join("") : '<span>未导出</span>';
+      html += '<div class="record-card">' +
+        '<div class="record-date"><strong>' + dateKey.slice(5) + '</strong><small>' + weekdayLabel(dateKey) + '</small></div>' +
+        '<div class="record-info">' +
+        '<div class="record-title">' + escapeHtml((draft.name || profile.name || "远山")) + (summary ? " · " + escapeHtml(summary) : "") + '</div>' +
+        '<div class="record-desc">' + (feedback ? "问题反馈：" + escapeHtml(feedback) : "未填写问题反馈") + '</div>' +
+        '</div>' +
+        '<div class="record-ops">' + opsHtml + '</div>' +
+        '<button type="button" class="btn ghost record-btn" data-open-report="' + dateKey + '">查看</button>' +
+        '</div>';
+    });
+    wrap.style.display = "block";
+    container.innerHTML = html;
   }
 
   function yesterdayKeyOf(dateKey) {
@@ -4526,6 +4711,7 @@ table.report th {
     if ($("reportSummary")) { draft.summary = $("reportSummary").value; }
     if ($("reportFeedback")) { draft.feedback = $("reportFeedback").value; }
     saveReportDraft(dateKey, draft);
+    logReportAction(dateKey, "保存草稿");
     showToast("日报草稿已保存");
   }
 
@@ -4533,10 +4719,12 @@ table.report th {
     var text = collectDailyReportText();
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () {
+        logReportAction(yesterdayKeyOf(todayKey()), "复制文本");
         showToast("日报已复制");
-      }).catch(function () { fallbackCopy(text); showToast("日报已复制"); });
+      }).catch(function () { fallbackCopy(text); logReportAction(yesterdayKeyOf(todayKey()), "复制文本"); showToast("日报已复制"); });
     } else {
       fallbackCopy(text);
+      logReportAction(yesterdayKeyOf(todayKey()), "复制文本");
       showToast("日报已复制");
     }
   }
@@ -4666,6 +4854,7 @@ table.report th {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      logReportAction(yesterdayKeyOf(todayKey()), "下载图片");
       showToast("图片已生成");
     }).catch(function (err) {
       showToast(err && err.message === "load" ? "加载图片库失败，请检查网络" : "图片生成失败");
@@ -4679,6 +4868,7 @@ table.report th {
         if (!blob) { showToast("图片生成失败"); return; }
         var item = new ClipboardItem({ "image/png": blob });
         navigator.clipboard.write([item]).then(function () {
+          logReportAction(yesterdayKeyOf(todayKey()), "复制图片");
           showToast("图片已复制，直接粘贴发送即可");
         }).catch(function () {
           showToast("复制失败，可改用下载图片");
@@ -5186,6 +5376,27 @@ table.report th {
       switchTab("today");
       renderToday();
     });
+
+    var reportRecordsEl = $("reportRecords");
+    if (reportRecordsEl) {
+      reportRecordsEl.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-open-report]");
+        if (!btn) { return; }
+        var targetDate = btn.getAttribute("data-open-report");
+        var today = todayKey();
+        var yesterday = yesterdayKeyOf(today);
+        if (targetDate === yesterday) {
+          switchTab("summary");
+          renderSummary();
+          renderDailyReport();
+        } else {
+          $("dateInput").value = targetDate;
+          switchTab("today");
+          renderToday();
+          showToast("该日报数据日期为 " + yesterday + "，可在主页生成查看");
+        }
+      });
+    }
   }
 
   function init() {
