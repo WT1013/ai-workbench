@@ -1011,6 +1011,71 @@ table.report tr.collapsed {
   background: rgba(248, 250, 244, 0.5);
 }
 
+table.report tr.month-row {
+  cursor: pointer;
+}
+
+table.report tr.month-row:hover td {
+  background: #f6fbf0;
+}
+
+table.report tr.month-row td {
+  background: #fff;
+  border-top: 1px solid #eef2e7;
+  padding: 8px 12px;
+}
+
+table.report tr.month-row td .month-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #2E5A0E;
+}
+
+table.report tr.month-row .month-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4A8418, #76B13C);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+table.report tr.month-row .month-count {
+  font-size: 12px;
+  color: #8e8e93;
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+table.report tr.month-row .month-arrow {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: #8e8e93;
+  transition: transform 0.18s ease;
+}
+
+table.report tr.month-row.open .month-arrow {
+  transform: rotate(180deg);
+  color: #3B6D11;
+}
+
+table.report tr.day-row[data-month] {
+  display: none;
+}
+
+table.report tr.month-row.open ~ tr.day-row[data-month] {
+  display: table-row;
+}
+
 .date-cell small {
   display: block;
   color: var(--muted);
@@ -3714,10 +3779,6 @@ table.report th {
     var body = $("reportBody");
     body.innerHTML = "";
     var keys = Object.keys(state.days).filter(dayHasData).sort().reverse();
-    var tableEl = $("reportTable");
-    if (tableEl) {
-      tableEl.classList.toggle("all-collapsed", reportAllCollapsed);
-    }
 
     if (keys.length === 0) {
       var emptyRow = document.createElement("tr");
@@ -3730,66 +3791,98 @@ table.report th {
       return;
     }
 
+    var months = {};
     keys.forEach(function (key) {
-      var day = state.days[key];
-      var counts = countStatus(key);
-      var cols = reportColumns(day);
-      var statusTr = document.createElement("tr");
-      statusTr.setAttribute("data-day", key);
-      statusTr.classList.toggle("collapsed", reportAllCollapsed);
+      var m = key.slice(0, 7);
+      if (!months[m]) { months[m] = []; }
+      months[m].push(key);
+    });
+    var monthKeys = Object.keys(months).sort().reverse();
 
-      var dateCell = document.createElement("td");
-      dateCell.className = "date-cell collapsible";
-      dateCell.setAttribute("data-toggle-day", key);
-      dateCell.title = "点击展开/折叠详情";
-      var dateMain = document.createElement("div");
-      dateMain.className = "date-main";
-      dateMain.textContent = key;
-      var dateSmall = document.createElement("small");
-      dateSmall.textContent = weekdayLabel(key);
-      var arrow = document.createElement("span");
-      arrow.className = "toggle-arrow";
-      arrow.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-      dateCell.appendChild(dateMain);
-      dateCell.appendChild(dateSmall);
-      dateCell.appendChild(arrow);
+    monthKeys.forEach(function (monthKey) {
+      var monthDayKeys = months[monthKey];
+      var monthNum = monthKey.slice(5).replace(/^0/, "");
+      var yearNum = monthKey.slice(0, 4);
 
-      var statusCell = document.createElement("td");
-      statusCell.className = "status-summary";
-      statusCell.innerHTML =
-        '<span class="ok">完成 ' + counts.done + '</span> / ' +
-        '<span class="warn">进行中 ' + counts.doing + '</span> / ' +
-        '<span class="muted">待处理 ' + counts.todo + '</span> / ' +
-        '<span class="closed">关闭 ' + counts.closed + '</span>';
+      var monthTr = document.createElement("tr");
+      monthTr.className = "month-row" + (reportAllCollapsed ? "" : " open");
+      monthTr.setAttribute("data-month", monthKey);
+      monthTr.setAttribute("data-toggle-month", monthKey);
+      var monthTd = document.createElement("td");
+      monthTd.colSpan = 8;
+      monthTd.innerHTML =
+        '<div class="month-cell">' +
+        '<span class="month-badge">' + monthNum + '月</span>' +
+        '<span>' + yearNum + '年' + monthNum + '月</span>' +
+        '<span class="month-count">共 ' + monthDayKeys.length + ' 条</span>' +
+        '<span class="month-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>' +
+        '</div>';
+      monthTd.title = "点击展开/折叠该月记录";
+      monthTr.appendChild(monthTd);
+      body.appendChild(monthTr);
 
-      statusTr.appendChild(dateCell);
-      statusTr.appendChild(statusCell);
-      cols.forEach(function (value) {
-        var td = document.createElement("td");
-        td.className = "metric-num detail-cell";
-        td.textContent = value;
-        statusTr.appendChild(td);
+      monthDayKeys.forEach(function (key) {
+        var day = state.days[key];
+        var counts = countStatus(key);
+        var cols = reportColumns(day);
+        var statusTr = document.createElement("tr");
+        statusTr.className = "day-row collapsed";
+        statusTr.setAttribute("data-day", key);
+        statusTr.setAttribute("data-month", monthKey);
+
+        var dateCell = document.createElement("td");
+        dateCell.className = "date-cell collapsible";
+        dateCell.setAttribute("data-toggle-day", key);
+        dateCell.title = "点击展开/折叠详情";
+        var dateMain = document.createElement("div");
+        dateMain.className = "date-main";
+        dateMain.textContent = key.slice(5);
+        var dateSmall = document.createElement("small");
+        dateSmall.textContent = weekdayLabel(key);
+        var arrow = document.createElement("span");
+        arrow.className = "toggle-arrow";
+        arrow.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+        dateCell.appendChild(dateMain);
+        dateCell.appendChild(dateSmall);
+        dateCell.appendChild(arrow);
+
+        var statusCell = document.createElement("td");
+        statusCell.className = "status-summary";
+        statusCell.innerHTML =
+          '<span class="ok">完成 ' + counts.done + '</span> / ' +
+          '<span class="warn">进行中 ' + counts.doing + '</span> / ' +
+          '<span class="muted">待处理 ' + counts.todo + '</span> / ' +
+          '<span class="closed">关闭 ' + counts.closed + '</span>';
+
+        statusTr.appendChild(dateCell);
+        statusTr.appendChild(statusCell);
+        cols.forEach(function (value) {
+          var td = document.createElement("td");
+          td.className = "metric-num detail-cell";
+          td.textContent = value;
+          statusTr.appendChild(td);
+        });
+
+        var diffTd = document.createElement("td");
+        diffTd.className = "difficulty-cell detail-cell";
+        diffTd.textContent = day.difficulty || "—";
+        if (day.difficulty) {
+          diffTd.title = day.difficulty;
+        }
+        statusTr.appendChild(diffTd);
+
+        var actionTd = document.createElement("td");
+        actionTd.className = "detail-cell";
+        var openBtn = document.createElement("button");
+        openBtn.type = "button";
+        openBtn.className = "btn ghost";
+        openBtn.setAttribute("data-open-day", key);
+        openBtn.textContent = "打开";
+        actionTd.appendChild(openBtn);
+        statusTr.appendChild(actionTd);
+
+        body.appendChild(statusTr);
       });
-
-      var diffTd = document.createElement("td");
-      diffTd.className = "difficulty-cell detail-cell";
-      diffTd.textContent = day.difficulty || "—";
-      if (day.difficulty) {
-        diffTd.title = day.difficulty;
-      }
-      statusTr.appendChild(diffTd);
-
-      var actionTd = document.createElement("td");
-      actionTd.className = "detail-cell";
-      var openBtn = document.createElement("button");
-      openBtn.type = "button";
-      openBtn.className = "btn ghost";
-      openBtn.setAttribute("data-open-day", key);
-      openBtn.textContent = "打开";
-      actionTd.appendChild(openBtn);
-      statusTr.appendChild(actionTd);
-
-      body.appendChild(statusTr);
     });
   }
 
@@ -3797,16 +3890,12 @@ table.report th {
 
   function toggleReportAll() {
     reportAllCollapsed = !reportAllCollapsed;
-    var tableEl = $("reportTable");
     var btn = $("toggleAllBtn");
-    if (tableEl) {
-      tableEl.classList.toggle("all-collapsed", reportAllCollapsed);
-    }
     if (btn) {
       btn.textContent = reportAllCollapsed ? "全部展开" : "全部折叠";
     }
-    Array.prototype.forEach.call(document.querySelectorAll("#reportBody tr[data-day]"), function (row) {
-      row.classList.toggle("collapsed", reportAllCollapsed);
+    Array.prototype.forEach.call(document.querySelectorAll("#reportBody tr.month-row"), function (row) {
+      row.classList.toggle("open", !reportAllCollapsed);
     });
   }
 
@@ -5510,6 +5599,12 @@ table.report th {
       if (dateToggle) {
         var row = dateToggle.closest("tr[data-day]");
         if (row) { row.classList.toggle("collapsed"); }
+        return;
+      }
+      var monthToggle = e.target.closest("[data-toggle-month]");
+      if (monthToggle) {
+        var monthRow = monthToggle.closest("tr.month-row");
+        if (monthRow) { monthRow.classList.toggle("open"); }
         return;
       }
       var btn = e.target.closest("[data-open-day]");
