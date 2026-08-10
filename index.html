@@ -981,6 +981,36 @@ table.report tbody tr:hover {
   font-weight: 600;
 }
 
+.date-cell.collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.date-cell.collapsible:hover .date-main {
+  color: #3B6D11;
+}
+
+.date-cell .toggle-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  color: #8e8e93;
+  transition: transform 0.18s ease;
+}
+
+table.report tr.collapsed .toggle-arrow {
+  transform: rotate(-90deg);
+}
+
+table.report tr.collapsed td.detail-cell {
+  display: none;
+}
+
+table.report tr.collapsed {
+  background: rgba(248, 250, 244, 0.5);
+}
+
 .date-cell small {
   display: block;
   color: var(--muted);
@@ -2990,6 +3020,7 @@ table.report th {
             日报表格
           </h2>
           <div class="report-actions">
+            <button type="button" class="btn ghost" id="toggleAllBtn">全部折叠</button>
             <button type="button" class="btn ghost" id="exportCsvBtn">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -3025,7 +3056,7 @@ table.report th {
           <div class="report-records-head">日报记录</div>
           <div id="reportRecords"></div>
           <div class="table-wrap report-table-sub">
-            <table class="report">
+            <table class="report" id="reportTable">
               <thead>
                 <tr>
                   <th>日期</th>
@@ -3616,6 +3647,10 @@ table.report th {
     var body = $("reportBody");
     body.innerHTML = "";
     var keys = Object.keys(state.days).filter(dayHasData).sort().reverse();
+    var tableEl = $("reportTable");
+    if (tableEl) {
+      tableEl.classList.toggle("all-collapsed", reportAllCollapsed);
+    }
 
     if (keys.length === 0) {
       var emptyRow = document.createElement("tr");
@@ -3633,15 +3668,24 @@ table.report th {
       var counts = countStatus(key);
       var cols = reportColumns(day);
       var statusTr = document.createElement("tr");
+      statusTr.setAttribute("data-day", key);
+      statusTr.classList.toggle("collapsed", reportAllCollapsed);
 
       var dateCell = document.createElement("td");
-      dateCell.className = "date-cell";
+      dateCell.className = "date-cell collapsible";
+      dateCell.setAttribute("data-toggle-day", key);
+      dateCell.title = "点击展开/折叠详情";
       var dateMain = document.createElement("div");
+      dateMain.className = "date-main";
       dateMain.textContent = key;
       var dateSmall = document.createElement("small");
       dateSmall.textContent = weekdayLabel(key);
+      var arrow = document.createElement("span");
+      arrow.className = "toggle-arrow";
+      arrow.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
       dateCell.appendChild(dateMain);
       dateCell.appendChild(dateSmall);
+      dateCell.appendChild(arrow);
 
       var statusCell = document.createElement("td");
       statusCell.className = "status-summary";
@@ -3655,13 +3699,13 @@ table.report th {
       statusTr.appendChild(statusCell);
       cols.forEach(function (value) {
         var td = document.createElement("td");
-        td.className = "metric-num";
+        td.className = "metric-num detail-cell";
         td.textContent = value;
         statusTr.appendChild(td);
       });
 
       var diffTd = document.createElement("td");
-      diffTd.className = "difficulty-cell";
+      diffTd.className = "difficulty-cell detail-cell";
       diffTd.textContent = day.difficulty || "—";
       if (day.difficulty) {
         diffTd.title = day.difficulty;
@@ -3669,6 +3713,7 @@ table.report th {
       statusTr.appendChild(diffTd);
 
       var actionTd = document.createElement("td");
+      actionTd.className = "detail-cell";
       var openBtn = document.createElement("button");
       openBtn.type = "button";
       openBtn.className = "btn ghost";
@@ -3678,6 +3723,23 @@ table.report th {
       statusTr.appendChild(actionTd);
 
       body.appendChild(statusTr);
+    });
+  }
+
+  var reportAllCollapsed = false;
+
+  function toggleReportAll() {
+    reportAllCollapsed = !reportAllCollapsed;
+    var tableEl = $("reportTable");
+    var btn = $("toggleAllBtn");
+    if (tableEl) {
+      tableEl.classList.toggle("all-collapsed", reportAllCollapsed);
+    }
+    if (btn) {
+      btn.textContent = reportAllCollapsed ? "全部展开" : "全部折叠";
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("#reportBody tr[data-day]"), function (row) {
+      row.classList.toggle("collapsed", reportAllCollapsed);
     });
   }
 
@@ -5370,12 +5432,23 @@ table.report th {
     $("clearBtn").addEventListener("click", clearHistory);
 
     $("reportBody").addEventListener("click", function (e) {
+      var dateToggle = e.target.closest("[data-toggle-day]");
+      if (dateToggle) {
+        var row = dateToggle.closest("tr[data-day]");
+        if (row) { row.classList.toggle("collapsed"); }
+        return;
+      }
       var btn = e.target.closest("[data-open-day]");
       if (!btn) { return; }
       $("dateInput").value = btn.getAttribute("data-open-day");
       switchTab("today");
       renderToday();
     });
+
+    var toggleAllBtn = $("toggleAllBtn");
+    if (toggleAllBtn) {
+      toggleAllBtn.addEventListener("click", toggleReportAll);
+    }
 
     var reportRecordsEl = $("reportRecords");
     if (reportRecordsEl) {
