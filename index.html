@@ -2373,6 +2373,28 @@ table.report th {
   letter-spacing: 0.5px;
 }
 
+.report-sec-optional {
+  color: #8a6d3b;
+  border-left-color: #d9a94e;
+}
+
+.report-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5c4a33;
+}
+
+.report-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #639922;
+  cursor: pointer;
+}
+
 .report-table-wrap {
   border: 1px solid rgba(99, 153, 34, 0.28);
   border-radius: 12px;
@@ -2716,6 +2738,17 @@ table.report th {
   border-radius: 14px;
   padding: 16px 20px;
   margin-top: 16px;
+}
+
+.shot-focus-card {
+  margin-top: 16px;
+}
+
+.shot-focus-card .shot-text {
+  background: #FFF8EE;
+  border-left: 3px solid #639922;
+  padding: 12px 16px;
+  border-radius: 0 10px 10px 0;
 }
 
 .shot-todo-grid {
@@ -4845,6 +4878,10 @@ table.report th {
     html += '<h3 class="report-sec">三、问题反馈</h3>';
     html += '<textarea id="reportFeedback" class="input report-textarea" rows="3" placeholder="记录前置接待或调优时遇到的问题">' + escapeHtml(draft.feedback || "") + '</textarea>';
 
+    html += '<h3 class="report-sec report-sec-optional"><label class="report-check"><input type="checkbox" id="reportWeekFocusOn"' + (draft.weekFocus && draft.weekFocus.on ? " checked" : "") + '> 本周重点（可选）</label></h3>';
+    html += '<div id="reportWeekFocusWrap" style="' + (draft.weekFocus && draft.weekFocus.on ? "" : "display:none;") + '">' +
+      '<textarea id="reportWeekFocus" class="input report-textarea" rows="3" placeholder="填写本周重点工作：目标、进展、成果等">' + escapeHtml((draft.weekFocus && draft.weekFocus.text) || "") + '</textarea></div>';
+
     html += '<h3 class="report-sec">四、明日待办 · 调优重点</h3>';
     if (todoItems.length) {
       html += '<div class="report-todo">';
@@ -4879,6 +4916,16 @@ table.report th {
       try { localStorage.setItem(REPORT_PROFILE_KEY, JSON.stringify(p)); } catch (e) {}
       saveDailyReport();
     });
+    var wfOn = $("reportWeekFocusOn");
+    if (wfOn) {
+      wfOn.addEventListener("change", function () {
+        var wrap = $("reportWeekFocusWrap");
+        if (wrap) { wrap.style.display = wfOn.checked ? "" : "none"; }
+        if (!wfOn.checked && $("reportWeekFocus")) { $("reportWeekFocus").value = ""; }
+        saveDailyReport();
+      });
+      $("reportWeekFocus").addEventListener("change", saveDailyReport);
+    }
   }
 
   function collectDailyReportText() {
@@ -4932,6 +4979,15 @@ table.report th {
     lines.push("三、问题反馈");
     lines.push(($("reportFeedback") ? $("reportFeedback").value.trim() : "") || draft.feedback || "（无）");
     lines.push("");
+    var wfOn = $("reportWeekFocusOn");
+    var wfText = wfOn && wfOn.checked
+      ? (($("reportWeekFocus") ? $("reportWeekFocus").value.trim() : "") || (draft.weekFocus && draft.weekFocus.text) || "")
+      : "";
+    if (wfText) {
+      lines.push("本周重点");
+      lines.push(wfText);
+      lines.push("");
+    }
     lines.push("四、明日待办 · 调优重点");
     if (todoItems.length) {
       todoItems.forEach(function (item) {
@@ -4950,6 +5006,13 @@ table.report th {
     var draft = reportDraft(dateKey);
     if ($("reportSummary")) { draft.summary = $("reportSummary").value; }
     if ($("reportFeedback")) { draft.feedback = $("reportFeedback").value; }
+    var wfOn = $("reportWeekFocusOn");
+    if (wfOn) {
+      draft.weekFocus = {
+        on: wfOn.checked,
+        text: $("reportWeekFocus") ? $("reportWeekFocus").value : ""
+      };
+    }
     saveReportDraft(dateKey, draft);
     logReportAction(dateKey, "保存草稿");
     showToast("日报草稿已保存");
@@ -4978,6 +5041,10 @@ table.report th {
     var name = ($("reportName") ? $("reportName").value.trim() : "") || profile.name || "远山";
     var summaryTxt = ($("reportSummary") ? $("reportSummary").value.trim() : "") || draft.summary || "";
     var feedbackTxt = ($("reportFeedback") ? $("reportFeedback").value.trim() : "") || draft.feedback || "";
+    var wfOnEl = $("reportWeekFocusOn");
+    var weekFocusTxt = (wfOnEl && wfOnEl.checked)
+      ? (($("reportWeekFocus") ? $("reportWeekFocus").value.trim() : "") || (draft.weekFocus && draft.weekFocus.text) || "")
+      : "";
 
     var h = "";
     h += '<div class="shot-hero">' +
@@ -5039,6 +5106,11 @@ table.report th {
     h += '</div>';
 
     h += '</div>';
+
+    if (weekFocusTxt) {
+      h += '<div class="shot-card shot-focus-card"><div class="shot-card-head">本周重点</div>' +
+        '<div class="shot-text">' + escapeHtml(weekFocusTxt) + '</div></div>';
+    }
 
     h += '<div class="shot-todo-card"><div class="shot-card-head">明日待办 · 调优重点</div>';
     if (todoItems.length) {
