@@ -4038,9 +4038,19 @@ table.report th {
 
   function renderShopDaily() {
     var key = currentKey();
+    var today = todayKey();
+    var yest = yesterdayKeyOf(today);
+    var useYest = false;
+    if (key === today) {
+      var yestDay = state.days[yest];
+      if (yestDay && yestDay.shopData && Object.keys(yestDay.shopData).length) {
+        key = yest;
+        useYest = true;
+      }
+    }
     var day = dayData(key);
     var shops = state.shopLibrary || [];
-    $("shopsDateText").textContent = key + " " + weekdayLabel(key);
+    $("shopsDateText").textContent = key + " " + weekdayLabel(key) + (useYest ? "（昨日同步）" : "");
     var list = $("shopDailyList");
     list.innerHTML = "";
     shops.forEach(function (shop, index) {
@@ -5439,12 +5449,6 @@ table.report th {
     });
     $("shopTabDaily").addEventListener("click", function () {
       shopsTab = "daily";
-      if (currentKey() === todayKey()) {
-        var d = fromKey(currentKey());
-        d.setDate(d.getDate() - 1);
-        $("dateInput").value = toKey(d);
-      }
-      renderToday();
       renderShopsView();
     });
     $("shopTabMonth").addEventListener("click", function () {
