@@ -847,6 +847,90 @@ button {
   color: #97c459;
 }
 
+.marked-note {
+  margin-top: 14px;
+  background: #fff8ef;
+  border: 1px solid rgba(216, 169, 78, 0.45);
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+
+.marked-note-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a6d3b;
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.marked-note-title::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: #d9a94e;
+}
+
+.marked-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.marked-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid rgba(216, 169, 78, 0.3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.marked-shop {
+  color: #4a3a28;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marked-num {
+  flex: 0 0 auto;
+  background: #d9a94e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 1px 10px;
+  margin-left: 8px;
+}
+
+:root[data-theme="dark"] .marked-note {
+  background: rgba(216, 169, 78, 0.12);
+  border-color: rgba(216, 169, 78, 0.4);
+}
+
+:root[data-theme="dark"] .marked-note-title {
+  color: #e8c36b;
+}
+
+:root[data-theme="dark"] .marked-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(216, 169, 78, 0.3);
+}
+
+:root[data-theme="dark"] .marked-shop {
+  color: #f0e6d2;
+}
+
 textarea {
   width: 100%;
   min-height: 104px;
@@ -3116,6 +3200,10 @@ table.report th {
             </div>
             <div class="panel-body">
               <div class="metric-grid" id="metricGrid"></div>
+              <div class="marked-note" id="markedNote" style="display:none;">
+                <div class="marked-note-title">已标记店铺清单（可去探域调优工坊查看）</div>
+                <div class="marked-note-list" id="markedNoteList"></div>
+              </div>
             </div>
           </div>
 
@@ -3741,6 +3829,26 @@ table.report th {
       field.appendChild(value);
       grid.appendChild(field);
     });
+
+    // 便签: 有已标记记录的店铺清单
+    var note = $("markedNote");
+    var noteList = $("markedNoteList");
+    if (note && noteList) {
+      var marked = (latestToday && latestToday.shopMarked) || {};
+      var names = Object.keys(marked).filter(function (n) { return marked[n] > 0; }).sort(function (a, b) { return marked[b] - marked[a]; });
+      if (names.length) {
+        note.style.display = "block";
+        noteList.innerHTML = "";
+        names.forEach(function (n) {
+          var chip = document.createElement("div");
+          chip.className = "marked-chip";
+          chip.innerHTML = '<span class="marked-shop">' + escapeHtml(n) + '</span><span class="marked-num">' + marked[n] + '</span>';
+          noteList.appendChild(chip);
+        });
+      } else {
+        note.style.display = "none";
+      }
+    }
   }
 
   function updateProgress(key) {
