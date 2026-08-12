@@ -818,6 +818,69 @@ button {
   box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22);
 }
 
+.month-summary {
+  margin-top: 16px;
+  border-top: 1px dashed rgba(99, 153, 34, 0.35);
+  padding-top: 12px;
+}
+
+.month-summary-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3b6d11;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.month-summary-title::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #639922, #3b6d11);
+}
+
+.month-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.month-summary-card {
+  background: linear-gradient(180deg, #f6fbf0 0%, #eef5e6 100%);
+  border: 1px solid rgba(99, 153, 34, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.month-summary-label {
+  font-size: 11.5px;
+  color: #5c4a33;
+  margin-bottom: 4px;
+}
+
+.month-summary-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2e5a0e;
+}
+
+:root[data-theme="dark"] .month-summary-card {
+  background: rgba(46, 90, 14, 0.25);
+  border-color: rgba(99, 153, 34, 0.35);
+}
+
+:root[data-theme="dark"] .month-summary-value {
+  color: #97c459;
+}
+
+:root[data-theme="dark"] .month-summary-title {
+  color: #97c459;
+}
+
 textarea {
   width: 100%;
   min-height: 104px;
@@ -3087,6 +3150,10 @@ table.report th {
             </div>
             <div class="panel-body">
               <div class="metric-grid" id="metricGrid"></div>
+              <div class="month-summary">
+                <div class="month-summary-title">本月汇总</div>
+                <div class="month-summary-grid" id="monthSummaryGrid"></div>
+              </div>
             </div>
           </div>
 
@@ -3697,6 +3764,41 @@ table.report th {
     });
   }
 
+  function renderMonthSummary(key) {
+    var grid = $("monthSummaryGrid");
+    if (!grid) { return; }
+    var month = key.slice(0, 7); // YYYY-MM
+    var sum = { labelCount: 0, scriptCount: 0, badcaseCount: 0, kbCount: 0 };
+    Object.keys(state.days).forEach(function (k) {
+      if (k.slice(0, 7) !== month) { return; }
+      var m = (state.days[k] && state.days[k].metrics) || {};
+      ["labelCount", "scriptCount", "badcaseCount", "kbCount"].forEach(function (id) {
+        var v = parseFloat(m[id]);
+        if (!isNaN(v)) { sum[id] += v; }
+      });
+    });
+    var items = [
+      { label: "本月店铺达标数", value: sum.labelCount },
+      { label: "本月话术未生成数", value: sum.scriptCount },
+      { label: "Agent 更新条数", value: sum.badcaseCount },
+      { label: "知识库更新条数", value: sum.kbCount }
+    ];
+    grid.innerHTML = "";
+    items.forEach(function (item) {
+      var card = document.createElement("div");
+      card.className = "month-summary-card";
+      var label = document.createElement("div");
+      label.className = "month-summary-label";
+      label.textContent = item.label;
+      var value = document.createElement("div");
+      value.className = "month-summary-value";
+      value.textContent = item.value;
+      card.appendChild(label);
+      card.appendChild(value);
+      grid.appendChild(card);
+    });
+  }
+
   function updateProgress(key) {
     var counts = countStatus(key);
     var total = TASKS.length - counts.closed;
@@ -3788,6 +3890,7 @@ table.report th {
     renderCalendar();
     renderTaskRows(key);
     renderMetrics(key);
+    renderMonthSummary(key);
     $("difficulty").value = dayData(key).difficulty || "";
     updateProgress(key);
     renderShopsView();
@@ -5669,6 +5772,7 @@ table.report th {
       var day = dayData(currentKey());
       day.metrics[metricId] = e.target.value;
       saveState();
+      renderMonthSummary(currentKey());
     });
 
     $("difficulty").addEventListener("input", function () {
