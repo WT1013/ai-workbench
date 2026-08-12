@@ -6055,6 +6055,16 @@ table.report th {
       });
     }
 
+    var workshopBtn = $("syncWorkshopBtn");
+    if (workshopBtn) {
+      workshopBtn.addEventListener("click", function () {
+        var win = window.open("http://10.10.12.157:8080/sync-workshop", "_blank");
+        if (!win) {
+          window.location.href = "http://10.10.12.157:8080/sync-workshop";
+        }
+      });
+    }
+
     var genReportBtn = $("genReportBtn");
     if (genReportBtn) {
       genReportBtn.addEventListener("click", renderDailyReport);
@@ -6333,6 +6343,13 @@ table.report th {
       dingBtn.textContent = "同步到钉钉表格";
       dingBtn.title = "把云端店铺数据(采纳率/生成率/转化率/纯智能体占比)写入钉钉「拼多多—远山」表格";
       syncActions.appendChild(dingBtn);
+      var workshopBtn = document.createElement("button");
+      workshopBtn.type = "button";
+      workshopBtn.className = "btn";
+      workshopBtn.id = "syncWorkshopBtn";
+      workshopBtn.textContent = "同步已打标数据";
+      workshopBtn.title = "从探域调优工坊抓取本月已打标/已打标待审核数量写入云端";
+      syncActions.appendChild(workshopBtn);
       summaryHead.appendChild(syncActions);
     }
     document.title = "远山工作台";
