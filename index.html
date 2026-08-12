@@ -953,6 +953,93 @@ button {
   color: #f0e6d2;
 }
 
+/* 昨日数据下降通知栏 */
+.down-notice {
+  margin-bottom: 14px;
+  background: #fff8f0;
+  border: 1px solid rgba(216, 130, 60, 0.4);
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+
+.down-notice-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #b45309;
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.down-notice-title::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #dc2626);
+}
+
+.down-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.down-notice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  background: #fffdf8;
+  border: 1px solid rgba(216, 130, 60, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.down-shop {
+  font-weight: 600;
+  color: #7c2d12;
+}
+
+.down-tag {
+  background: #fee2d5;
+  color: #c2410c;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.down-notice-empty {
+  font-size: 12px;
+  color: #9aa19b;
+}
+
+:root[data-theme="dark"] .down-notice {
+  background: rgba(216, 130, 60, 0.1);
+  border-color: rgba(216, 130, 60, 0.4);
+}
+
+:root[data-theme="dark"] .down-notice-title {
+  color: #f0b46b;
+}
+
+:root[data-theme="dark"] .down-notice-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(216, 130, 60, 0.3);
+}
+
+:root[data-theme="dark"] .down-shop {
+  color: #f5d5b8;
+}
+
+:root[data-theme="dark"] .down-tag {
+  background: rgba(216, 130, 60, 0.25);
+  color: #f0b46b;
+}
+
 textarea {
   width: 100%;
   min-height: 104px;
@@ -4734,8 +4821,59 @@ table.report th {
     var content = $("summaryContent");
     var keyList = shops.filter(shopKey);
     var otherList = shops.filter(function (s) { return !shopKey(s); });
+    renderDownNotice(content);
     appendSummaryGroup(content, "重点店铺", true, keyList, dates);
     appendSummaryGroup(content, "非重点店铺", false, otherList, dates);
+  }
+
+  // 昨日数据下降通知栏: 昨天较前天各指标下降的店铺
+  function renderDownNotice(content) {
+    var yKey = yesterdayKeyOf(todayKey());
+    var pKey = yesterdayKeyOf(yKey);
+    var metrics = [
+      { key: "adoptionRate", label: "采纳率" },
+      { key: "generationRate", label: "生成率" },
+      { key: "conversionRate", label: "转化率" },
+      { key: "pureAgentRatio", label: "纯智能体占比" }
+    ];
+    var items = [];
+    (state.shopLibrary || []).forEach(function (shop) {
+      var downs = [];
+      metrics.forEach(function (m) {
+        var latest = shopMetricVal(yKey, shop.id, m.key);
+        var prev = shopMetricVal(pKey, shop.id, m.key);
+        if (latest !== null && prev !== null) {
+          var diff = Math.round((latest - prev) * 100) / 100;
+          if (diff < 0) { downs.push({ label: m.label, diff: Math.abs(diff) }); }
+        }
+      });
+      if (downs.length) { items.push({ name: shop.name, downs: downs }); }
+    });
+
+    var wrap = document.createElement("div");
+    wrap.className = "down-notice";
+    var title = document.createElement("div");
+    title.className = "down-notice-title";
+    title.textContent = "昨日数据下降提醒（" + yKey + " 较 " + pKey + "）";
+    wrap.appendChild(title);
+    var list = document.createElement("div");
+    list.className = "down-notice-list";
+    if (!items.length) {
+      var empty = document.createElement("div");
+      empty.className = "down-notice-empty";
+      empty.textContent = "昨日所有店铺数据均未下降";
+      list.appendChild(empty);
+    } else {
+      items.forEach(function (it) {
+        var row = document.createElement("div");
+        row.className = "down-notice-item";
+        row.innerHTML = '<span class="down-shop">' + escapeHtml(it.name) + '</span>' +
+          it.downs.map(function (d) { return '<span class="down-tag">' + d.label + ' ↓' + d.diff + '</span>'; }).join("");
+        list.appendChild(row);
+      });
+    }
+    wrap.appendChild(list);
+    content.appendChild(wrap);
   }
 
   function buildDetailPanel(metric, shop, dates) {
