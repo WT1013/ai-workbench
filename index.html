@@ -4826,7 +4826,7 @@ table.report th {
     appendSummaryGroup(content, "非重点店铺", false, otherList, dates);
   }
 
-  // 昨日数据下降通知栏: 昨天较前天各指标下降的店铺
+  // 昨日数据下降通知栏: 昨天较前天各指标下降≥10个百分点的店铺
   function renderDownNotice(content) {
     var yKey = yesterdayKeyOf(todayKey());
     var pKey = yesterdayKeyOf(yKey);
@@ -4844,7 +4844,7 @@ table.report th {
         var prev = shopMetricVal(pKey, shop.id, m.key);
         if (latest !== null && prev !== null) {
           var diff = Math.round((latest - prev) * 100) / 100;
-          if (diff < 0) { downs.push({ label: m.label, diff: Math.abs(diff) }); }
+          if (diff <= -10) { downs.push({ label: m.label, diff: Math.abs(diff) }); }
         }
       });
       if (downs.length) { items.push({ name: shop.name, downs: downs }); }
@@ -5823,6 +5823,14 @@ table.report th {
         }
       });
     }
+
+    // 联动: 同步昨日数据完成后(同步页 postMessage 通知), 自动重新拉取云端数据刷新界面(含下降通知栏)
+    window.addEventListener("message", function (e) {
+      if (e && e.data && e.data.source === "workbench-sync-done") {
+        fetchCloudState();
+        showToast("同步完成，已刷新数据");
+      }
+    });
 
     var fillDingBtn = $("fillDingtalkBtn");
     if (fillDingBtn) {
