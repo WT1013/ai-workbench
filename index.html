@@ -3223,7 +3223,7 @@ table.report th {
             <div class="panel-body">
               <div class="metric-grid" id="metricGrid"></div>
               <div class="marked-note" id="markedNote" style="display:none;">
-                <div class="marked-note-title">已达标待审核店铺清单</div>
+                <div class="marked-note-title">已打标待审核店铺清单</div>
                 <div class="marked-note-list" id="markedNoteList"></div>
                 <button type="button" class="btn primary marked-note-btn" id="markedGoBtn">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
@@ -3837,7 +3837,7 @@ table.report th {
     });
     var todayM = (latestToday && latestToday.metrics) || {};
     var items = [
-      { id: "labelCount", label: "本月店铺达标数", value: (todayM.labelCount !== undefined && todayM.labelCount !== null && todayM.labelCount !== "") ? todayM.labelCount : 0 },
+      { id: "labelCount", label: "本月店铺已打标数", value: (todayM.labelCount !== undefined && todayM.labelCount !== null && todayM.labelCount !== "") ? todayM.labelCount : 0 },
       { id: "scriptCount", label: "本月话术未生成数", value: (todayM.scriptCount !== undefined && todayM.scriptCount !== null && todayM.scriptCount !== "") ? todayM.scriptCount : 0 },
       { id: "badcaseCount", label: "Agent 更新条数", value: sum.badcaseCount },
       { id: "kbCount", label: "知识库更新条数", value: sum.kbCount }
