@@ -3222,7 +3222,7 @@ table.report th {
             </div>
             <div class="panel-body">
               <div class="metric-grid" id="metricGrid"></div>
-              <div class="marked-note" id="markedNote" style="display:none;">
+              <div class="marked-note" id="markedNote">
                 <div class="marked-note-title">已打标待审核店铺清单</div>
                 <div class="marked-note-list" id="markedNoteList"></div>
                 <button type="button" class="btn primary marked-note-btn" id="markedGoBtn">
@@ -3856,24 +3856,20 @@ table.report th {
       grid.appendChild(field);
     });
 
-    // 便签: 有已标记记录的店铺清单
+    // 便签: 始终显示卡片; 有已打标待审核记录则列出店铺+数量, 没有则列表留空
     var note = $("markedNote");
     var noteList = $("markedNoteList");
     if (note && noteList) {
       var marked = (latestToday && latestToday.shopMarked) || {};
       var names = Object.keys(marked).filter(function (n) { return marked[n] > 0; }).sort(function (a, b) { return marked[b] - marked[a]; });
-      if (names.length) {
-        note.style.display = "block";
-        noteList.innerHTML = "";
-        names.forEach(function (n) {
-          var chip = document.createElement("div");
-          chip.className = "marked-chip";
-          chip.innerHTML = '<span class="marked-shop">' + escapeHtml(n) + '</span><span class="marked-num">' + marked[n] + '</span>';
-          noteList.appendChild(chip);
-        });
-      } else {
-        note.style.display = "none";
-      }
+      note.style.display = "block";
+      noteList.innerHTML = "";
+      names.forEach(function (n) {
+        var chip = document.createElement("div");
+        chip.className = "marked-chip";
+        chip.innerHTML = '<span class="marked-shop">' + escapeHtml(n) + '</span><span class="marked-num">' + marked[n] + '</span>';
+        noteList.appendChild(chip);
+      });
     }
   }
 
