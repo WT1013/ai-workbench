@@ -3707,18 +3707,24 @@ table.report th {
     var grid = $("metricGrid");
     grid.innerHTML = "";
     var month = key.slice(0, 7); // YYYY-MM
-    var sum = { labelCount: 0, scriptCount: 0, badcaseCount: 0, kbCount: 0 };
+    // labelCount/scriptCount: 每日覆盖值(抓取脚本写入本月总), 取最近一次
+    // badcaseCount/kbCount: 本月每日累加
+    var sum = { badcaseCount: 0, kbCount: 0 };
+    var lastDate = '';
+    var latestToday = dayData(key);
     Object.keys(state.days).forEach(function (k) {
       if (k.slice(0, 7) !== month) { return; }
       var m = (state.days[k] && state.days[k].metrics) || {};
-      ["labelCount", "scriptCount", "badcaseCount", "kbCount"].forEach(function (id) {
+      ["badcaseCount", "kbCount"].forEach(function (id) {
         var v = parseFloat(m[id]);
         if (!isNaN(v)) { sum[id] += v; }
       });
+      if (k > lastDate) { lastDate = k; }
     });
+    var todayM = (latestToday && latestToday.metrics) || {};
     var items = [
-      { id: "labelCount", label: "本月店铺达标数", value: sum.labelCount },
-      { id: "scriptCount", label: "本月话术未生成数", value: sum.scriptCount },
+      { id: "labelCount", label: "本月店铺达标数", value: (todayM.labelCount !== undefined && todayM.labelCount !== null && todayM.labelCount !== "") ? todayM.labelCount : 0 },
+      { id: "scriptCount", label: "本月话术未生成数", value: (todayM.scriptCount !== undefined && todayM.scriptCount !== null && todayM.scriptCount !== "") ? todayM.scriptCount : 0 },
       { id: "badcaseCount", label: "Agent 更新条数", value: sum.badcaseCount },
       { id: "kbCount", label: "知识库更新条数", value: sum.kbCount }
     ];
