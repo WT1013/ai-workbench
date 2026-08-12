@@ -818,37 +818,7 @@ button {
   box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22);
 }
 
-.month-summary {
-  margin-top: 16px;
-  border-top: 1px dashed rgba(99, 153, 34, 0.35);
-  padding-top: 12px;
-}
-
-.month-summary-title {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #3b6d11;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.month-summary-title::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 3px;
-  background: linear-gradient(135deg, #639922, #3b6d11);
-}
-
-.month-summary-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.month-summary-card {
+.metric-readonly {
   background: linear-gradient(180deg, #f6fbf0 0%, #eef5e6 100%);
   border: 1px solid rgba(99, 153, 34, 0.25);
   border-radius: 12px;
@@ -856,28 +826,24 @@ button {
   text-align: center;
 }
 
-.month-summary-label {
-  font-size: 11.5px;
-  color: #5c4a33;
+.metric-readonly label {
+  justify-content: center;
   margin-bottom: 4px;
 }
 
-.month-summary-value {
-  font-size: 20px;
+.metric-readonly-value {
+  font-size: 22px;
   font-weight: 800;
   color: #2e5a0e;
+  line-height: 1.2;
 }
 
-:root[data-theme="dark"] .month-summary-card {
+:root[data-theme="dark"] .metric-readonly {
   background: rgba(46, 90, 14, 0.25);
   border-color: rgba(99, 153, 34, 0.35);
 }
 
-:root[data-theme="dark"] .month-summary-value {
-  color: #97c459;
-}
-
-:root[data-theme="dark"] .month-summary-title {
+:root[data-theme="dark"] .metric-readonly-value {
   color: #97c459;
 }
 
@@ -3150,10 +3116,6 @@ table.report th {
             </div>
             <div class="panel-body">
               <div class="metric-grid" id="metricGrid"></div>
-              <div class="month-summary">
-                <div class="month-summary-title">本月汇总</div>
-                <div class="month-summary-grid" id="monthSummaryGrid"></div>
-              </div>
             </div>
           </div>
 
@@ -3744,29 +3706,6 @@ table.report th {
   function renderMetrics(key) {
     var grid = $("metricGrid");
     grid.innerHTML = "";
-    var metrics = dayData(key).metrics;
-    METRICS.forEach(function (metric) {
-      var field = document.createElement("div");
-      field.className = "metric-field";
-      field.setAttribute("data-metric", metric.id);
-      var label = document.createElement("label");
-      label.textContent = metric.label;
-      label.setAttribute("for", "metric-" + metric.id);
-      var input = document.createElement("input");
-      input.type = "number";
-      input.min = "0";
-      input.id = "metric-" + metric.id;
-      input.setAttribute("data-metric", metric.id);
-      input.value = metrics[metric.id] !== undefined && metrics[metric.id] !== null ? metrics[metric.id] : "";
-      field.appendChild(label);
-      field.appendChild(input);
-      grid.appendChild(field);
-    });
-  }
-
-  function renderMonthSummary(key) {
-    var grid = $("monthSummaryGrid");
-    if (!grid) { return; }
     var month = key.slice(0, 7); // YYYY-MM
     var sum = { labelCount: 0, scriptCount: 0, badcaseCount: 0, kbCount: 0 };
     Object.keys(state.days).forEach(function (k) {
@@ -3778,24 +3717,23 @@ table.report th {
       });
     });
     var items = [
-      { label: "本月店铺达标数", value: sum.labelCount },
-      { label: "本月话术未生成数", value: sum.scriptCount },
-      { label: "Agent 更新条数", value: sum.badcaseCount },
-      { label: "知识库更新条数", value: sum.kbCount }
+      { id: "labelCount", label: "本月店铺达标数", value: sum.labelCount },
+      { id: "scriptCount", label: "本月话术未生成数", value: sum.scriptCount },
+      { id: "badcaseCount", label: "Agent 更新条数", value: sum.badcaseCount },
+      { id: "kbCount", label: "知识库更新条数", value: sum.kbCount }
     ];
-    grid.innerHTML = "";
     items.forEach(function (item) {
-      var card = document.createElement("div");
-      card.className = "month-summary-card";
-      var label = document.createElement("div");
-      label.className = "month-summary-label";
+      var field = document.createElement("div");
+      field.className = "metric-field metric-readonly";
+      field.setAttribute("data-metric", item.id);
+      var label = document.createElement("label");
       label.textContent = item.label;
       var value = document.createElement("div");
-      value.className = "month-summary-value";
+      value.className = "metric-readonly-value";
       value.textContent = item.value;
-      card.appendChild(label);
-      card.appendChild(value);
-      grid.appendChild(card);
+      field.appendChild(label);
+      field.appendChild(value);
+      grid.appendChild(field);
     });
   }
 
@@ -3890,7 +3828,6 @@ table.report th {
     renderCalendar();
     renderTaskRows(key);
     renderMetrics(key);
-    renderMonthSummary(key);
     $("difficulty").value = dayData(key).difficulty || "";
     updateProgress(key);
     renderShopsView();
@@ -5767,12 +5704,12 @@ table.report th {
     });
 
     $("metricGrid").addEventListener("input", function (e) {
-      var metricId = e.target.getAttribute("data-metric");
-      if (!metricId) { return; }
+      var metricId = e.target.getAttribute && e.target.getAttribute("data-metric");
+      if (!metricId || !e.target.tagName || e.target.tagName.toLowerCase() !== "input") { return; }
       var day = dayData(currentKey());
       day.metrics[metricId] = e.target.value;
       saveState();
-      renderMonthSummary(currentKey());
+      renderMetrics(currentKey());
     });
 
     $("difficulty").addEventListener("input", function () {
