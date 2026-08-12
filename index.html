@@ -913,6 +913,28 @@ button {
   margin-left: 8px;
 }
 
+.marked-note-btn {
+  width: 100%;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  background: linear-gradient(135deg, #639922, #3b6d11);
+  border: 0;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.15s ease;
+}
+
+.marked-note-btn:hover {
+  opacity: 0.88;
+}
+
 :root[data-theme="dark"] .marked-note {
   background: rgba(216, 169, 78, 0.12);
   border-color: rgba(216, 169, 78, 0.4);
@@ -3201,8 +3223,12 @@ table.report th {
             <div class="panel-body">
               <div class="metric-grid" id="metricGrid"></div>
               <div class="marked-note" id="markedNote" style="display:none;">
-                <div class="marked-note-title">已达标待审核店铺清单（可去探域调优工坊查看）</div>
+                <div class="marked-note-title">已达标待审核店铺清单</div>
                 <div class="marked-note-list" id="markedNoteList"></div>
+                <button type="button" class="btn primary marked-note-btn" id="markedGoBtn">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+                  去探域寻找
+                </button>
               </div>
             </div>
           </div>
@@ -5825,6 +5851,13 @@ table.report th {
       saveState();
       renderMetrics(currentKey());
     });
+
+    var markedGoBtn = $("markedGoBtn");
+    if (markedGoBtn) {
+      markedGoBtn.addEventListener("click", function () {
+        window.open("https://agent.tanyuai.com/v2/diagnostic-optimization/optimization-workshop", "_blank");
+      });
+    }
 
     $("difficulty").addEventListener("input", function () {
       var day = dayData(currentKey());
