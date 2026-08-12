@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0a84ff">
+<meta name="theme-color" content="#3b6d11">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="远山工作台">
@@ -20,8 +20,8 @@
   --text: #1c1c1e;
   --text-soft: #48484a;
   --muted: #8e8e93;
-  --blue: #0a84ff;
-  --blue-deep: #0071e3;
+  --blue: #3b6d11;
+  --blue-deep: #2e5a0e;
   --blue-soft: #e6f1ff;
   --teal: #30b0c7;
   --teal-soft: #e4f4f8;
@@ -70,7 +70,7 @@ button {
 }
 
 ::selection {
-  background: rgba(10, 132, 255, 0.22);
+  background: rgba(59, 109, 17, 0.22);
 }
 
 .app {
@@ -119,8 +119,8 @@ button {
   align-items: center;
   justify-content: center;
   color: #fff;
-  background: linear-gradient(135deg, #0a84ff 0%, #4aa8ff 55%, #7cc4ff 100%);
-  box-shadow: 0 4px 10px rgba(10, 132, 255, 0.28);
+  background: linear-gradient(135deg, #3b6d11 0%, #639922 55%, #97c459 100%);
+  box-shadow: 0 4px 10px rgba(59, 109, 17, 0.28);
 }
 
 .brand h1 {
@@ -179,7 +179,7 @@ button {
 .icon-btn:hover {
   background: var(--blue-soft);
   color: var(--blue);
-  border-color: rgba(10, 132, 255, 0.35);
+  border-color: rgba(59, 109, 17, 0.35);
 }
 
 .icon-btn:active {
@@ -195,7 +195,7 @@ button {
   padding: 0 16px;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.28);
+  box-shadow: 0 3px 10px rgba(59, 109, 17, 0.28);
 }
 
 .today-btn:hover {
@@ -260,9 +260,9 @@ button {
 }
 
 .tab-btn.active {
-  background: rgba(10, 132, 255, 0.92);
+  background: rgba(59, 109, 17, 0.92);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(10, 132, 255, 0.28);
+  box-shadow: 0 4px 14px rgba(59, 109, 17, 0.28);
 }
 
 .tab-btn[draggable="true"] {
@@ -275,11 +275,11 @@ button {
 
 .tab-btn.dragging {
   opacity: 0.45;
-  background: rgba(10, 132, 255, 0.1);
+  background: rgba(59, 109, 17, 0.1);
 }
 
 .tab-btn.drag-over {
-  border-left: 3px solid #0a84ff;
+  border-left: 3px solid #3b6d11;
 }
 
 .today-grid {
@@ -375,7 +375,7 @@ button {
 .progress-fill {
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, #0a84ff, #4aa8ff);
+  background: linear-gradient(90deg, #3b6d11, #639922);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
@@ -466,7 +466,7 @@ button {
 .cal-day.selected {
   background: var(--blue);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(59, 109, 17, 0.35);
 }
 
 .cal-day.selected .shift-chip {
@@ -753,7 +753,7 @@ button {
 
 .select:focus, .input:focus, textarea:focus {
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22);
+  box-shadow: 0 0 0 3px rgba(59, 109, 17, 0.22);
 }
 
 .side {
@@ -815,32 +815,63 @@ button {
 
 .metric-field input:focus {
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22);
+  box-shadow: 0 0 0 3px rgba(59, 109, 17, 0.22);
 }
 
 .metric-readonly {
-  background: linear-gradient(180deg, #f6fbf0 0%, #eef5e6 100%);
-  border: 1px solid rgba(99, 153, 34, 0.25);
-  border-radius: 12px;
-  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 12px 14px 10px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.metric-readonly .metric-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--green-soft);
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
 }
 
 .metric-readonly label {
   justify-content: center;
-  margin-bottom: 4px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .metric-readonly-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: #2e5a0e;
-  line-height: 1.2;
+  line-height: 1.15;
+}
+
+.metric-readonly-sub {
+  font-size: 10.5px;
+  color: var(--muted);
 }
 
 :root[data-theme="dark"] .metric-readonly {
-  background: rgba(46, 90, 14, 0.25);
-  border-color: rgba(99, 153, 34, 0.35);
+  background: rgba(44, 44, 46, 0.5);
+  border-color: var(--hairline);
+}
+
+:root[data-theme="dark"] .metric-readonly .metric-icon {
+  background: rgba(52, 199, 89, 0.16);
+  color: #6fd88a;
 }
 
 :root[data-theme="dark"] .metric-readonly-value {
@@ -849,8 +880,8 @@ button {
 
 .marked-note {
   margin-top: 14px;
-  background: #fff8ef;
-  border: 1px solid rgba(216, 169, 78, 0.45);
+  background: #f4f9ec;
+  border: 1px solid rgba(99, 153, 34, 0.4);
   border-radius: 12px;
   padding: 11px 13px;
 }
@@ -858,7 +889,7 @@ button {
 .marked-note-title {
   font-size: 12px;
   font-weight: 700;
-  color: #8a6d3b;
+  color: #3b6d11;
   margin-bottom: 9px;
   display: flex;
   align-items: center;
@@ -870,7 +901,7 @@ button {
   width: 8px;
   height: 8px;
   border-radius: 3px;
-  background: #d9a94e;
+  background: #639922;
 }
 
 .marked-note-list {
@@ -886,14 +917,14 @@ button {
   align-items: center;
   justify-content: space-between;
   background: #fff;
-  border: 1px solid rgba(216, 169, 78, 0.3);
+  border: 1px solid rgba(99, 153, 34, 0.3);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
 }
 
 .marked-shop {
-  color: #4a3a28;
+  color: #3f5a24;
   font-weight: 500;
   flex: 1;
   min-width: 0;
@@ -904,7 +935,7 @@ button {
 
 .marked-num {
   flex: 0 0 auto;
-  background: #d9a94e;
+  background: #639922;
   color: #fff;
   font-weight: 700;
   font-size: 12px;
@@ -936,28 +967,28 @@ button {
 }
 
 :root[data-theme="dark"] .marked-note {
-  background: rgba(216, 169, 78, 0.12);
-  border-color: rgba(216, 169, 78, 0.4);
+  background: rgba(99, 153, 34, 0.14);
+  border-color: rgba(99, 153, 34, 0.45);
 }
 
 :root[data-theme="dark"] .marked-note-title {
-  color: #e8c36b;
+  color: #97c459;
 }
 
 :root[data-theme="dark"] .marked-chip {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(216, 169, 78, 0.3);
+  border-color: rgba(99, 153, 34, 0.35);
 }
 
 :root[data-theme="dark"] .marked-shop {
-  color: #f0e6d2;
+  color: #dcecc5;
 }
 
 /* 昨日数据下降通知栏 */
 .down-notice {
   margin-bottom: 14px;
-  background: #fff8f0;
-  border: 1px solid rgba(216, 130, 60, 0.4);
+  background: #fdf1ef;
+  border: 1px solid rgba(220, 38, 38, 0.35);
   border-radius: 12px;
   padding: 11px 13px;
 }
@@ -965,7 +996,7 @@ button {
 .down-notice-title {
   font-size: 12.5px;
   font-weight: 700;
-  color: #b45309;
+  color: #b91c1c;
   margin-bottom: 9px;
   display: flex;
   align-items: center;
@@ -992,20 +1023,20 @@ button {
   gap: 8px;
   flex-wrap: wrap;
   font-size: 12.5px;
-  background: #fffdf8;
-  border: 1px solid rgba(216, 130, 60, 0.25);
+  background: #fffaf8;
+  border: 1px solid rgba(220, 38, 38, 0.22);
   border-radius: 8px;
   padding: 6px 10px;
 }
 
 .down-shop {
   font-weight: 600;
-  color: #7c2d12;
+  color: #991b1b;
 }
 
 .down-tag {
-  background: #fee2d5;
-  color: #c2410c;
+  background: #fde8e8;
+  color: #dc2626;
   font-size: 11.5px;
   font-weight: 600;
   border-radius: 999px;
@@ -1018,26 +1049,67 @@ button {
 }
 
 :root[data-theme="dark"] .down-notice {
-  background: rgba(216, 130, 60, 0.1);
-  border-color: rgba(216, 130, 60, 0.4);
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.4);
 }
 
 :root[data-theme="dark"] .down-notice-title {
-  color: #f0b46b;
+  color: #f5a3a3;
 }
 
 :root[data-theme="dark"] .down-notice-item {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(216, 130, 60, 0.3);
+  border-color: rgba(220, 38, 38, 0.3);
 }
 
 :root[data-theme="dark"] .down-shop {
-  color: #f5d5b8;
+  color: #f2c9c9;
 }
 
 :root[data-theme="dark"] .down-tag {
-  background: rgba(216, 130, 60, 0.25);
-  color: #f0b46b;
+  background: rgba(220, 38, 38, 0.22);
+  color: #f5a3a3;
+}
+
+/* 卡片关闭按钮 */
+.marked-note,
+.down-notice {
+  position: relative;
+}
+
+.note-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.14);
+  color: #8e8e93;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.note-close:hover {
+  background: rgba(120, 120, 128, 0.28);
+  color: #48484a;
+}
+
+:root[data-theme="dark"] .note-close {
+  background: rgba(255, 255, 255, 0.12);
+  color: #98989f;
+}
+
+:root[data-theme="dark"] .note-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #e5e5ea;
 }
 
 textarea {
@@ -1135,7 +1207,7 @@ textarea {
 .btn.primary {
   background: var(--blue);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.28);
+  box-shadow: 0 4px 12px rgba(59, 109, 17, 0.28);
 }
 
 .btn.primary:hover {
@@ -1288,6 +1360,32 @@ table.report tr.month-row .month-arrow {
 table.report tr.month-row.open .month-arrow {
   transform: rotate(180deg);
   color: #3B6D11;
+}
+
+table.report tr.month-row .month-state {
+  font-size: 11px;
+  color: #9aa19b;
+  background: rgba(120, 120, 128, 0.12);
+  border-radius: 999px;
+  padding: 1px 9px;
+  margin-left: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+table.report tr.month-row.open .month-state {
+  color: #3B6D11;
+  background: rgba(99, 153, 34, 0.14);
+}
+
+.day-state-tip {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+table.report tr.day-row:not(.collapsed) .day-state-tip {
+  display: none;
 }
 
 table.report tr.day-row[data-month] {
@@ -1923,7 +2021,7 @@ table.report th {
 .shops-tab.active {
   background: var(--blue);
   color: #fff;
-  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.28);
+  box-shadow: 0 3px 10px rgba(59, 109, 17, 0.28);
 }
 
 .shops-date {
@@ -2174,7 +2272,7 @@ table.report th {
 }
 
 .shop-month-table tr.key-row .shop-month-name {
-  color: #b45309;
+  color: #b91c1c;
 }
 
 @media (max-width: 1100px) {
@@ -2378,7 +2476,7 @@ table.report th {
   height: 22px;
   border-radius: 3px;
   flex: none;
-  background: #0a84ff;
+  background: #3b6d11;
 }
 
 .summary-group:not(.key-group) .grp-accent {
@@ -2400,8 +2498,8 @@ table.report th {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(10, 132, 255, 0.14);
-  color: #0a84ff;
+  background: rgba(59, 109, 17, 0.14);
+  color: #3b6d11;
 }
 
 .summary-group:not(.key-group) .grp-badge {
@@ -2449,7 +2547,7 @@ table.report th {
 }
 
 .summary-overview-card.key-shop {
-  border-left: 4px solid #0a84ff;
+  border-left: 4px solid #3b6d11;
 }
 
 .summary-overview-card:not(.key-shop) {
@@ -2596,8 +2694,8 @@ table.report th {
 }
 
 .report-sec-optional {
-  color: #8a6d3b;
-  border-left-color: #d9a94e;
+  color: #3b6d11;
+  border-left-color: #639922;
 }
 
 .report-check {
@@ -2999,7 +3097,7 @@ table.report th {
 
 .shot-todo-detail {
   font-size: 12.5px;
-  color: #4a3a28;
+  color: #3f5a24;
 }
 
 .shot-todo-priority {
@@ -3201,6 +3299,57 @@ table.report th {
 :root[data-theme="dark"] .record-empty {
   border-color: rgba(255, 255, 255, 0.15);
 }
+
+/* --- 深色模式补充适配(统一) --- */
+:root[data-theme="dark"] .select:focus,
+:root[data-theme="dark"] .input:focus,
+:root[data-theme="dark"] textarea:focus {
+  background: var(--surface-inset);
+  box-shadow: 0 0 0 3px rgba(99, 153, 34, 0.35);
+}
+
+:root[data-theme="dark"] .metric-field input:focus {
+  background: var(--surface-inset);
+  box-shadow: 0 0 0 3px rgba(99, 153, 34, 0.35);
+}
+
+:root[data-theme="dark"] table.report tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+:root[data-theme="dark"] .record-block {
+  color: var(--text-soft);
+}
+
+:root[data-theme="dark"] .record-title {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .record-desc {
+  color: var(--text-soft);
+}
+
+:root[data-theme="dark"] .difficulty-cell {
+  color: var(--text-soft);
+}
+
+:root[data-theme="dark"] .status-summary {
+  color: var(--text-soft);
+}
+
+:root[data-theme="dark"] .summary-detail-head {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .summary-metric-panel {
+  background: rgba(44, 44, 46, 0.4);
+  border-color: var(--hairline);
+}
+
+:root[data-theme="dark"] .month-summary-card {
+  background: rgba(46, 90, 14, 0.22);
+  border-color: rgba(99, 153, 34, 0.3);
+}
 </style>
 </head>
 <body>
@@ -3310,6 +3459,7 @@ table.report th {
             <div class="panel-body">
               <div class="metric-grid" id="metricGrid"></div>
               <div class="marked-note" id="markedNote">
+                <button type="button" class="note-close" id="markedNoteClose" aria-label="关闭" title="关闭（当天不再显示）">×</button>
                 <div class="marked-note-title">已打标待审核店铺清单</div>
                 <div class="marked-note-list" id="markedNoteList"></div>
                 <button type="button" class="btn primary marked-note-btn" id="markedGoBtn">
@@ -3904,6 +4054,17 @@ table.report th {
     updateClosedToggle(key);
   }
 
+  // 卡片"当日关闭忽略"记忆: csa-dismiss-日期
+  function dismissState() {
+    try { return JSON.parse(localStorage.getItem("csa-dismiss-" + todayKey()) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+  function dismissSet(kind) {
+    var s = dismissState();
+    s[kind] = 1;
+    try { localStorage.setItem("csa-dismiss-" + todayKey(), JSON.stringify(s)); } catch (e) {}
+  }
+
   function renderMetrics(key) {
     var grid = $("metricGrid");
     grid.innerHTML = "";
@@ -3924,39 +4085,51 @@ table.report th {
     });
     var todayM = (latestToday && latestToday.metrics) || {};
     var items = [
-      { id: "labelCount", label: "本月店铺已打标数", value: (todayM.labelCount !== undefined && todayM.labelCount !== null && todayM.labelCount !== "") ? todayM.labelCount : 0 },
-      { id: "scriptCount", label: "本月话术未生成数", value: (todayM.scriptCount !== undefined && todayM.scriptCount !== null && todayM.scriptCount !== "") ? todayM.scriptCount : 0 },
-      { id: "badcaseCount", label: "Agent 更新条数", value: sum.badcaseCount },
-      { id: "kbCount", label: "知识库更新条数", value: sum.kbCount }
+      { id: "labelCount", label: "本月店铺已打标数", value: (todayM.labelCount !== undefined && todayM.labelCount !== null && todayM.labelCount !== "") ? todayM.labelCount : 0, icon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' },
+      { id: "scriptCount", label: "本月话术未生成数", value: (todayM.scriptCount !== undefined && todayM.scriptCount !== null && todayM.scriptCount !== "") ? todayM.scriptCount : 0, icon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' },
+      { id: "badcaseCount", label: "Agent 更新条数", value: sum.badcaseCount, icon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>' },
+      { id: "kbCount", label: "知识库更新条数", value: sum.kbCount, icon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' }
     ];
     items.forEach(function (item) {
       var field = document.createElement("div");
       field.className = "metric-field metric-readonly";
       field.setAttribute("data-metric", item.id);
+      var icon = document.createElement("div");
+      icon.className = "metric-icon";
+      icon.innerHTML = item.icon;
       var label = document.createElement("label");
       label.textContent = item.label;
       var value = document.createElement("div");
       value.className = "metric-readonly-value";
       value.textContent = item.value;
+      var sub = document.createElement("div");
+      sub.className = "metric-readonly-sub";
+      sub.textContent = "本月累计";
+      field.appendChild(icon);
       field.appendChild(label);
       field.appendChild(value);
+      field.appendChild(sub);
       grid.appendChild(field);
     });
 
-    // 便签: 始终显示卡片; 有已打标待审核记录则列出店铺+数量, 没有则列表留空
+    // 便签: 始终显示卡片; 有已打标待审核记录则列出店铺+数量, 没有则列表留空; 当日可关闭忽略
     var note = $("markedNote");
     var noteList = $("markedNoteList");
     if (note && noteList) {
       var marked = (latestToday && latestToday.shopMarked) || {};
       var names = Object.keys(marked).filter(function (n) { return marked[n] > 0; }).sort(function (a, b) { return marked[b] - marked[a]; });
-      note.style.display = "block";
-      noteList.innerHTML = "";
-      names.forEach(function (n) {
-        var chip = document.createElement("div");
-        chip.className = "marked-chip";
-        chip.innerHTML = '<span class="marked-shop">' + escapeHtml(n) + '</span><span class="marked-num">' + marked[n] + '</span>';
-        noteList.appendChild(chip);
-      });
+      if (dismissState().markedNote) {
+        note.style.display = "none";
+      } else {
+        note.style.display = "block";
+        noteList.innerHTML = "";
+        names.forEach(function (n) {
+          var chip = document.createElement("div");
+          chip.className = "marked-chip";
+          chip.innerHTML = '<span class="marked-shop">' + escapeHtml(n) + '</span><span class="marked-num">' + marked[n] + '</span>';
+          noteList.appendChild(chip);
+        });
+      }
     }
   }
 
@@ -4112,6 +4285,7 @@ table.report th {
         '<span class="month-badge">' + monthNum + '月</span>' +
         '<span>' + yearNum + '年' + monthNum + '月</span>' +
         '<span class="month-count">共 ' + monthDayKeys.length + ' 条</span>' +
+        '<span class="month-state">' + (reportAllCollapsed ? "已收起" : "展开中") + '</span>' +
         '<span class="month-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>' +
         '</div>';
       monthTd.title = "点击展开/折叠该月记录";
@@ -4142,6 +4316,10 @@ table.report th {
         dateCell.appendChild(dateMain);
         dateCell.appendChild(dateSmall);
         dateCell.appendChild(arrow);
+        var stateTip = document.createElement("span");
+        stateTip.className = "day-state-tip";
+        stateTip.textContent = "展开详情";
+        dateCell.appendChild(stateTip);
 
         var statusCell = document.createElement("td");
         statusCell.className = "status-summary";
@@ -4193,6 +4371,8 @@ table.report th {
     }
     Array.prototype.forEach.call(document.querySelectorAll("#reportBody tr.month-row"), function (row) {
       row.classList.toggle("open", !reportAllCollapsed);
+      var state = row.querySelector(".month-state");
+      if (state) { state.textContent = reportAllCollapsed ? "已收起" : "展开中"; }
     });
   }
 
@@ -4518,7 +4698,7 @@ table.report th {
     nav.appendChild(btn);
   }
 
-  var SHOP_COLORS = ["#0a84ff", "#ff9500", "#34c759", "#af52de", "#ff3b30", "#30b0c7", "#8e8e93", "#e11d48"];
+  var SHOP_COLORS = ["#3b6d11", "#ff9500", "#34c759", "#af52de", "#ff3b30", "#30b0c7", "#8e8e93", "#e11d48"];
 
   function shopMetricVal(dateKey, shopId, metric) {
     var day = state.days[dateKey];
@@ -4552,7 +4732,7 @@ table.report th {
     btn.className = "tab-btn";
     btn.id = "tabSummary";
     btn.setAttribute("data-view", "summary");
-    btn.textContent = "主页";
+    btn.textContent = "数据总览";
     nav.appendChild(btn);
   }
 
@@ -4852,6 +5032,22 @@ table.report th {
 
     var wrap = document.createElement("div");
     wrap.className = "down-notice";
+    // 当日已关闭则不再显示
+    if (dismissState().downNotice) {
+      wrap.style.display = "none";
+    }
+    var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "note-close";
+    closeBtn.setAttribute("aria-label", "关闭");
+    closeBtn.title = "关闭（当天不再显示）";
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", function () {
+      dismissSet("downNotice");
+      wrap.style.display = "none";
+      showToast("已关闭（当天不再显示）");
+    });
+    wrap.appendChild(closeBtn);
     var title = document.createElement("div");
     title.className = "down-notice-title";
     title.textContent = "昨日数据下降提醒（" + yKey + " 较 " + pKey + "）";
@@ -4887,7 +5083,7 @@ table.report th {
     legend.className = "summary-legend";
     var chip = document.createElement("span");
     chip.className = "summary-legend-chip";
-    chip.innerHTML = '<i style="background:#0a84ff"></i>' + (shop.name || "");
+    chip.innerHTML = '<i style="background:#3b6d11"></i>' + (shop.name || "");
     legend.appendChild(chip);
     head.appendChild(title);
     head.appendChild(legend);
@@ -5832,6 +6028,23 @@ table.report th {
       }
     });
 
+    var refreshBtn = $("refreshDataBtn");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", function () {
+        fetchCloudState();
+        showToast("正在刷新数据…");
+      });
+    }
+
+    var noteCloseBtn = $("markedNoteClose");
+    if (noteCloseBtn) {
+      noteCloseBtn.addEventListener("click", function () {
+        dismissSet("markedNote");
+        $("markedNote").style.display = "none";
+        showToast("已关闭（当天不再显示）");
+      });
+    }
+
     var fillDingBtn = $("fillDingtalkBtn");
     if (fillDingBtn) {
       fillDingBtn.addEventListener("click", function () {
@@ -6026,7 +6239,11 @@ table.report th {
       var monthToggle = e.target.closest("[data-toggle-month]");
       if (monthToggle) {
         var monthRow = monthToggle.closest("tr.month-row");
-        if (monthRow) { monthRow.classList.toggle("open"); }
+        if (monthRow) {
+          monthRow.classList.toggle("open");
+          var st = monthRow.querySelector(".month-state");
+          if (st) { st.textContent = monthRow.classList.contains("open") ? "展开中" : "已收起"; }
+        }
         return;
       }
       var btn = e.target.closest("[data-open-day]");
@@ -6102,6 +6319,13 @@ table.report th {
       syncBtn.id = "syncShopBtn";
       syncBtn.textContent = "同步昨日数据";
       syncActions.appendChild(syncBtn);
+      var refreshBtn = document.createElement("button");
+      refreshBtn.type = "button";
+      refreshBtn.className = "btn ghost";
+      refreshBtn.id = "refreshDataBtn";
+      refreshBtn.textContent = "刷新数据";
+      refreshBtn.title = "重新从云端拉取最新数据";
+      syncActions.appendChild(refreshBtn);
       var dingBtn = document.createElement("button");
       dingBtn.type = "button";
       dingBtn.className = "btn";
@@ -6115,7 +6339,7 @@ table.report th {
     var brandTitle = document.querySelector(".brand h1");
     if (brandTitle) { brandTitle.textContent = "远山工作台"; }
     $("tabToday").textContent = "工作台";
-    $("tabSummary").textContent = "主页";
+    $("tabSummary").textContent = "数据总览";
     $("shopTabDaily").textContent = "昨日数据";
     var tabsNav = document.querySelector(".tabs");
     applySavedTabOrder(tabsNav);
