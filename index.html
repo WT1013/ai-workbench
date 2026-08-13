@@ -560,7 +560,7 @@ button {
 
 .task-row {
   display: grid;
-  grid-template-columns: 264px minmax(170px, 1.2fr) 84px 48px;
+  grid-template-columns: 264px minmax(170px, 1fr);
   gap: 12px;
   align-items: center;
   padding: 11px 18px;
@@ -1046,6 +1046,95 @@ button {
 .down-notice-empty {
   font-size: 12px;
   color: #9aa19b;
+}
+
+/* 数据缺口提醒(信息蓝绿色) */
+.gap-notice {
+  margin-bottom: 14px;
+  background: #f2fafb;
+  border: 1px solid rgba(48, 176, 199, 0.4);
+  border-radius: 12px;
+  padding: 11px 13px;
+  position: relative;
+}
+
+.gap-notice-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0e7f96;
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gap-notice-title::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #30b0c7, #0e7f96);
+}
+
+.gap-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.gap-notice-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  background: #f7fdfe;
+  border: 1px solid rgba(48, 176, 199, 0.22);
+  border-radius: 8px;
+  padding: 5px 9px;
+}
+
+.gap-shop {
+  font-weight: 600;
+  color: #0b4f5e;
+}
+
+.gap-tag {
+  background: #e0f3f7;
+  color: #0e7f96;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.gap-notice-ok {
+  font-size: 12px;
+  color: #1a7f37;
+  padding: 2px 0;
+}
+
+:root[data-theme="dark"] .gap-notice {
+  background: rgba(48, 176, 199, 0.1);
+  border-color: rgba(48, 176, 199, 0.4);
+}
+
+:root[data-theme="dark"] .gap-notice-title {
+  color: #6cd4e8;
+}
+
+:root[data-theme="dark"] .gap-notice-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(48, 176, 199, 0.3);
+}
+
+:root[data-theme="dark"] .gap-shop {
+  color: #a8e6f2;
+}
+
+:root[data-theme="dark"] .gap-tag {
+  background: rgba(48, 176, 199, 0.22);
+  color: #6cd4e8;
 }
 
 :root[data-theme="dark"] .down-notice {
@@ -1820,7 +1909,7 @@ table.report tr.month-row.open ~ tr.day-row[data-month] {
   }
 
   .task-row {
-    grid-template-columns: 264px 1fr 84px 48px;
+    grid-template-columns: 264px 1fr;
   }
 
   .note-input.open {
@@ -3300,6 +3389,56 @@ table.report th {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
+/* 数据修改日志 */
+.data-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+
+.data-log-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  background: #fafcf7;
+  border: 1px solid rgba(99, 153, 34, 0.18);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.data-log-time {
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-log-date {
+  color: var(--text-soft);
+  flex: 0 0 auto;
+}
+
+.data-log-tag {
+  margin-left: auto;
+  background: rgba(99, 153, 34, 0.14);
+  color: #3b6d11;
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .data-log-row {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(99, 153, 34, 0.3);
+}
+
+:root[data-theme="dark"] .data-log-tag {
+  background: rgba(99, 153, 34, 0.22);
+  color: #97c459;
+}
+
 /* --- 深色模式补充适配(统一) --- */
 :root[data-theme="dark"] .select:focus,
 :root[data-theme="dark"] .input:focus,
@@ -3600,6 +3739,14 @@ table.report th {
           </div>
           <div id="reportRecordsBody">
             <div id="reportRecords"></div>
+            <div class="report-records-head" id="dataLogsHead" title="点击折叠/展开">
+              <span class="rr-head-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+              数据修改日志
+              <span class="rr-head-count" id="dataLogsCount"></span>
+            </div>
+            <div id="dataLogsBody">
+              <div id="dataLogs"></div>
+            </div>
             <div class="table-wrap report-table-sub">
               <table class="report" id="reportTable">
               <thead>
@@ -3875,9 +4022,25 @@ table.report th {
     }, 400);
   }
 
+  // 数据修改日志: 记录最近的数据保存(同分钟合并), 存云端 days.__logs__
+  function logDataChange() {
+    var now = new Date();
+    var timeTxt = toKey(now) + " " + String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+    var logs = Array.isArray(state.days.__logs__) ? state.days.__logs__.slice() : [];
+    var last = logs[logs.length - 1];
+    if (last && last.d === currentKey() && now.getTime() - (last.ts || 0) < 60000) {
+      last.t = timeTxt;
+    } else {
+      logs.push({ t: timeTxt, d: currentKey(), ts: now.getTime() });
+    }
+    if (logs.length > 300) { logs = logs.slice(-300); }
+    state.days.__logs__ = logs;
+  }
+
   function saveState() {
     try {
       state.days["__library__"] = { shops: state.shopLibrary || [] };
+      logDataChange();
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days: state.days, shifts: state.shifts }));
       if (location.protocol.indexOf("http") === 0) {
         queueSync();
@@ -4020,35 +4183,10 @@ table.report th {
       name.textContent = task.name;
       name.title = task.name;
 
-      var priority = document.createElement("select");
-      priority.className = "select priority-select";
-      priority.setAttribute("data-field", "priority");
-      priority.setAttribute("aria-label", task.name + "优先级");
-      ["high", "mid", "low"].forEach(function (p) {
-        var opt = document.createElement("option");
-        opt.value = p;
-        opt.textContent = PRIORITY[p].label;
-        if (p === data.priority) { opt.selected = true; }
-        priority.appendChild(opt);
-      });
-
-      var noteCell = document.createElement("div");
-      noteCell.className = "note-cell";
-      var noteBtn = document.createElement("button");
-      noteBtn.type = "button";
-      noteBtn.className = "note-btn" + (data.note ? " has-note" : "");
-      noteBtn.setAttribute("data-action", "open-note");
-      noteBtn.setAttribute("aria-label", task.name + "备注");
-      noteBtn.title = "备注";
-      noteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>';
-      noteCell.appendChild(noteBtn);
-
       row.classList.toggle("closed", data.status === "closed");
       row.classList.toggle("is-closed-hidden", data.status === "closed" && !showClosed);
       row.appendChild(seg);
       row.appendChild(name);
-      row.appendChild(priority);
-      row.appendChild(noteCell);
       list.appendChild(row);
     });
     updateClosedToggle(key);
@@ -4246,6 +4384,7 @@ table.report th {
 
   function renderReport() {
     renderReportRecords();
+    renderDataLogs();
     var body = $("reportBody");
     body.innerHTML = "";
     var keys = Object.keys(state.days).filter(dayHasData).sort().reverse();
@@ -5002,8 +5141,75 @@ table.report th {
     var keyList = shops.filter(shopKey);
     var otherList = shops.filter(function (s) { return !shopKey(s); });
     renderDownNotice(content);
+    renderGapNotice(content);
     appendSummaryGroup(content, "重点店铺", true, keyList, dates);
     appendSummaryGroup(content, "非重点店铺", false, otherList, dates);
+  }
+
+  // 数据缺口提醒: 最近7天各店四项指标缺失情况
+  function renderGapNotice(content) {
+    var today = todayKey();
+    var dates = [];
+    for (var i = 6; i >= 0; i -= 1) {
+      var d = fromKey(today);
+      d.setDate(d.getDate() - i);
+      dates.push(toKey(d));
+    }
+    var fields = [
+      { key: "adoptionRate", label: "采纳率" },
+      { key: "generationRate", label: "生成率" },
+      { key: "conversionRate", label: "转化率" },
+      { key: "pureAgentRatio", label: "纯智能体占比" }
+    ];
+    var items = [];
+    (state.shopLibrary || []).forEach(function (shop) {
+      var gaps = [];
+      dates.forEach(function (dt) {
+        fields.forEach(function (f) {
+          var v = shopMetricVal(dt, shop.id, f.key);
+          if (v === null) { gaps.push(dt.slice(8) + "日" + f.label); }
+        });
+      });
+      if (gaps.length) { items.push({ name: shop.name, gaps: gaps }); }
+    });
+
+    var wrap = document.createElement("div");
+    wrap.className = "gap-notice";
+    if (dismissState().gapNotice) { wrap.style.display = "none"; }
+    var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "note-close";
+    closeBtn.setAttribute("aria-label", "关闭");
+    closeBtn.title = "关闭（当天不再显示）";
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", function () {
+      dismissSet("gapNotice");
+      wrap.style.display = "none";
+      showToast("已关闭（当天不再显示）");
+    });
+    wrap.appendChild(closeBtn);
+    var title = document.createElement("div");
+    title.className = "gap-notice-title";
+    title.textContent = "数据缺口检查（最近7天）";
+    wrap.appendChild(title);
+    var list = document.createElement("div");
+    list.className = "gap-notice-list";
+    if (!items.length) {
+      var ok = document.createElement("div");
+      ok.className = "gap-notice-ok";
+      ok.textContent = "最近 7 天所有店铺数据完整 ✓";
+      list.appendChild(ok);
+    } else {
+      items.forEach(function (it) {
+        var row = document.createElement("div");
+        row.className = "gap-notice-item";
+        row.innerHTML = '<span class="gap-shop">' + escapeHtml(it.name) + '</span>' +
+          it.gaps.map(function (g) { return '<span class="gap-tag">' + g + '</span>'; }).join("");
+        list.appendChild(row);
+      });
+    }
+    wrap.appendChild(list);
+    content.appendChild(wrap);
   }
 
   // 昨日数据下降通知栏: 昨天较前天各指标下降≥10个百分点的店铺
@@ -5301,6 +5507,29 @@ table.report th {
     container.innerHTML = html;
   }
 
+  // 数据修改日志: 展示最近的数据保存记录
+  function renderDataLogs() {
+    var countEl = $("dataLogsCount");
+    var container = $("dataLogs");
+    if (!container) { return; }
+    var logs = (state.days && state.days.__logs__) || [];
+    var list = logs.slice(-20).reverse();
+    if (countEl) { countEl.textContent = list.length ? "最近 " + list.length + " 条" : ""; }
+    if (!list.length) {
+      container.innerHTML = '<div class="record-empty">暂无数据修改记录。工作台数据发生修改时会自动记录在这里。</div>';
+      return;
+    }
+    var html = '<div class="data-log-list">';
+    list.forEach(function (l) {
+      var dateTxt = l.d || "—";
+      html += '<div class="data-log-row"><span class="data-log-time">' + escapeHtml(l.t || "") + '</span>' +
+        '<span class="data-log-date">' + escapeHtml(dateTxt) + '</span>' +
+        '<span class="data-log-tag">数据修改</span></div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
   function yesterdayKeyOf(dateKey) {
     var d = fromKey(dateKey);
     d.setDate(d.getDate() - 1);
@@ -5330,7 +5559,6 @@ table.report th {
       '<button type="button" class="btn primary" id="reportImgCopyBtn">复制图片</button>' +
       '<button type="button" class="btn" id="reportImgBtn">下载图片</button>' +
       '<button type="button" class="btn" id="reportCopyBtn">复制日报</button>' +
-      '<button type="button" class="btn" id="reportSaveBtn">保存草稿</button>' +
       '</div>';
 
     html += '<div class="report-hero">' +
@@ -5419,7 +5647,14 @@ table.report th {
     $("reportImgCopyBtn").addEventListener("click", copyReportImage);
     $("reportImgBtn").addEventListener("click", downloadReportImage);
     $("reportCopyBtn").addEventListener("click", copyDailyReport);
-    $("reportSaveBtn").addEventListener("click", saveDailyReport);
+    // 日报内容输入自动保存(去掉了手动保存草稿按钮)
+    var autoSaveTimer = null;
+    function autoSaveDailyReport() {
+      if (autoSaveTimer) { clearTimeout(autoSaveTimer); }
+      autoSaveTimer = setTimeout(function () { saveDailyReport(true); }, 500);
+    }
+    $("reportSummary").addEventListener("input", autoSaveDailyReport);
+    $("reportFeedback").addEventListener("input", autoSaveDailyReport);
     $("reportName").addEventListener("change", function () {
       var p = reportProfile();
       p.name = $("reportName").value.trim() || "远山";
@@ -5511,7 +5746,7 @@ table.report th {
     return lines.join("\n");
   }
 
-  function saveDailyReport() {
+  function saveDailyReport(quiet) {
     var dateKey = yesterdayKeyOf(todayKey());
     var draft = reportDraft(dateKey);
     if ($("reportSummary")) { draft.summary = $("reportSummary").value; }
@@ -5524,8 +5759,10 @@ table.report th {
       };
     }
     saveReportDraft(dateKey, draft);
-    logReportAction(dateKey, "保存草稿");
-    showToast("日报草稿已保存");
+    if (!quiet) {
+      logReportAction(dateKey, "保存草稿");
+      showToast("日报草稿已保存");
+    }
   }
 
   function copyDailyReport() {
