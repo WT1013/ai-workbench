@@ -78,7 +78,7 @@ button {
   margin: 0 auto;
   padding: 18px 24px 56px;
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -142,6 +142,43 @@ button {
   align-items: center;
   gap: 12px;
   flex: 0 0 auto;
+}
+
+/* 顶栏高频同步按钮(紧凑) */
+.top-sync {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.top-sync-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.top-sync-btn svg {
+  width: 13px;
+  height: 13px;
+  margin-right: 4px;
+}
+
+/* 顶栏数据新鲜度提示 */
+.top-fresh {
+  font-size: 11.5px;
+  color: var(--text-secondary, #6e6e73);
+  background: rgba(99, 153, 34, 0.1);
+  border: 1px solid rgba(99, 153, 34, 0.25);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .top-fresh {
+  color: #dcecc5;
+  background: rgba(99, 153, 34, 0.16);
+  border-color: rgba(99, 153, 34, 0.4);
 }
 
 .save-indicator {
@@ -1220,6 +1257,16 @@ textarea {
   gap: 10px;
 }
 
+/* 概览卡片合并布局: 难点输入 + 统计 + 日报按钮 间距 */
+.panel-body textarea#difficulty {
+  margin-bottom: 12px;
+  min-height: 56px;
+}
+
+.summary-report-btn {
+  margin-top: 12px;
+}
+
 .summary-cell {
   background: var(--surface-soft);
   border: 1px solid var(--hairline);
@@ -1266,6 +1313,20 @@ textarea {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* 危险操作独立分组: 与常规操作分隔, 防误触 */
+.report-danger-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  margin-left: 4px;
+  border-left: 1px solid rgba(120, 120, 128, 0.25);
+}
+
+:root[data-theme="dark"] .report-danger-group {
+  border-left-color: rgba(255, 255, 255, 0.16);
 }
 
 .btn {
@@ -3507,6 +3568,8 @@ table.report th {
       </div>
     </div>
     <div class="topbar-actions">
+      <div class="top-sync" id="topSyncActions"></div>
+      <span class="top-fresh" id="dataFreshness" title="最近一个有数据的日期"></span>
       <span class="save-indicator" id="saveIndicator">数据已保存</span>
       <button type="button" class="theme-toggle" id="themeToggle" aria-label="切换主题" title="切换深色/浅色">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon">
@@ -3612,23 +3675,6 @@ table.report th {
           <div class="panel">
             <div class="panel-head">
               <h2>
-                <span class="panel-icon red" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-                    <path d="M4 22v-7"/>
-                  </svg>
-                </span>
-                今日难点
-              </h2>
-            </div>
-            <div class="panel-body">
-              <textarea id="difficulty" placeholder="今天遇到的难点"></textarea>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <h2>
                 <span class="panel-icon orange" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 14l3.5-3.5"/>
@@ -3639,6 +3685,7 @@ table.report th {
               </h2>
             </div>
             <div class="panel-body">
+              <textarea id="difficulty" placeholder="今天遇到的难点"></textarea>
               <div class="summary-grid">
                 <div class="summary-cell">
                   <div class="num accent" id="doneCount">0</div>
@@ -3657,23 +3704,7 @@ table.report th {
                   <div class="label">累计记录天数</div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <h2>
-                <span class="panel-icon green" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="16" rx="2"/>
-                    <path d="M3 10h18M9 10v10"/>
-                  </svg>
-                </span>
-                日报
-              </h2>
-            </div>
-            <div class="panel-body">
-              <button type="button" class="btn primary block" id="copyTodayBtn">
+              <button type="button" class="btn primary block summary-report-btn" id="copyTodayBtn">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -3723,12 +3754,14 @@ table.report th {
               恢复数据
             </button>
             <input type="file" id="importFileInput" accept=".json" hidden>
-            <button type="button" class="btn danger" id="clearBtn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              </svg>
-              清空历史
-            </button>
+            <div class="report-danger-group">
+              <button type="button" class="btn danger" id="clearBtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                </svg>
+                清空历史
+              </button>
+            </div>
           </div>
         </div>
         <div class="table-wrap" id="reportRecordsWrap" style="display:none;">
@@ -4359,6 +4392,7 @@ table.report th {
   function renderToday() {
     var key = $("dateInput").value || todayKey();
     $("dateInput").value = key;
+    updateDataFreshness();
     renderCalendar();
     renderTaskRows(key);
     renderMetrics(key);
@@ -4372,6 +4406,27 @@ table.report th {
 
   function currentKey() {
     return $("dateInput").value || todayKey();
+  }
+
+  // 顶栏数据新鲜度: 显示最近一个有店铺数据的日期
+  function updateDataFreshness() {
+    var el = $("dataFreshness");
+    if (!el) { return; }
+    var dates = Object.keys(state.days || {}).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort();
+    var latest = null;
+    for (var i = dates.length - 1; i >= 0; i--) {
+      var sd = state.days[dates[i]].shopData;
+      if (sd && Object.keys(sd).length > 0) { latest = dates[i]; break; }
+    }
+    if (!latest) {
+      el.textContent = "暂无数据";
+      el.title = "尚未同步任何店铺数据，请点击「同步昨日数据」";
+      return;
+    }
+    var m = latest.slice(5, 7);
+    var d = latest.slice(8, 10);
+    el.textContent = "数据更新至 " + parseInt(m, 10) + "月" + parseInt(d, 10) + "日";
+    el.title = "最近一个有店铺数据的日期: " + latest;
   }
 
   function reportColumns(day) {
@@ -6560,19 +6615,6 @@ table.report th {
       reportBtn.id = "genReportBtn";
       reportBtn.textContent = "生成日报";
       syncActions.appendChild(reportBtn);
-      var syncBtn = document.createElement("button");
-      syncBtn.type = "button";
-      syncBtn.className = "btn";
-      syncBtn.id = "syncShopBtn";
-      syncBtn.textContent = "同步昨日数据";
-      syncActions.appendChild(syncBtn);
-      var refreshBtn = document.createElement("button");
-      refreshBtn.type = "button";
-      refreshBtn.className = "btn ghost";
-      refreshBtn.id = "refreshDataBtn";
-      refreshBtn.textContent = "刷新数据";
-      refreshBtn.title = "重新从云端拉取最新数据";
-      syncActions.appendChild(refreshBtn);
       var dingBtn = document.createElement("button");
       dingBtn.type = "button";
       dingBtn.className = "btn";
@@ -6580,14 +6622,26 @@ table.report th {
       dingBtn.textContent = "同步到钉钉表格";
       dingBtn.title = "把云端店铺数据(采纳率/生成率/转化率/纯智能体占比)写入钉钉「拼多多—远山」表格";
       syncActions.appendChild(dingBtn);
-      var workshopBtn = document.createElement("button");
-      workshopBtn.type = "button";
-      workshopBtn.className = "btn";
-      workshopBtn.id = "syncWorkshopBtn";
-      workshopBtn.textContent = "同步已打标数据";
-      workshopBtn.title = "从探域调优工坊抓取本月已打标/已打标待审核数量写入云端";
-      syncActions.appendChild(workshopBtn);
       summaryHead.appendChild(syncActions);
+    }
+    // 高频同步按钮上移到顶栏(同步昨日数据 / 同步已打标数据 / 刷新数据)
+    var topSync = document.getElementById("topSyncActions");
+    if (topSync) {
+      var mkTopBtn = function (text, id, cls, title) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = cls || "btn top-sync-btn";
+        b.id = id;
+        b.textContent = text;
+        if (title) { b.title = title; }
+        return b;
+      };
+      var syncBtn = mkTopBtn("同步昨日数据", "syncShopBtn", "btn primary top-sync-btn", "抓取昨日各店铺采纳率/生成率/转化率/纯智能体占比写入云端");
+      var workshopBtn = mkTopBtn("同步已打标数据", "syncWorkshopBtn", "btn top-sync-btn", "从探域调优工坊抓取本月已打标/已打标待审核数量写入云端");
+      var refreshBtn = mkTopBtn("刷新数据", "refreshDataBtn", "btn ghost top-sync-btn", "重新从云端拉取最新数据");
+      topSync.appendChild(syncBtn);
+      topSync.appendChild(workshopBtn);
+      topSync.appendChild(refreshBtn);
     }
     document.title = "远山工作台";
     var brandTitle = document.querySelector(".brand h1");
