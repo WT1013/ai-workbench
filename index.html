@@ -5324,7 +5324,9 @@ table.report th {
         { key: "adoptionRate", label: "采纳率" },
         { key: "generationRate", label: "生成率" },
         { key: "conversionRate", label: "转化率" },
-        { key: "pureAgentRatio", label: "纯智能体占比" }
+        { key: "pureAgentRatio", label: "纯智能体占比" },
+        { key: "experienceScore", label: "消费者体验分" },
+        { key: "threeMinReplyRate", label: "3分钟回复率" }
       ];
       var metricsWrap = document.createElement("div");
       metricsWrap.className = "summary-metrics";
@@ -5723,7 +5725,9 @@ table.report th {
       { key: "adoptionRate", label: "采纳率 (%)" },
       { key: "generationRate", label: "生成率 (%)" },
       { key: "conversionRate", label: "转化率 (%)" },
-      { key: "pureAgentRatio", label: "纯智能体接待占比 (%)" }
+      { key: "pureAgentRatio", label: "纯智能体接待占比 (%)" },
+      { key: "experienceScore", label: "消费者服务体验分" },
+      { key: "threeMinReplyRate", label: "3分钟人工回复率 (%)" }
     ];
     metrics.forEach(function (m) {
       content.appendChild(buildDetailPanel(m, shop, dates));
