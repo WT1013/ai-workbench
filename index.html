@@ -1174,6 +1174,182 @@ button {
   color: #6cd4e8;
 }
 
+/* --- 数据达标提醒通知栏(用户自定义标准) --- */
+.std-notice {
+  margin-bottom: 14px;
+  background: #fff7ec;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 12px;
+  padding: 11px 13px;
+  position: relative;
+}
+
+.std-notice-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.std-notice-title::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.std-notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.std-notice-title {
+  margin-bottom: 0;
+}
+
+.std-set-btn {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  color: #b45309;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s;
+}
+
+.std-set-btn:hover {
+  background: rgba(217, 119, 6, 0.18);
+}
+
+.std-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.std-notice-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  background: #fffdf7;
+  border: 1px solid rgba(217, 119, 6, 0.22);
+  border-radius: 8px;
+  padding: 5px 9px;
+}
+
+.std-shop {
+  font-weight: 600;
+  color: #7c2d12;
+}
+
+.std-tag {
+  background: #fdeed8;
+  color: #b45309;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.std-notice-ok {
+  font-size: 12px;
+  color: #1a7f37;
+  padding: 2px 0;
+}
+
+:root[data-theme="dark"] .std-notice {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.4);
+}
+
+:root[data-theme="dark"] .std-notice-title {
+  color: #fbbf24;
+}
+
+:root[data-theme="dark"] .std-notice-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
+:root[data-theme="dark"] .std-shop {
+  color: #fcd9a8;
+}
+
+:root[data-theme="dark"] .std-tag {
+  background: rgba(217, 119, 6, 0.22);
+  color: #fbbf24;
+}
+
+:root[data-theme="dark"] .std-set-btn {
+  background: rgba(217, 119, 6, 0.18);
+  border-color: rgba(217, 119, 6, 0.45);
+  color: #fbbf24;
+}
+
+/* 标准编辑弹窗 */
+.th-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+.th-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.th-field label {
+  flex: 0 0 92px;
+  font-weight: 600;
+  color: #3a3a3c;
+}
+
+.th-field input {
+  width: 90px;
+  padding: 5px 8px;
+  border: 1px solid rgba(60, 60, 67, 0.25);
+  border-radius: 7px;
+  font-size: 13px;
+  background: #fff;
+  color: #1c1c1e;
+}
+
+.th-field .th-unit {
+  color: #8e8e93;
+  font-size: 12px;
+}
+
+:root[data-theme="dark"] .th-field label {
+  color: #d1d1d6;
+}
+
+:root[data-theme="dark"] .th-field input {
+  background: #1c1c1e;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #f0f0f0;
+}
+
+.th-editor-hint {
+  font-size: 11.5px;
+  color: #8e8e93;
+  margin-top: 2px;
+}
+
 :root[data-theme="dark"] .down-notice {
   background: rgba(220, 38, 38, 0.1);
   border-color: rgba(220, 38, 38, 0.4);
@@ -5196,9 +5372,159 @@ table.report th {
     var keyList = shops.filter(shopKey);
     var otherList = shops.filter(function (s) { return !shopKey(s); });
     renderDownNotice(content);
+    renderStdNotice(content);
     renderGapNotice(content);
     appendSummaryGroup(content, "重点店铺", true, keyList, dates);
     appendSummaryGroup(content, "非重点店铺", false, otherList, dates);
+  }
+
+  // --- 数据达标标准: 用户自定义阈值(localStorage 持久化) ---
+  var THRESH_KEY = "csa-metric-thresholds";
+  var THRESH_FIELDS = [
+    { key: "adoptionRate", label: "采纳率", unit: "%" },
+    { key: "generationRate", label: "生成率", unit: "%" },
+    { key: "conversionRate", label: "转化率", unit: "%" },
+    { key: "pureAgentRatio", label: "纯智能体占比", unit: "%" }
+  ];
+  var THRESH_DEFAULT = { adoptionRate: 50, generationRate: 90, conversionRate: 20, pureAgentRatio: 30 };
+  function thresholdSettings() {
+    var t = THRESH_DEFAULT;
+    try {
+      var s = JSON.parse(localStorage.getItem(THRESH_KEY) || "null");
+      if (s && typeof s === "object") { t = Object.assign({}, THRESH_DEFAULT, s); }
+    } catch (e) {}
+    return t;
+  }
+  function saveThresholds(t) {
+    try { localStorage.setItem(THRESH_KEY, JSON.stringify(t)); } catch (e) {}
+  }
+
+  // 达标标准编辑弹窗(复用 modal)
+  function editThresholds() {
+    return new Promise(function (resolve) {
+      var overlay = $("modalOverlay");
+      var t = thresholdSettings();
+      $("modalTitle").textContent = "设置数据达标标准";
+      var html = '<div class="th-editor">';
+      THRESH_FIELDS.forEach(function (f) {
+        html += '<div class="th-field"><label>' + f.label + ' ≥</label>' +
+          '<input type="number" min="0" max="100" step="1" id="th_' + f.key + '" value="' + (t[f.key] !== undefined ? t[f.key] : "") + '">' +
+          '<span class="th-unit">' + f.unit + '</span></div>';
+      });
+      html += '<div class="th-editor-hint">低于设定标准的店铺及其指标将显示在「数据达标提醒」中（标准按百分点设置）</div></div>';
+      $("modalBody").innerHTML = html;
+      overlay.classList.add("show");
+      var onConfirm = function () { cleanup(); resolve(true); };
+      var onCancel = function () { cleanup(); resolve(false); };
+      function cleanup() {
+        overlay.classList.remove("show");
+        $("modalConfirm").removeEventListener("click", onConfirm);
+        $("modalCancel").removeEventListener("click", onCancel);
+        overlay.removeEventListener("click", onOverlayClick);
+      }
+      function onOverlayClick(e) { if (e.target === overlay) { onCancel(); } }
+      $("modalConfirm").addEventListener("click", onConfirm);
+      $("modalCancel").addEventListener("click", onCancel);
+      overlay.addEventListener("click", onOverlayClick);
+    });
+  }
+
+  // 数据达标提醒: 最新有数据日期低于自定义标准的店铺汇总
+  function renderStdNotice(content) {
+    var t = thresholdSettings();
+    // 最新有店铺数据的日期
+    var latest = null;
+    var dayKeys = Object.keys(state.days || {}).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort();
+    for (var i = dayKeys.length - 1; i >= 0; i--) {
+      var sd = state.days[dayKeys[i]].shopData;
+      if (sd && Object.keys(sd).length > 0) { latest = dayKeys[i]; break; }
+    }
+    var items = [];
+    if (latest) {
+      (state.shopLibrary || []).forEach(function (shop) {
+        var lows = [];
+        THRESH_FIELDS.forEach(function (f) {
+          var std = t[f.key];
+          if (std === undefined || std === null || std === "") { return; }
+          var v = shopMetricVal(latest, shop.id, f.key);
+          if (v !== null && v < std) {
+            lows.push({ label: f.label, value: v, std: std });
+          }
+        });
+        if (lows.length) { items.push({ name: shop.name, lows: lows }); }
+      });
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "std-notice";
+    if (dismissState().stdNotice) { wrap.style.display = "none"; }
+    var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "note-close";
+    closeBtn.setAttribute("aria-label", "关闭");
+    closeBtn.title = "关闭（当天不再显示）";
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", function () {
+      dismissSet("stdNotice");
+      wrap.style.display = "none";
+      showToast("已关闭（当天不再显示）");
+    });
+    wrap.appendChild(closeBtn);
+
+    var head = document.createElement("div");
+    head.className = "std-notice-head";
+    var title = document.createElement("div");
+    title.className = "std-notice-title";
+    if (latest) {
+      var lm = parseInt(latest.slice(5, 7), 10);
+      var ld = parseInt(latest.slice(8, 10), 10);
+      title.textContent = "数据达标提醒（" + lm + "月" + ld + "日）";
+    } else {
+      title.textContent = "数据达标提醒";
+    }
+    head.appendChild(title);
+    var setBtn = document.createElement("button");
+    setBtn.type = "button";
+    setBtn.className = "std-set-btn";
+    setBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>设置标准';
+    setBtn.title = "设置各指标达标标准";
+    setBtn.addEventListener("click", function () {
+      editThresholds().then(function (ok) {
+        if (!ok) { return; }
+        var nt = {};
+        THRESH_FIELDS.forEach(function (f) {
+          var el = $("th_" + f.key);
+          var v = el ? parseFloat(el.value) : NaN;
+          nt[f.key] = isNaN(v) ? "" : v;
+        });
+        saveThresholds(nt);
+        renderSummary();
+        showToast("达标标准已保存");
+      });
+    });
+    head.appendChild(setBtn);
+    wrap.appendChild(head);
+
+    var list = document.createElement("div");
+    list.className = "std-notice-list";
+    if (!items.length) {
+      var ok = document.createElement("div");
+      ok.className = "std-notice-ok";
+      ok.textContent = latest ? "所有店铺数据均达到标准 ✓" : "暂无店铺数据，请先同步";
+      list.appendChild(ok);
+    } else {
+      items.forEach(function (it) {
+        var row = document.createElement("div");
+        row.className = "std-notice-item";
+        row.innerHTML = '<span class="std-shop">' + escapeHtml(it.name) + '</span>' +
+          it.lows.map(function (l) {
+            return '<span class="std-tag">' + l.label + ' ' + l.value + '%（标准 ≥' + l.std + '%）</span>';
+          }).join("");
+        list.appendChild(row);
+      });
+    }
+    wrap.appendChild(list);
+    content.appendChild(wrap);
   }
 
   // 数据缺口提醒: 最近7天各店四项指标缺失情况
