@@ -5080,6 +5080,17 @@ table.report th {
     return isNaN(n) ? null : n;
   }
 
+  // 月均指标: 指定月份(如 "2026-08")内该店铺所有有数据日期的均值
+  function monthAvgVal(monthPrefix, shopId, metric) {
+    var sum = 0, n = 0;
+    Object.keys(state.days).forEach(function (k) {
+      if (k.indexOf(monthPrefix) !== 0) { return; }
+      var v = shopMetricVal(k, shopId, metric);
+      if (v !== null) { sum += v; n++; }
+    });
+    return n ? sum / n : null;
+  }
+
   function pctSuffix(metric) {
     return metric === "experienceScore" ? "" : "%";
   }
@@ -5414,7 +5425,7 @@ table.report th {
           '<input type="number" min="0" max="100" step="1" id="th_' + f.key + '" value="' + (t[f.key] !== undefined ? t[f.key] : "") + '">' +
           '<span class="th-unit">' + f.unit + '</span></div>';
       });
-      html += '<div class="th-editor-hint">低于设定标准的店铺及其指标将显示在「数据达标提醒」中（标准按百分点设置）</div></div>';
+      html += '<div class="th-editor-hint">低于设定标准的店铺及其指标将显示在「数据达标提醒」中（按当月均值判断，标准按百分点设置）</div></div>';
       $("modalBody").innerHTML = html;
       overlay.classList.add("show");
       var onConfirm = function () { cleanup(); resolve(true); };
@@ -5432,16 +5443,17 @@ table.report th {
     });
   }
 
-  // 数据达标提醒: 最新有数据日期低于自定义标准的店铺汇总
+  // 数据达标提醒: 当月均值低于自定义标准的店铺汇总(月均判断)
   function renderStdNotice(content) {
     var t = thresholdSettings();
-    // 最新有店铺数据的日期
+    // 最新有店铺数据的日期(用于确定提醒月份)
     var latest = null;
     var dayKeys = Object.keys(state.days || {}).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort();
     for (var i = dayKeys.length - 1; i >= 0; i--) {
       var sd = state.days[dayKeys[i]].shopData;
       if (sd && Object.keys(sd).length > 0) { latest = dayKeys[i]; break; }
     }
+    var monthPrefix = latest ? latest.slice(0, 7) : null;
     var items = [];
     if (latest) {
       (state.shopLibrary || []).forEach(function (shop) {
@@ -5449,7 +5461,7 @@ table.report th {
         THRESH_FIELDS.forEach(function (f) {
           var std = t[f.key];
           if (std === undefined || std === null || std === "") { return; }
-          var v = shopMetricVal(latest, shop.id, f.key);
+          var v = monthAvgVal(monthPrefix, shop.id, f.key);
           if (v !== null && v < std) {
             lows.push({ label: f.label, value: v, std: std });
           }
@@ -5480,8 +5492,7 @@ table.report th {
     title.className = "std-notice-title";
     if (latest) {
       var lm = parseInt(latest.slice(5, 7), 10);
-      var ld = parseInt(latest.slice(8, 10), 10);
-      title.textContent = "数据达标提醒（" + lm + "月" + ld + "日）";
+      title.textContent = "数据达标提醒（" + lm + "月均值）";
     } else {
       title.textContent = "数据达标提醒";
     }
@@ -5521,7 +5532,7 @@ table.report th {
         row.className = "std-notice-item";
         row.innerHTML = '<span class="std-shop">' + escapeHtml(it.name) + '</span>' +
           it.lows.map(function (l) {
-            return '<span class="std-tag">' + l.label + ' ' + l.value + '%（标准 ≥' + l.std + '%）</span>';
+            return '<span class="std-tag">' + l.label + ' ' + (+l.value).toFixed(1) + '%（月均，标准 ≥' + l.std + '%）</span>';
           }).join("");
         list.appendChild(row);
       });
