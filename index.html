@@ -2601,6 +2601,35 @@ table.report th {
   color: #b91c1c;
 }
 
+/* 月度汇总: 横向滚动时固定店铺名列, 店铺名始终可见 */
+.shop-month-table th:first-child,
+.shop-month-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-right: 1px solid var(--hairline);
+}
+.shop-month-table th:first-child {
+  z-index: 3;
+  background: var(--surface-soft);
+}
+.shop-month-table tr.key-row td:first-child {
+  background: linear-gradient(rgba(255, 149, 0, 0.08), rgba(255, 149, 0, 0.08)), var(--surface);
+}
+.shop-month-table tbody tr:hover td:first-child {
+  background: #fafafc;
+}
+.shop-month-table tbody tr.key-row:hover td:first-child {
+  background: linear-gradient(rgba(255, 149, 0, 0.08), rgba(255, 149, 0, 0.08)), #fafafc;
+}
+:root[data-theme="dark"] .shop-month-table th:first-child {
+  background: #2c2c2e !important;
+}
+:root[data-theme="dark"] .shop-month-table tr.key-row td:first-child {
+  background: linear-gradient(rgba(255, 149, 0, 0.16), rgba(255, 149, 0, 0.16)), var(--surface);
+}
+
 @media (max-width: 1100px) {
   .shop-list {
     grid-template-columns: 1fr;
