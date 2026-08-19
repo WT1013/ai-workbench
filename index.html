@@ -6728,6 +6728,16 @@ table.report th {
       });
     }
 
+    var fixShopBtn = $("fixShopDataBtn");
+    if (fixShopBtn) {
+      fixShopBtn.addEventListener("click", function () {
+        var win = window.open("http://10.10.12.157:8080/fix-shop-data", "_blank");
+        if (!win) {
+          window.location.href = "http://10.10.12.157:8080/fix-shop-data";
+        }
+      });
+    }
+
     var genReportBtn = $("genReportBtn");
     if (genReportBtn) {
       genReportBtn.addEventListener("click", renderDailyReport);
@@ -7010,9 +7020,11 @@ table.report th {
       var syncBtn = mkTopBtn("同步昨日数据", "syncShopBtn", "btn primary top-sync-btn", "抓取昨日各店铺采纳率/生成率/转化率/纯智能体占比写入云端");
       var workshopBtn = mkTopBtn("同步已打标数据", "syncWorkshopBtn", "btn top-sync-btn", "从探域调优工坊抓取本月已打标/已打标待审核数量写入云端");
       var refreshBtn = mkTopBtn("刷新数据", "refreshDataBtn", "btn ghost top-sync-btn", "重新从云端拉取最新数据");
+      var fixShopBtn = mkTopBtn("修复店铺数据", "fixShopDataBtn", "btn top-sync-btn", "检测并修复店铺名乱码/owner异常等数据问题");
       topSync.appendChild(syncBtn);
       topSync.appendChild(workshopBtn);
       topSync.appendChild(refreshBtn);
+      topSync.appendChild(fixShopBtn);
     }
     document.title = "远山工作台";
     var brandTitle = document.querySelector(".brand h1");
