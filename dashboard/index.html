@@ -50,7 +50,8 @@
       <aside class="sidebar panel">
         <div class="brand"><strong>远山</strong><span>Yuanshan OS</span></div>
         <nav class="primary-nav" aria-label="主导航">
-          <button class="nav-item active"><span class="live-dot"></span><svg><use href="#i-book"/></svg><span>数据驾驶舱</span><svg class="nav-arrow"><use href="#i-chevron"/></svg></button>
+          <button class="nav-item active" data-view="dashboard"><span class="live-dot"></span><svg><use href="#i-book"/></svg><span>数据驾驶舱</span><svg class="nav-arrow"><use href="#i-chevron"/></svg></button>
+          <button class="nav-item" data-view="monthly"><svg><use href="#i-calendar"/></svg><span>月度汇总</span></button>
           <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/"><svg><use href="#i-grid"/></svg><span>今日工作台</span></button>
           <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/"><svg><use href="#i-list"/></svg><span>日报表格</span></button>
           <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/"><svg><use href="#i-columns"/></svg><span>店铺库</span></button>
@@ -126,6 +127,23 @@
             </div>
           </section>
         </div>
+
+        <section id="monthlyView" class="monthly-view panel" hidden>
+          <header class="monthly-head">
+            <div class="section-heading"><h2>月度汇总</h2><span id="monthlyDateTitle">2026年8月</span></div>
+            <div class="monthly-toolbar">
+              <button id="monthPrev" class="pill-btn quiet">‹ 上月</button>
+              <div class="monthly-metric-seg" id="monthlyMetricSeg"></div>
+              <button id="monthNext" class="pill-btn quiet">下月 ›</button>
+            </div>
+          </header>
+          <div class="monthly-table-wrap">
+            <table class="monthly-table">
+              <thead id="monthlyTableHead"></thead>
+              <tbody id="monthlyTableBody"></tbody>
+            </table>
+          </div>
+        </section>
       </section>
 
       <aside class="details-panel panel">

@@ -115,6 +115,83 @@ function updateMetricCards(docs) {
   set("valPure", "subPure", avg("pure"), "%");
 }
 
+/* ===== 月度汇总视图 ===== */
+const MONTHLY_METRICS = [
+  { key: "adoptionRate", label: "采纳率" },
+  { key: "generationRate", label: "生成率" },
+  { key: "conversionRate", label: "转化率" },
+  { key: "pureAgentRatio", label: "纯智能体" },
+  { key: "experienceScore", label: "体验分" },
+  { key: "threeMinReplyRate", label: "3分钟回复率" },
+];
+let monthlyMetric = "adoptionRate";
+let monthlyYear = 2026;
+let monthlyMonth = 7; // 0-based, 8月
+
+function pctSuffix(metric) {
+  return metric === "experienceScore" ? "" : "%";
+}
+
+function renderMonthlySeg() {
+  const seg = document.querySelector("#monthlyMetricSeg");
+  if (!seg) return;
+  seg.innerHTML = MONTHLY_METRICS.map((m) =>
+    `<button data-metric="${m.key}" class="${m.key === monthlyMetric ? "active" : ""}">${m.label}</button>`
+  ).join("");
+  seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    monthlyMetric = b.dataset.metric;
+    renderMonthlySeg();
+    renderMonthlyTable();
+  }));
+}
+
+function renderMonthlyTable() {
+  document.querySelector("#monthlyDateTitle").textContent = monthlyYear + "年" + (monthlyMonth + 1) + "月";
+  const daysInMonth = new Date(monthlyYear, monthlyMonth + 1, 0).getDate();
+  const head = document.querySelector("#monthlyTableHead");
+  const body = document.querySelector("#monthlyTableBody");
+
+  let headHtml = '<tr><th>店铺</th>';
+  for (let i = 1; i <= daysInMonth; i++) headHtml += `<th>${i}</th>`;
+  headHtml += '<th>月均</th></tr>';
+  head.innerHTML = headHtml;
+
+  const monthPrefix = `${monthlyYear}-${String(monthlyMonth + 1).padStart(2, "0")}`;
+  let bodyHtml = "";
+  cloudShops.forEach((shop) => {
+    const isKey = shop.key === true;
+    const values = [];
+    let cells = "";
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateKey = monthPrefix + "-" + String(i).padStart(2, "0");
+      const day = cloudDays && cloudDays[dateKey];
+      const v = (day && day.shopData && day.shopData[shop.id]) ? day.shopData[shop.id][monthlyMetric] : null;
+      const rawVal = (v !== undefined && v !== null && String(v).trim() !== "") ? v : null;
+      cells += `<td>${rawVal === null ? "—" : String(rawVal) + pctSuffix(monthlyMetric)}</td>`;
+      if (rawVal !== null && !isNaN(Number(rawVal))) values.push(Number(rawVal));
+    }
+    const avg = values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100 : "";
+    bodyHtml += `<tr class="${isKey ? "key-row" : ""}"><td>${shop.name}</td>${cells}<td class="monthly-avg">${avg === "" ? "—" : avg + pctSuffix(monthlyMetric)}</td></tr>`;
+  });
+  body.innerHTML = bodyHtml;
+}
+
+function setDashboardMode(mode) {
+  const shell = document.querySelector(".app-shell");
+  const monthlyView = document.querySelector("#monthlyView");
+  if (mode === "monthly") {
+    shell.classList.add("monthly-mode");
+    monthlyView.hidden = false;
+    renderMonthlyTable();
+  } else {
+    shell.classList.remove("monthly-mode");
+    monthlyView.hidden = true;
+  }
+  document.querySelectorAll('.primary-nav .nav-item[data-view]').forEach((b) => {
+    b.classList.toggle("active", b.dataset.view === mode);
+  });
+}
+
 const materialPalettes = {
   cyan: ["#27e8df", "#11a9c8", "#17346f"],
   original: ["#ff4aa9", "#ff8849", "#aa49ff"],
@@ -735,12 +812,24 @@ function bindEvents() {
     if (event.key === " ") { event.preventDefault(); setPlaying(!isPlaying); }
   });
 
-  // 导航项：有 data-href 的跳转回原工作台，其余保持 toast
-  document.querySelectorAll(".primary-nav .nav-item:not(.active):not([data-open-material])").forEach((button) => button.addEventListener("click", () => {
+  // 导航项：data-view 本地切换视图；data-href 跳转回原工作台；其余 toast
+  document.querySelectorAll('.primary-nav .nav-item[data-view]').forEach((button) => button.addEventListener("click", () => setDashboardMode(button.dataset.view)));
+  document.querySelectorAll(".primary-nav .nav-item:not(.active):not([data-open-material]):not([data-view])").forEach((button) => button.addEventListener("click", () => {
     const href = button.dataset.href;
     if (href) { window.open(href, "_blank"); return; }
     showToast(`${button.textContent.trim()} · 已定位`);
   }));
+  // 月度汇总：上月/下月切换
+  document.querySelector("#monthPrev").addEventListener("click", () => {
+    monthlyMonth -= 1;
+    if (monthlyMonth < 0) { monthlyMonth = 11; monthlyYear -= 1; }
+    renderMonthlyTable();
+  });
+  document.querySelector("#monthNext").addEventListener("click", () => {
+    monthlyMonth += 1;
+    if (monthlyMonth > 11) { monthlyMonth = 0; monthlyYear += 1; }
+    renderMonthlyTable();
+  });
   // 顶栏同步按钮 + 详情页操作按钮：跳转回原工作台对应功能
   const syncBtn = document.querySelector("#syncBtn");
   if (syncBtn) syncBtn.addEventListener("click", () => window.open("http://10.10.12.157:8080/sync", "_blank"));
@@ -798,6 +887,13 @@ async function initDashboard() {
     updateCardPositions(0);
     updateDetails(documents[0]);
     setPlaying(false);
+    // 月度汇总：初始化指标切换 + 定位到最新数据月份
+    if (data.latestDate) {
+      const m = data.latestDate.match(/^(\d{4})-(\d{2})/);
+      if (m) { monthlyYear = parseInt(m[1], 10); monthlyMonth = parseInt(m[2], 10) - 1; }
+    }
+    renderMonthlySeg();
+    renderMonthlyTable();
   } catch (e) {
     console.error("数据加载失败:", e);
     showToast("云端数据加载失败，请检查网络");
