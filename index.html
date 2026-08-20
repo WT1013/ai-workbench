@@ -7178,6 +7178,22 @@ table.report th {
   }
 
   init();
+  // 主题切换: 初始化按 localStorage 应用, 点击切换
+  (function () {
+    var t = $("themeToggle");
+    if (!t) { return; }
+    var saved = null;
+    try { saved = localStorage.getItem("csa-theme"); } catch (e) {}
+    if (saved === "dark" || saved === "light") {
+      document.documentElement.setAttribute("data-theme", saved);
+    }
+    t.addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme");
+      var next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("csa-theme", next); } catch (e) {}
+    });
+  })();
 })();
 </script>
 </body>
