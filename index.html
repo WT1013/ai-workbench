@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -187,7 +187,7 @@ button {
 }
 
 .topbar-inner {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -201,6 +201,54 @@ button {
   align-items: center;
   gap: 12px;
   min-width: 0;
+}
+
+.topbar-search {
+  flex: 1;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  color: var(--text-soft);
+  transition: background 0.15s, border-color 0.15s;
+}
+.topbar-search:focus-within {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--blue);
+}
+.topbar-search svg { flex-shrink: 0; opacity: 0.7; }
+.topbar-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+}
+.topbar-search input::placeholder { color: var(--muted); }
+.topbar-search-kbd {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  font-family: ui-monospace, monospace;
+}
+:root[data-theme="dark"] .topbar-search {
+  background: rgba(20, 20, 43, 0.6);
+  border-color: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+}
+:root[data-theme="dark"] .topbar-search-kbd {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #8c8aaa;
 }
 
 .brand-icon {
@@ -893,14 +941,67 @@ button {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .metric-field label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-soft);
+}
+.metric-field .metric-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--blue-soft);
+  color: var(--blue);
+  flex-shrink: 0;
+}
+.metric-field .metric-readonly-value,
+.metric-field .metric-input {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  width: 100%;
+  display: block;
+}
+.metric-field .metric-input {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.metric-field .metric-input:focus {
+  border-color: var(--blue);
+  outline: none;
+  background: var(--surface);
+}
+.metric-field {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  padding: 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  min-height: 96px;
+}
+.metric-field label::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+  display: none;
+}
   color: var(--text-soft);
   font-size: 12.5px;
   font-weight: 500;
@@ -2116,27 +2217,27 @@ table.report tr.month-row.open ~ tr.day-row[data-month] {
 }
 
 :root[data-theme="dark"] {
-  --bg: #0a1020;
-  --surface: #1a2238;
-  --surface-soft: #2a324a;
-  --surface-inset: #3a4262;
-  --hairline: rgba(255, 255, 255, 0.08);
-  --hairline-strong: rgba(255, 255, 255, 0.16);
-  --text: #f0f4ff;
-  --text-soft: #c8d0e8;
-  --muted: #8893b0;
+  --bg: #08081a;
+  --surface: #14142b;
+  --surface-soft: #1f1f3a;
+  --surface-inset: #2a2a4a;
+  --hairline: rgba(255, 255, 255, 0.06);
+  --hairline-strong: rgba(255, 255, 255, 0.12);
+  --text: #f0eeff;
+  --text-soft: #c4c2dc;
+  --muted: #7c7a9b;
 }
 
 :root[data-theme="dark"] body {
-  background: linear-gradient(165deg, #0a1020 0%, #131a35 50%, #0a0f1a 100%);
+  background: radial-gradient(ellipse at top, #1a1a3a 0%, #0a0a1a 60%, #050510 100%);
 }
 
 :root[data-theme="dark"] .panel {
-  background: rgba(26, 34, 56, 0.6) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background: rgba(31, 31, 58, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 :root[data-theme="dark"] .seg {
@@ -3908,6 +4009,11 @@ table.report th {
         <h1>客服AI训练师工作台</h1>
         <small>任务记录 · 数据统计 · 日报表格</small>
       </div>
+    </div>
+    <div class="topbar-search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="globalSearch" placeholder="搜索店铺/日期/指标...  ⌘K" />
+      <span class="topbar-search-kbd">⌘ K</span>
     </div>
     <div class="topbar-actions">
       <div class="top-sync" id="topSyncActions"></div>
@@ -6660,9 +6766,11 @@ table.report th {
 
   function initTheme() {
     var saved = localStorage.getItem("wb-theme");
-    if (saved === "dark" || saved === "light") {
-      document.documentElement.setAttribute("data-theme", saved);
+    if (saved !== "dark" && saved !== "light") {
+      // 默认深色主题(更贴近现代数据工作台风格); 用户手动切换后才会记忆
+      saved = "dark";
     }
+    document.documentElement.setAttribute("data-theme", saved);
     updateThemeIcon();
     // 绑按钮点击(原本只设初始未绑事件 → 按钮无反应)
     var btn = $("themeToggle");
