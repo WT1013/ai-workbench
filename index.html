@@ -2023,28 +2023,63 @@ table.report tr.month-row.open ~ tr.day-row[data-month] {
 }
 
 :root[data-theme="dark"] {
-  --bg: #000000;
-  --surface: #1c1c1e;
-  --surface-soft: #2c2c2e;
-  --surface-inset: #3a3a3c;
-  --hairline: rgba(255, 255, 255, 0.1);
-  --hairline-strong: rgba(255, 255, 255, 0.18);
-  --text: #ffffff;
-  --text-soft: #e5e5ea;
-  --muted: #98989f;
+  --bg: #0a1020;
+  --surface: #1a2238;
+  --surface-soft: #2a324a;
+  --surface-inset: #3a4262;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
+  --text: #f0f4ff;
+  --text-soft: #c8d0e8;
+  --muted: #8893b0;
 }
 
 :root[data-theme="dark"] body {
-  background: linear-gradient(165deg, #0a1628 0%, #0d1f3c 50%, #0a0f1a 100%);
+  background: linear-gradient(165deg, #0a1020 0%, #131a35 50%, #0a0f1a 100%);
 }
 
 :root[data-theme="dark"] .panel {
-  background: rgba(44, 44, 46, 0.5) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(26, 34, 56, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 :root[data-theme="dark"] .seg {
   background: rgba(118, 118, 128, 0.24) !important;
+}
+
+/* === 渐变彩色 KPI 卡片 (dark 主题, 借鉴参考工作台视觉) === */
+:root[data-theme="dark"] .metric-field[data-metric="labelCount"] {
+  background: linear-gradient(135deg, #5B8DEF 0%, #9B6BFF 100%);
+  color: #fff;
+  border: none;
+}
+:root[data-theme="dark"] .metric-field[data-metric="scriptCount"] {
+  background: linear-gradient(135deg, #FF6B9D 0%, #FFB347 100%);
+  color: #fff;
+  border: none;
+}
+:root[data-theme="dark"] .metric-field[data-metric="badcaseCount"] {
+  background: linear-gradient(135deg, #3B82F6 0%, #1E3A8A 100%);
+  color: #fff;
+  border: none;
+}
+:root[data-theme="dark"] .metric-field[data-metric="kbCount"] {
+  background: linear-gradient(135deg, #FB923C 0%, #FACC15 100%);
+  color: #fff;
+  border: none;
+}
+:root[data-theme="dark"] .metric-field .metric-icon { color: rgba(255, 255, 255, 0.95); }
+:root[data-theme="dark"] .metric-field input { color: #fff; background: transparent; }
+:root[data-theme="dark"] .metric-field .metric-readonly-value { color: #fff; }
+:root[data-theme="dark"] .metric-field label { color: rgba(255, 255, 255, 0.9); }
+:root[data-theme="dark"] .metric-field[data-metric="labelCount"] label::before,
+:root[data-theme="dark"] .metric-field[data-metric="scriptCount"] label::before,
+:root[data-theme="dark"] .metric-field[data-metric="badcaseCount"] label::before,
+:root[data-theme="dark"] .metric-field[data-metric="kbCount"] label::before {
+  background: rgba(255, 255, 255, 0.95) !important;
 }
 
 :root[data-theme="dark"] .select,
