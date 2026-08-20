@@ -33,6 +33,34 @@
   --red-soft: #ffeceb;
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.05);
   --radius-card: 16px;
+  --accent-rgb: 59 109 17;
+}
+
+/* === 强调色(accent)切换: 5 套主色 (移植自 octopus-kaogong-workbench 思路) ===
+   默认 emerald = 远山绿(#3b6d11), 切换 data-accent 后全站 --blue 主色联动 */
+html[data-accent="ocean"] {
+  --blue: #0e7490;
+  --blue-deep: #155e75;
+  --blue-soft: #e0f2fe;
+  --accent-rgb: 14 116 144;
+}
+html[data-accent="iris"] {
+  --blue: #6d28d9;
+  --blue-deep: #5b21b6;
+  --blue-soft: #ede9fe;
+  --accent-rgb: 109 40 217;
+}
+html[data-accent="amber"] {
+  --blue: #d97706;
+  --blue-deep: #b45309;
+  --blue-soft: #fef3c7;
+  --accent-rgb: 217 119 6;
+}
+html[data-accent="sakura"] {
+  --blue: #db2777;
+  --blue-deep: #be185d;
+  --blue-soft: #fce7f3;
+  --accent-rgb: 219 39 119;
 }
 
 * {
@@ -156,7 +184,7 @@ button {
   font-weight: 600;
 }
 :root[data-theme="dark"] .side-item.active {
-  background: linear-gradient(135deg, rgba(91,141,239,.2), rgba(155,107,255,.2));
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), .26), rgba(var(--accent-rgb), .10));
   color: #fff;
 }
 .side-item em { margin-left: auto; font-style: normal; color: var(--muted); font-size: 10px; }
@@ -2110,6 +2138,143 @@ table.report tr.month-row.open ~ tr.day-row[data-month] {
   color: var(--blue);
 }
 
+/* --- 强调色切换(accent) --- */
+.accent-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.accent-pop {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  z-index: 60;
+}
+.accent-pop[hidden] { display: none; }
+.accent-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--dot);
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.accent-dot:hover { transform: scale(1.18); }
+.accent-dot.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--dot);
+}
+:root[data-theme="dark"] .accent-pop {
+  background: #1f1f3a;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* --- 卡片材质设置抽屉 --- */
+.mat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.24s ease, visibility 0s linear 0.3s;
+}
+.mat-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.24s ease;
+}
+.mat-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  max-width: 92vw;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #1c1c30, #0d0d1a);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(.16, 1, .3, 1);
+}
+.mat-overlay.open .mat-drawer { transform: translateX(0); }
+.mat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.mat-heading span { display: block; font-size: 9px; letter-spacing: .16em; color: #8ab4f8; margin-bottom: 4px; }
+.mat-heading h2 { margin: 0; font-size: 18px; color: #f0eeff; }
+.mat-heading button {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04); color: #ccc;
+  cursor: pointer; font-size: 18px; line-height: 1;
+}
+.mat-heading button:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.mat-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.mat-select { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; color: #999; font-size: 12px; }
+.mat-select select {
+  height: 38px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px;
+  background: #0a0a18; color: #e8ecf4;
+}
+.mat-preview {
+  position: relative; overflow: hidden; isolation: isolate;
+  height: 92px; padding: 18px 20px; margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 16px;
+  color: #fff; display: flex; flex-direction: column; justify-content: center; gap: 2px;
+}
+.mat-preview::before {
+  content: ""; position: absolute; inset: -30%; z-index: -1;
+  filter: blur(22px);
+  animation: wb-fluid-drift 6s cubic-bezier(.45,.05,.55,.95) infinite alternate;
+  background:
+    radial-gradient(ellipse 48% 74% at 82% 26%, var(--mat-a) 0 22%, transparent 68%),
+    radial-gradient(ellipse 50% 72% at 72% 88%, var(--mat-b) 0 24%, transparent 69%),
+    radial-gradient(ellipse 48% 76% at 48% 45%, var(--mat-c) 0 24%, transparent 72%),
+    #14142b;
+}
+.mat-preview small { font-size: 9px; letter-spacing: .14em; opacity: .75; }
+.mat-preview strong { font-size: 18px; }
+.mat-preview span { font-size: 11px; opacity: .8; }
+.mat-section {
+  padding: 13px 14px; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025); margin-bottom: 12px;
+}
+.mat-section h3 { margin: 0 0 12px; font-size: 12px; color: #bbb; font-weight: 600; }
+.mat-color-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mat-color-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 10px; color: #999; }
+.mat-color-fields input { width: 100%; height: 32px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; background: transparent; cursor: pointer; padding: 0; }
+.mat-slider { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #999; margin-bottom: 14px; }
+.mat-slider:last-child { margin-bottom: 0; }
+.mat-slider span { display: flex; justify-content: space-between; }
+.mat-slider output { color: #e0e4f0; }
+.mat-slider input { width: 100%; accent-color: #8ab4f8; cursor: pointer; }
+.mat-actions { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.mat-actions button {
+  flex: 1; height: 40px; border-radius: 11px; border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04); color: #bbb; cursor: pointer; font-size: 13px;
+}
+.mat-actions button.primary {
+  color: #fff; border-color: transparent;
+  background: linear-gradient(145deg, #3b6d11, #2e5a0e);
+}
+
 /* --- Dark mode --- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -2244,28 +2409,75 @@ table.report tr.month-row.open ~ tr.day-row[data-month] {
   background: rgba(118, 118, 128, 0.24) !important;
 }
 
-/* === 渐变彩色 KPI 卡片 (dark 主题, 借鉴参考工作台视觉) === */
-:root[data-theme="dark"] .metric-field[data-metric="labelCount"] {
-  background: linear-gradient(135deg, #5B8DEF 0%, #9B6BFF 100%);
+/* === 流体卡片材质 (dark 主题, 移植自 octopus-kaogong-workbench) === */
+:root[data-theme="dark"] .metric-field {
+  overflow: hidden;
+  isolation: isolate;
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 15px 35px rgba(0, 0, 0, 0.3);
+  /* 材质可调参数(由设置抽屉控制) */
+  --mat-opacity: .95;
+  --mat-blur: 26px;
+  --mat-flow: 7s;
+}
+
+/* 流体光斑层: 多层径向渐变 + 模糊 + 缓慢漂移 */
+:root[data-theme="dark"] .metric-field::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  z-index: -2;
+  opacity: var(--mat-opacity, .95);
+  filter: blur(var(--mat-blur, 26px)) saturate(1.05);
+  will-change: transform;
+  animation: wb-fluid-drift var(--mat-flow, 7s) cubic-bezier(.45,.05,.55,.95) infinite alternate;
+  background:
+    radial-gradient(ellipse 48% 74% at 82% 26%, var(--mat-a) 0 22%, transparent 68%),
+    radial-gradient(ellipse 50% 72% at 72% 88%, var(--mat-b) 0 24%, transparent 69%),
+    radial-gradient(ellipse 48% 76% at 48% 45%, var(--mat-c) 0 24%, transparent 72%),
+    #14142b;
+}
+
+/* 交互高光层 */
+:root[data-theme="dark"] .metric-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(118deg, rgba(255,255,255,.10), transparent 38%, rgba(0,0,0,.18));
+  opacity: .7;
+  pointer-events: none;
+}
+
+@keyframes wb-fluid-drift {
+  0%   { transform: translate3d(-2.5%, 1%, 0) rotate(-2.2deg) scale(1.02); }
+  48%  { transform: translate3d(1%, -2%, 0) rotate(.7deg) scale(1.08); }
+  100% { transform: translate3d(3.5%, 2.5%, 0) rotate(2.5deg) scale(1.04); }
+}
+
+/* 四张卡各自的默认流体配色(光斑三色, 可被抽屉覆盖): 蓝紫/粉桃/深蓝/橙金 */
+:root[data-theme="dark"] .metric-field[data-metric="labelCount"] {
+  --mat-a: rgba(155,107,255,.95);
+  --mat-b: rgba(91,141,239,.9);
+  --mat-c: rgba(30,58,138,.95);
 }
 :root[data-theme="dark"] .metric-field[data-metric="scriptCount"] {
-  background: linear-gradient(135deg, #FF6B9D 0%, #FFB347 100%);
-  color: #fff;
-  border: none;
+  --mat-a: rgba(255,107,157,.95);
+  --mat-b: rgba(255,179,71,.9);
+  --mat-c: rgba(216,27,96,.95);
 }
 :root[data-theme="dark"] .metric-field[data-metric="badcaseCount"] {
-  background: linear-gradient(135deg, #3B82F6 0%, #1E3A8A 100%);
-  color: #fff;
-  border: none;
+  --mat-a: rgba(96,165,250,.95);
+  --mat-b: rgba(59,130,246,.9);
+  --mat-c: rgba(30,58,138,.95);
 }
 :root[data-theme="dark"] .metric-field[data-metric="kbCount"] {
-  background: linear-gradient(135deg, #FB923C 0%, #FACC15 100%);
-  color: #fff;
-  border: none;
+  --mat-a: rgba(250,204,21,.9);
+  --mat-b: rgba(251,146,60,.9);
+  --mat-c: rgba(194,65,12,.95);
 }
-:root[data-theme="dark"] .metric-field .metric-icon { color: rgba(255, 255, 255, 0.95); }
+:root[data-theme="dark"] .metric-field .metric-icon { color: #fff; background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); }
 :root[data-theme="dark"] .metric-field input { color: #fff; background: transparent; }
 :root[data-theme="dark"] .metric-field .metric-readonly-value { color: #fff; }
 :root[data-theme="dark"] .metric-field label { color: rgba(255, 255, 255, 0.9); }
@@ -4019,6 +4231,25 @@ table.report th {
       <div class="top-sync" id="topSyncActions"></div>
       <span class="top-fresh" id="dataFreshness" title="最近一个有数据的日期"></span>
       <span class="save-indicator" id="saveIndicator">数据已保存</span>
+      <div class="accent-wrap">
+        <button type="button" class="theme-toggle" id="accentToggle" aria-label="切换强调色" title="切换界面强调色">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/>
+          </svg>
+        </button>
+        <div class="accent-pop" id="accentPop" hidden>
+          <button type="button" class="accent-dot" data-accent-option="emerald" title="远山绿" style="--dot:#3b6d11"></button>
+          <button type="button" class="accent-dot" data-accent-option="ocean" title="静海蓝" style="--dot:#0e7490"></button>
+          <button type="button" class="accent-dot" data-accent-option="iris" title="鸢尾紫" style="--dot:#6d28d9"></button>
+          <button type="button" class="accent-dot" data-accent-option="amber" title="琥珀橙" style="--dot:#d97706"></button>
+          <button type="button" class="accent-dot" data-accent-option="sakura" title="绯樱粉" style="--dot:#db2777"></button>
+        </div>
+      </div>
+      <button type="button" class="theme-toggle" id="matToggle" aria-label="卡片材质设置" title="卡片材质设置">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+        </svg>
+      </button>
       <button type="button" class="theme-toggle" id="themeToggle" aria-label="切换主题" title="切换深色/浅色">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
@@ -4330,6 +4561,56 @@ table.report th {
       <button type="button" class="btn danger" id="modalConfirm">确定</button>
     </div>
   </div>
+</div>
+
+<!-- 卡片材质设置抽屉 -->
+<div class="mat-overlay" id="matOverlay" aria-hidden="true">
+  <aside class="mat-drawer" role="dialog" aria-modal="true" aria-label="卡片材质设置">
+    <header class="mat-heading">
+      <div>
+        <span>FLUID MATERIAL</span>
+        <h2>卡片材质设置</h2>
+      </div>
+      <button type="button" id="matCloseBtn" aria-label="关闭">×</button>
+    </header>
+    <div class="mat-body">
+      <label class="mat-select">
+        <span>当前卡片</span>
+        <select id="matCardSelect">
+          <option value="labelCount">标注数（蓝紫）</option>
+          <option value="scriptCount">脚本数（粉桃）</option>
+          <option value="badcaseCount">Badcase（深蓝）</option>
+          <option value="kbCount">知识库（橙金）</option>
+        </select>
+      </label>
+      <div class="mat-preview" id="matPreview">
+        <small>LIVE PREVIEW</small>
+        <strong id="matPreviewName">标注数</strong>
+        <span>调整参数实时生效</span>
+      </div>
+      <section class="mat-section">
+        <h3>光斑颜色</h3>
+        <div class="mat-color-fields">
+          <label><span>主色 A</span><input type="color" id="matColorA" value="#9b6bff"></label>
+          <label><span>辅色 B</span><input type="color" id="matColorB" value="#5b8def"></label>
+          <label><span>阴影 C</span><input type="color" id="matColorC" value="#1e3a8a"></label>
+        </div>
+      </section>
+      <section class="mat-section">
+        <h3>材质参数</h3>
+        <label class="mat-slider"><span>不透明度 <output id="matOpacityOut">95%</output></span>
+          <input type="range" id="matOpacity" min="45" max="100" value="95"></label>
+        <label class="mat-slider"><span>背景模糊 <output id="matBlurOut">26px</output></span>
+          <input type="range" id="matBlur" min="4" max="30" value="26"></label>
+        <label class="mat-slider"><span>流动速度 <output id="matFlowOut">7s</output></span>
+          <input type="range" id="matFlow" min="2" max="14" value="7"></label>
+      </section>
+    </div>
+    <footer class="mat-actions">
+      <button type="button" id="matResetBtn">重置当前卡</button>
+      <button type="button" id="matSaveBtn" class="primary">保存设置</button>
+    </footer>
+  </aside>
 </div>
 
 <script>
@@ -6777,6 +7058,8 @@ table.report th {
     if (btn) {
       btn.addEventListener("click", toggleTheme);
     }
+    initAccent();
+    initMaterial();
   }
 
   function updateThemeIcon() {
@@ -6797,6 +7080,153 @@ table.report th {
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("wb-theme", next);
     updateThemeIcon();
+  }
+
+  // --- 强调色(accent)切换: 5 套主色 ---
+  var ACCENTS = ["emerald", "ocean", "iris", "amber", "sakura"];
+  function applyAccent(name) {
+    if (ACCENTS.indexOf(name) < 0) name = "emerald";
+    if (name === "emerald") {
+      document.documentElement.removeAttribute("data-accent");
+    } else {
+      document.documentElement.setAttribute("data-accent", name);
+    }
+    document.querySelectorAll(".accent-dot").forEach(function (d) {
+      d.classList.toggle("active", d.getAttribute("data-accent-option") === name);
+    });
+  }
+  function initAccent() {
+    var saved = null;
+    try { saved = localStorage.getItem("wb-accent"); } catch (e) {}
+    applyAccent(saved || "emerald");
+    var toggle = $("accentToggle");
+    var pop = $("accentPop");
+    if (toggle && pop) {
+      toggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        pop.hidden = !pop.hidden;
+      });
+      pop.querySelectorAll(".accent-dot").forEach(function (dot) {
+        dot.addEventListener("click", function () {
+          var name = dot.getAttribute("data-accent-option");
+          applyAccent(name);
+          try { localStorage.setItem("wb-accent", name); } catch (e) {}
+          pop.hidden = true;
+        });
+      });
+      document.addEventListener("click", function (e) {
+        if (!pop.hidden && !pop.contains(e.target) && e.target !== toggle) {
+          pop.hidden = true;
+        }
+      });
+    }
+  }
+
+  // --- 卡片材质设置抽屉 ---
+  var MAT_METRICS = ["labelCount", "scriptCount", "badcaseCount", "kbCount"];
+  var MAT_NAMES = { labelCount: "标注数", scriptCount: "脚本数", badcaseCount: "Badcase", kbCount: "知识库" };
+  var MAT_DEFAULTS = {
+    labelCount:   { a: "#9b6bff", b: "#5b8def", c: "#1e3a8a", opacity: 95, blur: 26, flow: 7 },
+    scriptCount:  { a: "#ff6b9d", b: "#ffb347", c: "#d81b60", opacity: 95, blur: 26, flow: 7 },
+    badcaseCount: { a: "#60a5fa", b: "#3b82f6", c: "#1e3a8a", opacity: 95, blur: 26, flow: 7 },
+    kbCount:      { a: "#facc15", b: "#fb923c", c: "#c2410c", opacity: 95, blur: 26, flow: 7 }
+  };
+  var MAT_ALPHA = 0.9;
+
+  function hexToRgba(hex, alpha) {
+    var h = (hex || "").replace("#", "");
+    if (h.length === 3) { h = h.split("").map(function (c) { return c + c; }).join(""); }
+    var r = parseInt(h.slice(0, 2), 16) || 0;
+    var g = parseInt(h.slice(2, 4), 16) || 0;
+    var b = parseInt(h.slice(4, 6), 16) || 0;
+    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+  }
+  function matStore() {
+    try {
+      var s = localStorage.getItem("wb-mat");
+      return s ? JSON.parse(s) : {};
+    } catch (e) { return {}; }
+  }
+  function matApply(metric, cfg) {
+    var el = document.querySelector('.metric-field[data-metric="' + metric + '"]');
+    if (!el) return;
+    el.style.setProperty("--mat-a", hexToRgba(cfg.a, MAT_ALPHA));
+    el.style.setProperty("--mat-b", hexToRgba(cfg.b, MAT_ALPHA));
+    el.style.setProperty("--mat-c", hexToRgba(cfg.c, MAT_ALPHA));
+    el.style.setProperty("--mat-opacity", (cfg.opacity / 100).toFixed(2));
+    el.style.setProperty("--mat-blur", cfg.blur + "px");
+    el.style.setProperty("--mat-flow", cfg.flow + "s");
+  }
+  function matReset(metric) {
+    var el = document.querySelector('.metric-field[data-metric="' + metric + '"]');
+    if (!el) return;
+    ["--mat-a", "--mat-b", "--mat-c", "--mat-opacity", "--mat-blur", "--mat-flow"].forEach(function (p) {
+      el.style.removeProperty(p);
+    });
+  }
+  function initMaterial() {
+    var overlay = $("matOverlay");
+    if (!overlay) return;
+    var select = $("matCardSelect");
+    var preview = $("matPreview");
+    var colorA = $("matColorA"), colorB = $("matColorB"), colorC = $("matColorC");
+    var opacity = $("matOpacity"), blur = $("matBlur"), flow = $("matFlow");
+    var opOut = $("matOpacityOut"), blurOut = $("matBlurOut"), flowOut = $("matFlowOut");
+    var saveBtn = $("matSaveBtn"), resetBtn = $("matResetBtn");
+    var store = matStore();
+
+    function loadCard(metric) {
+      var cfg = store[metric] || MAT_DEFAULTS[metric];
+      colorA.value = cfg.a; colorB.value = cfg.b; colorC.value = cfg.c;
+      opacity.value = cfg.opacity; blur.value = cfg.blur; flow.value = cfg.flow;
+      opOut.textContent = cfg.opacity + "%"; blurOut.textContent = cfg.blur + "px"; flowOut.textContent = cfg.flow + "s";
+      $("matPreviewName").textContent = MAT_NAMES[metric];
+      preview.style.setProperty("--mat-a", hexToRgba(cfg.a, MAT_ALPHA));
+      preview.style.setProperty("--mat-b", hexToRgba(cfg.b, MAT_ALPHA));
+      preview.style.setProperty("--mat-c", hexToRgba(cfg.c, MAT_ALPHA));
+    }
+    function applyCur() {
+      var metric = select.value;
+      var cfg = { a: colorA.value, b: colorB.value, c: colorC.value, opacity: +opacity.value, blur: +blur.value, flow: +flow.value };
+      store[metric] = cfg;
+      matApply(metric, cfg);
+      opOut.textContent = cfg.opacity + "%"; blurOut.textContent = cfg.blur + "px"; flowOut.textContent = cfg.flow + "s";
+      preview.style.setProperty("--mat-a", hexToRgba(cfg.a, MAT_ALPHA));
+      preview.style.setProperty("--mat-b", hexToRgba(cfg.b, MAT_ALPHA));
+      preview.style.setProperty("--mat-c", hexToRgba(cfg.c, MAT_ALPHA));
+    }
+    function openDrawer() {
+      overlay.classList.add("open");
+      overlay.setAttribute("aria-hidden", "false");
+      loadCard(select.value);
+    }
+    function closeDrawer() {
+      overlay.classList.remove("open");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
+    var matToggle = $("matToggle");
+    if (matToggle) matToggle.addEventListener("click", openDrawer);
+    $("matCloseBtn").addEventListener("click", closeDrawer);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) closeDrawer(); });
+    select.addEventListener("change", function () { loadCard(select.value); });
+    [colorA, colorB, colorC].forEach(function (i) { i.addEventListener("input", applyCur); });
+    [opacity, blur, flow].forEach(function (i) { i.addEventListener("input", applyCur); });
+    resetBtn.addEventListener("click", function () {
+      var metric = select.value;
+      delete store[metric];
+      matReset(metric);
+      loadCard(metric);
+    });
+    saveBtn.addEventListener("click", function () {
+      try { localStorage.setItem("wb-mat", JSON.stringify(store)); } catch (e) {}
+      showToast("材质已保存");
+      closeDrawer();
+    });
+
+    MAT_METRICS.forEach(function (m) {
+      if (store[m]) matApply(m, store[m]);
+    });
   }
 
   function fallbackCopy(text) {
