@@ -534,30 +534,22 @@
   }
 
   function reportImage(fn) {
-    var content = $id("reportContent");
-    if (!content) { return; }
+    if (!wbReady) { wbLoad().then(function () { renderShotImage(fn); }); return; }
+    renderShotImage(fn);
+  }
+  function renderShotImage(fn) {
     toast("正在生成图片…");
-    var target = content.cloneNode(true);
-    Array.prototype.forEach.call(target.querySelectorAll("textarea"), function (ta) {
-      var p = document.createElement("div");
-      p.className = "wb-report-textarea";
-      p.style.minHeight = "40px";
-      p.textContent = ta.value || "—";
-      ta.parentNode.replaceChild(p, ta);
-    });
     var holder = document.createElement("div");
     holder.style.position = "fixed";
-    holder.style.left = "-9999px";
+    holder.style.left = "-10000px";
     holder.style.top = "0";
-    holder.style.width = "860px";
-    holder.style.background = "var(--panel)";
-    holder.style.padding = "20px";
-    holder.appendChild(target);
+    holder.style.width = "1000px";
+    holder.innerHTML = buildReportShotHtml();
     document.body.appendChild(holder);
     try {
       var html2canvas = window.html2canvas;
       if (!html2canvas) { toast("图片库未加载，请刷新重试"); document.body.removeChild(holder); return; }
-      html2canvas(holder, { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0c1210", scale: 2 }).then(function (canvas) {
+      html2canvas(holder, { backgroundColor: "#ffffff", scale: 2, useCORS: true }).then(function (canvas) {
         document.body.removeChild(holder);
         fn(canvas);
       }).catch(function () { document.body.removeChild(holder); toast("生成图片失败"); });
@@ -570,10 +562,8 @@
   }
 
   /* ---------- 日报弹窗（参考老版日报绿色主题）---------- */
-  function showReportModal() {
-    var modal = $id("reportModal");
-    var content = $id("reportModalContent");
-    if (!modal || !content) { return; }
+  // 生成老版日报示意图 HTML（弹窗 + 复制/下载图片共用）
+  function buildReportShotHtml() {
     var key = lastReportKey();
     var day = state.days[key] || {};
     var draft = (reportDraft() || {})[key] || {};
@@ -642,7 +632,7 @@
     } else {
       todoHtml = '<div class="shot-todo-empty">今日重点店铺指标均未下降，无明日调优重点</div>';
     }
-    content.innerHTML =
+    return '<div class="report-paper">' +
       '<div class="shot-hero"><div class="shot-hero-top">' +
         '<div class="shot-hero-left">' +
           '<div class="shot-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>' +
@@ -666,7 +656,14 @@
       '</div>' +
       '<div class="shot-todo-card"><div class="shot-card-head">明日待办 · 调优重点</div>' + todoHtml + '</div>' +
       '</div>' +
-      '<div class="shot-footer">— 远山工作台 出品 —</div>';
+      '<div class="shot-footer">— 远山工作台 出品 —</div>' +
+      '</div>';
+  }
+  function showReportModal() {
+    var modal = $id("reportModal");
+    var content = $id("reportModalContent");
+    if (!modal || !content) { return; }
+    content.innerHTML = buildReportShotHtml();
     modal.hidden = false;
   }
   function hideReportModal() {
