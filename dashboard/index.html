@@ -21,6 +21,7 @@
       })();
     </script>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="workbench.css" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -52,12 +53,14 @@
         <nav class="primary-nav" aria-label="主导航">
           <button class="nav-item active" data-view="dashboard"><span class="live-dot"></span><svg><use href="#i-book"/></svg><span>数据驾驶舱</span><svg class="nav-arrow"><use href="#i-chevron"/></svg></button>
           <button class="nav-item" data-view="monthly"><svg><use href="#i-calendar"/></svg><span>月度汇总</span></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="今日任务/排班/数据录入（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-grid"/></svg><span>今日工作台</span><em class="nav-badge">原站</em></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="日报生成/复制下载图片（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-list"/></svg><span>日报表格</span><em class="nav-badge">原站</em></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="店铺库/每日数据（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-columns"/></svg><span>店铺库</span><em class="nav-badge">原站</em></button>
+          <button class="nav-item" data-view="today" title="今日任务/排班/数据录入"><svg><use href="#i-grid"/></svg><span>今日工作台</span></button>
+          <button class="nav-item" data-view="report" title="日报生成/复制下载图片"><svg><use href="#i-list"/></svg><span>日报表格</span></button>
+          <button class="nav-item" data-view="shops" title="店铺库/每日数据/月度汇总"><svg><use href="#i-columns"/></svg><span>店铺库</span></button>
           <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="数据总览/单店图表（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-link"/></svg><span>数据总览</span><em class="nav-badge">原站</em></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync"><svg><use href="#i-spark"/></svg><span>同步昨日数据</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/fill-dingtalk"><svg><use href="#i-list"/></svg><span>同步钉钉表格</span></button>
+          <button class="nav-item" data-href="http://10.10.12.157:8080/sync-workshop"><svg><use href="#i-spark"/></svg><span>同步打标数据</span></button>
+          <button class="nav-item" data-href="http://10.10.12.157:8080/sync-gaps"><svg><use href="#i-spark"/></svg><span>同步补缺</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/fix-shop-data"><svg><use href="#i-grid"/></svg><span>修复店铺数据</span></button>
           <button id="sidebarSettingsBtn" class="nav-item" data-open-material aria-controls="materialOverlay"><svg><use href="#i-settings"/></svg><span>设置中心</span></button>
         </nav>
@@ -70,7 +73,7 @@
 
       <section class="core">
         <header class="topbar">
-          <div class="page-title"><h1>远山数据驾驶舱</h1><p>23 店核心指标 · 采纳/生成/转化/纯智 · 异常提醒</p></div>
+          <div class="page-title"><h1>远山数据驾驶舱</h1><p>23 店核心指标 · 采纳/生成/转化/纯智 · 异常提醒</p><span id="cloudStatus" class="cloud-status"></span></div>
           <label class="search-box"><svg><use href="#i-search"/></svg><input id="searchInput" aria-label="搜索店铺" placeholder="搜索店铺名称、日期或指标…"/><kbd>⌘ K</kbd></label>
           <div class="top-actions">
             <div class="theme-control">
@@ -147,6 +150,84 @@
             </table>
           </div>
         </section>
+
+        <section id="todayView" class="workbench-view panel" hidden>
+          <header class="workbench-head">
+            <div class="section-heading"><h2>今日工作台</h2><span id="wbDateLabel"></span></div>
+            <div class="workbench-toolbar">
+              <button id="wbPrevDay" class="pill-btn quiet">‹ 前一天</button>
+              <button id="wbTodayBtn" class="pill-btn">今天</button>
+              <button id="wbNextDay" class="pill-btn quiet">后一天 ›</button>
+              <button id="wbCopyReportBtn" class="pill-btn primary">复制当天日报表格</button>
+            </div>
+          </header>
+          <div class="wb-grid">
+            <section class="wb-calendar-card">
+              <div class="section-heading"><h3>排班日历</h3><span>点击日期切换 · 标记班次</span></div>
+              <div class="wb-calendar-head">
+                <button id="wbCalPrev" class="icon-btn">‹</button>
+                <b id="wbCalMonth"></b>
+                <button id="wbCalNext" class="icon-btn">›</button>
+              </div>
+              <div class="wb-cal-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+              <div id="wbCalGrid" class="wb-cal-grid"></div>
+              <div class="wb-shift-toolbar">
+                <span>今日班次：</span>
+                <button class="shift-btn" data-shift="zhong">中</button>
+                <button class="shift-btn" data-shift="a">A</button>
+                <button class="shift-btn" data-shift="xiu">休</button>
+                <button class="shift-btn" data-shift="none">无</button>
+              </div>
+            </section>
+            <section class="wb-tasks-card">
+              <div class="section-heading"><h3>今日任务</h3><span id="wbTaskSummary"></span></div>
+              <div id="wbTaskGroups" class="wb-task-groups"></div>
+            </section>
+            <section class="wb-metrics-card">
+              <div class="section-heading"><h3>今日数据</h3><span>月度累计</span></div>
+              <div id="wbMetricGrid" class="wb-metric-grid"></div>
+              <div id="wbMarkedNote"></div>
+              <div class="wb-difficulty-row">
+                <label>今日难点</label>
+                <input id="wbDifficulty" type="text" placeholder="记录今天的难点（选填）">
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="reportView" class="workbench-view panel" hidden>
+          <header class="workbench-head">
+            <div class="section-heading"><h2>日报表格</h2><span id="reportDateLabel"></span></div>
+            <div class="workbench-toolbar">
+              <button id="reportGenBtn" class="pill-btn primary">生成日报</button>
+              <button id="reportCopyBtn" class="pill-btn">复制文本</button>
+              <button id="reportCopyImgBtn" class="pill-btn">复制图片</button>
+              <button id="reportDownloadImgBtn" class="pill-btn">下载图片</button>
+              <button id="reportExportCsvBtn" class="pill-btn quiet">导出CSV</button>
+            </div>
+          </header>
+          <div id="reportContent" class="report-content"></div>
+          <div class="section-heading" style="margin-top:20px"><h3>历史日报记录</h3><span id="reportLogCount"></span></div>
+          <div id="reportLogList" class="report-log-list"></div>
+        </section>
+
+        <section id="shopsView" class="workbench-view panel" hidden>
+          <header class="workbench-head">
+            <div class="section-heading"><h2>店铺库</h2><span>店铺管理 · 每日数据 · 月度汇总</span></div>
+            <div class="workbench-toolbar">
+              <input id="shopSearchInput" class="wb-search-input" placeholder="搜索店铺名称">
+              <button id="addShopBtn" class="pill-btn primary">＋ 添加店铺</button>
+            </div>
+          </header>
+          <div class="shop-tabs">
+            <button class="shop-tab active" data-shop-tab="roster">店铺列表</button>
+            <button class="shop-tab" data-shop-tab="daily">每日数据</button>
+            <button class="shop-tab" data-shop-tab="month">月度汇总</button>
+          </div>
+          <div id="shopRosterView" class="shop-view"></div>
+          <div id="shopDailyView" class="shop-view" hidden></div>
+          <div id="shopMonthView" class="shop-view" hidden></div>
+        </section>
       </section>
 
       <aside class="details-panel panel">
@@ -218,6 +299,7 @@
     </div>
 
     <div id="toast" class="toast" role="status"></div>
+    <script src="workbench.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

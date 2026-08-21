@@ -35,7 +35,7 @@ async function fetchCloud() {
 }
 
 function findLatestFullDate(days) {
-  const keys = Object.keys(days).filter((k) => /^2026-08-\d{2}$/.test(k)).sort();
+  const keys = Object.keys(days).filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
   let latest = null;
   for (let i = keys.length - 1; i >= 0; i--) {
     const sd = days[keys[i]] && days[keys[i]].shopData;
@@ -129,7 +129,7 @@ function buildGroups(docs) {
     const map = {}; // day -> [metrics]
     Object.keys(cloudDays).forEach((dt) => {
       if (dt.indexOf(monthPrefix) !== 0) return;
-      if (dt >= todayKey) return; // 今天及未来不算缺数据
+      if (dt >= todayKey) return; // 今天及未来不��缺数据
       const sd = cloudDays[dt] && cloudDays[dt].shopData && cloudDays[dt].shopData[shop.id];
       missFields.forEach((f) => {
         if (metricVal(sd, f.key) === null) {
@@ -259,13 +259,30 @@ function renderMonthlyTable() {
 function setDashboardMode(mode) {
   const shell = document.querySelector(".app-shell");
   const monthlyView = document.querySelector("#monthlyView");
+  const metricGrid = document.querySelector(".metric-grid");
+  const workspaceGrid = document.querySelector(".workspace-grid");
+  const detailsPanel = document.querySelector(".details-panel");
+  const wbViews = {
+    today: document.querySelector("#todayView"),
+    report: document.querySelector("#reportView"),
+    shops: document.querySelector("#shopsView")
+  };
+  // 隐藏所有工作台内置视图
+  Object.keys(wbViews).forEach((k) => { if (wbViews[k]) wbViews[k].hidden = true; });
+  if (monthlyView) monthlyView.hidden = true;
+  // dashboard 内容显隐: dashboard=全部; monthly=保留指标卡; 工作台视图=隐藏
+  if (metricGrid) metricGrid.style.display = (mode === "today" || mode === "report" || mode === "shops") ? "none" : "";
+  if (workspaceGrid) workspaceGrid.style.display = (mode === "dashboard") ? "" : "none";
+  if (shell) shell.classList.toggle("monthly-mode", mode === "monthly");
+
   if (mode === "monthly") {
-    shell.classList.add("monthly-mode");
     monthlyView.hidden = false;
     renderMonthlyTable();
-  } else {
-    shell.classList.remove("monthly-mode");
-    monthlyView.hidden = true;
+  } else if (wbViews[mode]) {
+    wbViews[mode].hidden = false;
+    if (mode === "today" && typeof window.wbRenderToday === "function") window.wbRenderToday();
+    else if (mode === "report" && typeof window.wbRenderReport === "function") window.wbRenderReport();
+    else if (mode === "shops" && typeof window.wbRenderShops === "function") window.wbRenderShops();
   }
   document.querySelectorAll('.primary-nav .nav-item[data-view]').forEach((b) => {
     b.classList.toggle("active", b.dataset.view === mode);
@@ -1344,9 +1361,18 @@ applyTheme(themePreference, { persist: false });
 applyAccent(accentPreference, { persist: false });
 bindEvents();
 
+function setCloudStatus(text, cls) {
+  const el = document.querySelector("#cloudStatus");
+  if (!el) return;
+  el.textContent = text;
+  el.className = "cloud-status" + (cls ? " " + cls : "");
+}
+
 async function initDashboard() {
+  setCloudStatus("正在加载云端数据…", "loading");
   try {
     const data = await fetchCloud();
+    setCloudStatus("云端已同步 · 最新数据 " + (data.latestDate || "暂无"), "ok");
     renderTimeline(); // 先渲染时间轴按钮
     viewOnDate(data.latestDate); // 加载最新数据日并联动仪表盘所有视图
     if (!documents.length) {
@@ -1365,6 +1391,7 @@ async function initDashboard() {
     renderMonthlyTable();
   } catch (e) {
     console.error("数据加载失败:", e);
+    setCloudStatus("云端加载失败", "err");
     showToast("云端数据加载失败，请检查网络");
   }
 }
