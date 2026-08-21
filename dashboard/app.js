@@ -914,15 +914,12 @@ function updateDetails(doc) {
   document.querySelector("#detailState").textContent = fmt(m.adopt, "%");
   document.querySelector("#detailPriority").textContent = fmt(m.exp);
   document.querySelector("#detailTags").innerHTML = doc.tags.map((tag) => `<span>${tag}</span>`).join("");
-  // 指标明细：当前指标置顶+高亮
+  // 指标明细：当前指标置顶+高亮（sort 把 isCur=true 排前面）
   const ordered = METRIC_KEYS.map((k) => {
     const v = m[k.doc];
     return { k, v, line: `${k.label} ${fmt(v, k.unit)}`, isCur: k === cur };
-  }).sort((a, b) => (b.isCur ? 1 : 0) - (a.isCur ? 1 : 0));
+  }).sort((a, b) => (a.isCur ? -1 : 0) - (b.isCur ? -1 : 0));
   document.querySelector("#detailAdvice").innerHTML = ordered.map((a) => `<li class="${a.isCur ? "current-metric" : ""}">${a.isCur ? "★ " : ""}${a.line}</li>`).join("");
-  document.querySelector("#completionValue").textContent = fmt(m.adopt, "%");
-  document.querySelector(".completion-card b").style.width = `${m.adopt === null || m.adopt === undefined ? 0 : Math.min(100, m.adopt)}%`;
-  document.querySelector("#tipTitle").textContent = doc.title;
   progress.style.width = `${25 + selectedIndex * (56 / Math.max(1, documents.length - 1))}%`;
   detailsContent.classList.remove("detail-refresh");
   void detailsContent.offsetWidth;
