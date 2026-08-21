@@ -834,14 +834,19 @@
   /* 折线图悬停：划过日期点显示该日期的店铺数据 */
   function bindSummaryHover() {
     var wrap = $id("sumChartWrap");
-    if (!wrap || wrap.dataset.hoverBound) { return; }
-    wrap.dataset.hoverBound = "1";
+    if (!wrap) { return; }
     wrap.style.position = "relative";
+    // 每次重绘都重建 tooltip 浮层（renderSummary 的 innerHTML 重绘会清掉旧的）
     var tip = document.createElement("div");
     tip.className = "sum-tooltip";
     tip.style.display = "none";
     wrap.appendChild(tip);
+    // 事件只绑定一次（用独立标记，避免与 tooltip 重建冲突）
+    if (wrap.dataset.hoverEventsBound) { return; }
+    wrap.dataset.hoverEventsBound = "1";
     wrap.addEventListener("mousemove", function (e) {
+      var tip = wrap.querySelector(".sum-tooltip");
+      if (!tip) { return; }
       var svg = wrap.querySelector("svg");
       if (!svg || !sumDates.length || !sumShopCurrent) { tip.style.display = "none"; return; }
       var r = svg.getBoundingClientRect();
@@ -874,7 +879,10 @@
       tip.style.top = top + "px";
       tip.style.display = "block";
     });
-    wrap.addEventListener("mouseleave", function () { tip.style.display = "none"; });
+    wrap.addEventListener("mouseleave", function () {
+      var tip = wrap.querySelector(".sum-tooltip");
+      if (tip) { tip.style.display = "none"; }
+    });
   }
 
   function wbRenderSummary() {
