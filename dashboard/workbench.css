@@ -262,3 +262,44 @@ html, body { overflow-x: hidden; }
   flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
   color: var(--text); font-size: 12px; padding: 7px 10px; outline: none;
 }
+
+/* ---- 数据总览 ---- */
+.summary-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; min-width: 0; }
+@media (max-width: 1100px) { .summary-grid { grid-template-columns: 1fr; } }
+.summary-metric-seg { display: inline-flex; border-radius: 10px; background: var(--panel); padding: 3px; gap: 3px; }
+.summary-metric-seg button {
+  border: 0; background: transparent; color: var(--muted); font-size: 12px;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer;
+}
+.summary-metric-seg button:hover { color: var(--text); }
+.summary-metric-seg button.active { background: var(--accent-400); color: var(--accent-foreground); font-weight: 500; }
+.summary-shop-list { max-height: 560px; display: flex; flex-direction: column; }
+.summary-shop-items { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.sum-shop-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--text); font-size: 12px; cursor: pointer;
+}
+.sum-shop-item:hover { border-color: var(--accent-400); }
+.sum-shop-item.active { border-color: var(--accent-400); background: var(--accent-900); }
+.sum-shop-item.active .sum-shop-name { color: var(--accent-200); font-weight: 500; }
+.sum-shop-item.key { border-left: 3px solid var(--accent-400); }
+.sum-shop-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-chart-card { min-width: 0; }
+.summary-chart-wrap { overflow-x: auto; }
+.summary-chart-footer { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.sum-delta { font-size: 13px; color: var(--text); font-weight: 500; }
+.summary-chart-footer .shop-card-metrics { display: flex; flex-wrap: wrap; gap: 8px; }
+.sum-range.active { background: var(--accent-400); color: var(--accent-foreground); }
+
+/* 折线图悬停 tooltip */
+.sum-tooltip {
+  position: absolute; z-index: 70; pointer-events: none;
+  background: var(--panel-soft); border: 1px solid var(--line-bright);
+  border-radius: 10px; padding: 8px 12px; width: 182px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  font-size: 11px; color: var(--text);
+}
+.sum-tip-date { color: var(--muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sum-tip-val { font-size: 12px; }
+.sum-tip-val b { color: var(--accent-300); font-weight: 500; }

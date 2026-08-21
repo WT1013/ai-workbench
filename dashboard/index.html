@@ -56,7 +56,7 @@
           <button class="nav-item" data-view="today" title="今日任务/排班/数据录入"><svg><use href="#i-grid"/></svg><span>今日工作台</span></button>
           <button class="nav-item" data-view="report" title="日报生成/复制下载图片"><svg><use href="#i-list"/></svg><span>日报表格</span></button>
           <button class="nav-item" data-view="shops" title="店铺库/每日数据/月度汇总"><svg><use href="#i-columns"/></svg><span>店铺库</span></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="数据总览/单店图表（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-link"/></svg><span>数据总览</span><em class="nav-badge">原站</em></button>
+          <button class="nav-item" data-view="summary" title="单店历史趋势/多店指标对比"><svg><use href="#i-link"/></svg><span>数据总览</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync"><svg><use href="#i-spark"/></svg><span>同步昨日数据</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/fill-dingtalk"><svg><use href="#i-list"/></svg><span>同步钉钉表格</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync-workshop"><svg><use href="#i-spark"/></svg><span>同步打标数据</span></button>
@@ -227,7 +227,7 @@
 
         <section id="shopsView" class="workbench-view panel" hidden>
           <header class="workbench-head">
-            <div class="section-heading"><h2>店铺库</h2><span>店铺管理 · 每日数据 · 月度汇总</span></div>
+            <div class="section-heading"><h2>店铺库</h2><span>店铺管理 · 昨日数据（月度汇总见顶部导航）</span></div>
             <div class="workbench-toolbar">
               <input id="shopSearchInput" class="wb-search-input" placeholder="搜索店铺名称">
               <button id="addShopBtn" class="pill-btn primary">＋ 添加店铺</button>
@@ -235,12 +235,33 @@
           </header>
           <div class="shop-tabs">
             <button class="shop-tab active" data-shop-tab="roster">店铺列表</button>
-            <button class="shop-tab" data-shop-tab="daily">每日数据</button>
-            <button class="shop-tab" data-shop-tab="month">月度汇总</button>
+            <button class="shop-tab" data-shop-tab="daily">昨日数据</button>
           </div>
           <div id="shopRosterView" class="shop-view"></div>
           <div id="shopDailyView" class="shop-view" hidden></div>
-          <div id="shopMonthView" class="shop-view" hidden></div>
+        </section>
+
+        <section id="summaryView" class="workbench-view panel" hidden>
+          <header class="workbench-head">
+            <div class="section-heading"><h2>数据总览</h2><span>单店历史趋势 · 指标对比 · 环比变化</span></div>
+            <div class="workbench-toolbar">
+              <div class="summary-metric-seg" id="sumMetricSeg"></div>
+              <button class="pill-btn quiet sum-range" data-range="7">近7天</button>
+              <button class="pill-btn quiet sum-range active" data-range="month">本月</button>
+              <button class="pill-btn quiet sum-range" data-range="30">近30天</button>
+            </div>
+          </header>
+          <div class="summary-grid">
+            <aside class="wb-card summary-shop-list">
+              <div class="section-heading"><h3>店铺</h3><span id="sumShopCount"></span></div>
+              <div id="sumShopList" class="summary-shop-items"></div>
+            </aside>
+            <div class="wb-card summary-chart-card">
+              <div class="section-heading"><h3 id="sumChartTitle">采纳率 · 本月趋势</h3><span id="sumChartRange"></span></div>
+              <div id="sumChartWrap" class="summary-chart-wrap"></div>
+              <div id="sumChartFooter" class="summary-chart-footer"></div>
+            </div>
+          </div>
         </section>
       </section>
 

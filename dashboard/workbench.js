@@ -75,6 +75,12 @@
   function todayKey() { return toKey(new Date()); }
   function fromKey(key) { var parts = key.split("-").map(Number); return new Date(parts[0], parts[1] - 1, parts[2]); }
   function weekdayLabel(key) { return "星期" + ["日", "一", "二", "三", "四", "五", "六"][fromKey(key).getDay()]; }
+  function yesterdayKeyOf(key) {
+    var p = key.split("-").map(Number);
+    var d = new Date(p[0], p[1] - 1, p[2]);
+    d.setDate(d.getDate() - 1);
+    return toKey(d);
+  }
   function esc(s) { return String(s === undefined || s === null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
   function toast(msg) {
     var t = document.querySelector(".wb-toast");
@@ -558,20 +564,13 @@
     }
     var key = currentDateKey || todayKey();
     view.innerHTML = '<div class="shop-card-grid">' + shown.map(function (shop) {
-      var sd = state.days[key] && state.days[key].shopData && state.days[key].shopData[shop.id] || {};
-      var adopt = sd.adoptionRate !== undefined && sd.adoptionRate !== "" ? sd.adoptionRate : "—";
-      var exp = sd.experienceScore !== undefined && sd.experienceScore !== "" ? sd.experienceScore : "—";
       return '<div class="shop-card' + (shopKey(shop) ? " key-shop" : "") + '" data-shop-id="' + esc(shop.id) + '">' +
         '<div class="shop-card-head"><span class="wb-shop-name">' + esc(shop.name) + '</span>' +
         (shopKey(shop) ? '<span class="shop-key-badge">重点</span>' : '') + '</div>' +
         '<div class="shop-card-meta"><span>负责人：' + esc(shop.owner || "—") + '</span></div>' +
-        '<div class="shop-card-metrics">' +
-        '<span class="shop-mini-metric">采纳 <b>' + esc(adopt) + '%</b></span>' +
-        '<span class="shop-mini-metric">体验分 <b>' + esc(exp) + '</b></span>' +
-        '</div>' +
         '<div class="shop-card-actions">' +
         '<button class="pill-btn quiet" data-action="edit-shop">编辑</button>' +
-        '<button class="pill-btn quiet" data-action="daily-shop">每日数据</button>' +
+        '<button class="pill-btn quiet" data-action="daily-shop">昨日数据</button>' +
         '<button class="pill-btn quiet" data-action="remove-shop">移除</button>' +
         '</div></div>';
     }).join("") + '</div>';
@@ -580,7 +579,8 @@
   function renderShopDaily() {
     var view = $id("shopDailyView");
     if (!view) { return; }
-    var key = currentDateKey || todayKey();
+    // 昨日数据：默认编辑昨天的数据（业务上同步/录入的是昨日数据）
+    var key = yesterdayKeyOf(todayKey());
     var shop = null;
     if (selectedShopId) {
       shop = shopLibrary.filter(function (s) { return s.id === selectedShopId; })[0] || null;
@@ -597,7 +597,7 @@
       return '<div class="shop-input-row"><label>' + m.label + '</label><input type="number" step="0.01" data-metric="' + m.key + '" value="' + esc(v) + '"></div>';
     }).join("");
     view.innerHTML = '<div class="wb-card" style="max-width:640px">' +
-      '<h3>每日数据录入 · ' + key + '</h3>' +
+      '<h3>昨日数据录入 · ' + key + '</h3>' +
       '<p class="wb-card-sub">' + esc(shop.name) + '（' + esc(shop.owner || "远山") + '）</p>' +
       sel + rows +
       '<div class="shop-card-actions" style="margin-top:12px">' +
@@ -630,35 +630,6 @@
     }
   }
 
-  function renderShopMonth() {
-    var view = $id("shopMonthView");
-    if (!view) { return; }
-    var key = currentDateKey || todayKey();
-    var month = key.slice(0, 7);
-    var fields = [
-      { key: "adoptionRate", label: "采纳率" },
-      { key: "generationRate", label: "生成率" },
-      { key: "conversionRate", label: "转化率" },
-      { key: "pureAgentRatio", label: "纯智能体" },
-      { key: "experienceScore", label: "体验分" }
-    ];
-    var head = "<tr><th>店铺</th>" + fields.map(function (f) { return "<th>" + f.label + "</th>"; }).join("") + "</tr>";
-    var body = shopLibrary.map(function (shop) {
-      var cells = fields.map(function (f) {
-        var sum = 0, n = 0;
-        Object.keys(state.days).forEach(function (k) {
-          if (k.slice(0, 7) !== month) { return; }
-          var sd = state.days[k] && state.days[k].shopData && state.days[k].shopData[shop.id];
-          var v = sd && sd[f.key];
-          if (v !== undefined && v !== null && String(v) !== "") { sum += parseFloat(v); n += 1; }
-        });
-        return "<td>" + (n ? (Math.round((sum / n) * 100) / 100) : "—") + "</td>";
-      }).join("");
-      return "<tr><td>" + esc(shop.name) + "</td>" + cells + "</tr>";
-    }).join("");
-    view.innerHTML = '<div class="wb-table-wrap"><table class="wb-month-table"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
-  }
-
   function wbRenderShops() {
     if (!wbReady) { wbLoad().then(function () { renderShopsInternal(); }); return; }
     renderShopsInternal();
@@ -670,10 +641,241 @@
     });
     $id("shopRosterView").hidden = shopsTab !== "roster";
     $id("shopDailyView").hidden = shopsTab !== "daily";
-    $id("shopMonthView").hidden = shopsTab !== "month";
     if (shopsTab === "roster") { renderRoster(); }
     else if (shopsTab === "daily") { renderShopDaily(); }
-    else { renderShopMonth(); }
+  }
+
+  /* ---------- 数据总览视图 ---------- */
+  var sumMetric = "adoptionRate";
+  var sumRange = "month"; // 7 | 30 | month
+  var sumShopId = null;
+  var sumDates = [];      // 当前图表日期序列（供 hover 使用）
+  var sumShopCurrent = null; // 当前图表店铺（供 hover 使用）
+
+  var SUMMARY_METRICS = [
+    { key: "adoptionRate", label: "采纳率" },
+    { key: "generationRate", label: "生成率" },
+    { key: "conversionRate", label: "转化率" },
+    { key: "pureAgentRatio", label: "纯智能体" },
+    { key: "experienceScore", label: "体验分" },
+    { key: "threeMinReplyRate", label: "3分钟回复率" }
+  ];
+
+  function summaryRangeDates() {
+    var today = todayKey();
+    var out = [];
+    if (sumRange === "7") {
+      var d = fromKey(today);
+      for (var i = 6; i >= 0; i--) {
+        var t = new Date(d); t.setDate(d.getDate() - i);
+        var k = toKey(t);
+        if (state.days[k] && Object.keys((state.days[k].shopData) || {}).length) { out.push(k); }
+      }
+    } else if (sumRange === "30") {
+      var d2 = fromKey(today);
+      for (var i2 = 29; i2 >= 0; i2--) {
+        var t2 = new Date(d2); t2.setDate(d2.getDate() - i2);
+        var k2 = toKey(t2);
+        if (state.days[k2] && Object.keys((state.days[k2].shopData) || {}).length) { out.push(k2); }
+      }
+    } else {
+      // month: 当前有数据的月份（按最新有数据的日期所在月）
+      var base = today;
+      var keys = Object.keys(state.days).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k) && state.days[k].shopData && Object.keys(state.days[k].shopData).length; }).sort();
+      if (keys.length) { base = keys[keys.length - 1]; }
+      var y = parseInt(base.slice(0, 4), 10), m = parseInt(base.slice(5, 7), 10);
+      var daysIn = new Date(y, m, 0).getDate();
+      for (var d3 = 1; d3 <= daysIn; d3++) {
+        var k3 = y + "-" + String(m).padStart(2, "0") + "-" + String(d3).padStart(2, "0");
+        if (state.days[k3] && state.days[k3].shopData && Object.keys(state.days[k3].shopData).length) { out.push(k3); }
+      }
+    }
+    return out;
+  }
+
+  function renderSummarySeg() {
+    var seg = $id("sumMetricSeg");
+    if (!seg) { return; }
+    seg.innerHTML = SUMMARY_METRICS.map(function (m) {
+      return '<button data-sum-metric="' + m.key + '" class="' + (m.key === sumMetric ? "active" : "") + '">' + m.label + '</button>';
+    }).join("");
+    Array.prototype.forEach.call(seg.querySelectorAll("[data-sum-metric]"), function (b) {
+      b.addEventListener("click", function () {
+        sumMetric = b.dataset.sumMetric;
+        renderSummary();
+      });
+    });
+  }
+
+  function summaryChartSvg(metricKey, dates, shop) {
+    var W = 720, H = 260, padL = 48, padR = 16, padT = 18, padB = 34;
+    var vals = [];
+    dates.forEach(function (d) {
+      var v = shopMetricVal(d, shop.id, metricKey);
+      if (v !== null) { vals.push(v); }
+    });
+    if (!vals.length) { return '<div class="wb-empty-hint">所选范围暂无数据</div>'; }
+    var min = Math.min.apply(null, vals);
+    var max = Math.max.apply(null, vals);
+    if (min === max) { min -= 1; max += 1; }
+    var span = max - min;
+    var xf = function (i) { return dates.length === 1 ? padL + (W - padL - padR) / 2 : padL + ((W - padL - padR) * i) / (dates.length - 1); };
+    var yf = function (v) { return padT + (H - padT - padB) * (1 - (v - min) / span); };
+    var isPct = metricKey !== "experienceScore";
+    var suffix = isPct ? "%" : "";
+    var points = [];
+    dates.forEach(function (d, i) {
+      var v = shopMetricVal(d, shop.id, metricKey);
+      if (v === null) { points.push(null); } else { points.push({ x: xf(i), y: yf(v), v: v }); }
+    });
+    var lineD = "", dots = "";
+    var started = false;
+    points.forEach(function (p, i) {
+      if (!p) { started = false; return; }
+      if (!started) { lineD += "M" + p.x.toFixed(1) + "," + p.y.toFixed(1); started = true; }
+      else { lineD += " L" + p.x.toFixed(1) + "," + p.y.toFixed(1); }
+      dots += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3.5" fill="' + accent + '"/>';
+    });
+    var grid = "", labels = "";
+    for (var gi = 0; gi <= 4; gi++) {
+      var gv = min + (span * gi) / 4;
+      var gy = yf(gv).toFixed(1);
+      grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/>';
+      labels += '<text x="' + (padL - 8) + '" y="' + (Number(gy) + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + (Math.round(gv * 10) / 10) + suffix + '</text>';
+    }
+    var step = Math.max(1, Math.ceil(dates.length / 8));
+    dates.forEach(function (d, i) {
+      if (i % step === 0 || i === dates.length - 1) {
+        labels += '<text x="' + xf(i) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + d.slice(5) + '</text>';
+      }
+    });
+    var accent = getComputedStyle(document.documentElement).getPropertyValue("--accent-400").trim() || "#23e2a0";
+    var firstPt = null, lastPt = null;
+    points.forEach(function (p) { if (p) { if (!firstPt) { firstPt = p; } lastPt = p; } });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="display:block;width:100%;min-height:' + H + 'px;min-width:100%" role="img">' +
+      '<defs><linearGradient id="sumFill" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="' + accent + '" stop-opacity=".22"/>' +
+      '<stop offset="100%" stop-color="' + accent + '" stop-opacity="0"/>' +
+      '</linearGradient></defs>' +
+      grid + labels +
+      (lineD ? '<path d="' + lineD + '" fill="none" stroke="' + accent + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
+      (lineD && firstPt && lastPt ? '<path d="' + lineD + ' L' + lastPt.x.toFixed(1) + ',' + (H - padB) + ' L' + firstPt.x.toFixed(1) + ',' + (H - padB) + ' Z" fill="url(#sumFill)"/>' : '') +
+      dots +
+      '</svg>';
+  }
+
+  function renderSummary() {
+    if (!wbReady) { return; }
+    renderSummarySeg();
+    var dates = summaryRangeDates();
+    if (!sumShopId) {
+      var keyed = shopLibrary.filter(shopKey);
+      sumShopId = (keyed[0] || shopLibrary[0] || { id: null }).id;
+    }
+    var shop = shopLibrary.filter(function (s) { return s.id === sumShopId; })[0] || shopLibrary[0] || null;
+    if (!shop) { $id("sumShopList").innerHTML = '<div class="wb-empty-hint">暂无店铺</div>'; return; }
+    sumShopId = shop.id;
+
+    // 店铺列表
+    var countEl = $id("sumShopCount");
+    if (countEl) { countEl.textContent = shopLibrary.length + " 家"; }
+    var list = $id("sumShopList");
+    list.innerHTML = shopLibrary.slice().sort(function (a, b) { return (shopKey(b) ? 1 : 0) - (shopKey(a) ? 1 : 0); }).map(function (s) {
+      return '<button type="button" class="sum-shop-item' + (s.id === shop.id ? " active" : "") + (shopKey(s) ? " key" : "") + '" data-sum-shop="' + esc(s.id) + '">' +
+        '<span class="sum-shop-name">' + esc(s.name) + '</span>' +
+        (shopKey(s) ? '<span class="shop-key-badge">重点</span>' : '') +
+        '</button>';
+    }).join("");
+
+    // 图表
+    var metric = SUMMARY_METRICS.filter(function (m) { return m.key === sumMetric; })[0] || SUMMARY_METRICS[0];
+    var titleEl = $id("sumChartTitle");
+    if (titleEl) { titleEl.textContent = metric.label + " · " + (sumRange === "7" ? "近7天" : sumRange === "30" ? "近30天" : "本月") + "趋势"; }
+    var rangeEl = $id("sumChartRange");
+    if (rangeEl) { rangeEl.textContent = dates.length ? (dates[0] + " ~ " + dates[dates.length - 1]) : "无数据"; }
+    var wrap = $id("sumChartWrap");
+    wrap.innerHTML = summaryChartSvg(sumMetric, dates, shop);
+    sumDates = dates;
+    sumShopCurrent = shop;
+    bindSummaryHover();
+
+    // 底部信息
+    var footer = $id("sumChartFooter");
+    var first = null, last = null;
+    dates.forEach(function (d) {
+      var v = shopMetricVal(d, shop.id, sumMetric);
+      if (first === null && v !== null) { first = v; }
+      if (v !== null) { last = v; }
+    });
+    var isPct2 = sumMetric !== "experienceScore";
+    var suff2 = isPct2 ? "%" : "";
+    var deltaHtml = "";
+    if (first !== null && last !== null) {
+      var diff = Math.round((last - first) * 100) / 100;
+      deltaHtml = diff > 0
+        ? '<span class="wb-delta-up">▲ ' + first + suff2 + " → " + last + suff2 + "（+" + diff + "）</span>"
+        : diff < 0
+          ? '<span class="wb-delta-down">▼ ' + first + suff2 + " → " + last + suff2 + "（" + diff + "）</span>"
+          : '<span>' + first + suff2 + " → " + last + suff2 + "（持平）</span>";
+    } else {
+      deltaHtml = '<span>所选范围无数据</span>';
+    }
+    var snap = SUMMARY_METRICS.map(function (m) {
+      var v = shopMetricVal(dates[dates.length - 1] || todayKey(), shop.id, m.key);
+      return '<span class="shop-mini-metric">' + m.label + ' <b>' + (v === null ? "—" : (Math.round(v * 100) / 100) + (m.key === "experienceScore" ? "" : "%")) + '</b></span>';
+    }).join("");
+    footer.innerHTML = '<div class="sum-delta">' + deltaHtml + '</div><div class="shop-card-metrics">' + snap + '</div>';
+  }
+
+  /* 折线图悬停：划过日期点显示该日期的店铺数据 */
+  function bindSummaryHover() {
+    var wrap = $id("sumChartWrap");
+    if (!wrap || wrap.dataset.hoverBound) { return; }
+    wrap.dataset.hoverBound = "1";
+    wrap.style.position = "relative";
+    var tip = document.createElement("div");
+    tip.className = "sum-tooltip";
+    tip.style.display = "none";
+    wrap.appendChild(tip);
+    wrap.addEventListener("mousemove", function (e) {
+      var svg = wrap.querySelector("svg");
+      if (!svg || !sumDates.length || !sumShopCurrent) { tip.style.display = "none"; return; }
+      var r = svg.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right) { tip.style.display = "none"; return; }
+      var W = 720, padL = 48, padR = 16, padB = 34;
+      var drawW = W - padL - padR;
+      var ratio = (e.clientX - r.left) / r.width;
+      var drawX = padL + drawW * ratio;
+      // 找最近的日期索引
+      var best = 0, bestDist = Infinity;
+      sumDates.forEach(function (d, i) {
+        var x = sumDates.length === 1 ? padL + drawW / 2 : padL + drawW * i / (sumDates.length - 1);
+        var dist = Math.abs(x - drawX);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+      });
+      var dateKey = sumDates[best];
+      var v = shopMetricVal(dateKey, sumShopCurrent.id, sumMetric);
+      var isPct = sumMetric !== "experienceScore";
+      var metric = SUMMARY_METRICS.filter(function (m) { return m.key === sumMetric; })[0] || SUMMARY_METRICS[0];
+      tip.innerHTML =
+        '<div class="sum-tip-date">' + dateKey + ' · ' + esc(sumShopCurrent.name) + '</div>' +
+        '<div class="sum-tip-val">' + esc(metric.label) + '：<b>' + (v === null ? "无数据" : (Math.round(v * 100) / 100) + (isPct ? "%" : "")) + '</b></div>';
+      // 位置跟随鼠标，限定在 wrap 内
+      var tipW = 190;
+      var left = e.clientX - wrap.getBoundingClientRect().left - tipW / 2;
+      left = Math.max(4, Math.min(left, wrap.clientWidth - tipW - 4));
+      var top = e.clientY - wrap.getBoundingClientRect().top - 62;
+      top = Math.max(4, top);
+      tip.style.left = left + "px";
+      tip.style.top = top + "px";
+      tip.style.display = "block";
+    });
+    wrap.addEventListener("mouseleave", function () { tip.style.display = "none"; });
+  }
+
+  function wbRenderSummary() {
+    if (!wbReady) { wbLoad().then(function () { renderSummary(); }); return; }
+    renderSummary();
   }
 
   /* ---------- 事件绑定 ---------- */
@@ -787,6 +989,24 @@
         }
       });
     }
+    // 数据总览：店铺切换（事件委托）
+    var sumList = $id("sumShopList");
+    if (sumList) {
+      sumList.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-sum-shop]");
+        if (!btn) { return; }
+        sumShopId = btn.dataset.sumShop;
+        renderSummary();
+      });
+    }
+    // 数据总览：时间范围
+    Array.prototype.forEach.call(document.querySelectorAll(".sum-range"), function (b) {
+      b.addEventListener("click", function () {
+        sumRange = b.dataset.range;
+        Array.prototype.forEach.call(document.querySelectorAll(".sum-range"), function (x) { x.classList.toggle("active", x === b); });
+        renderSummary();
+      });
+    });
     // 同步按钮（顶部与详情面板）
     var syncBtns = document.querySelectorAll("[data-wb-sync]");
     Array.prototype.forEach.call(syncBtns, function (b) {
@@ -825,6 +1045,7 @@
   window.wbRenderToday = wbRenderToday;
   window.wbRenderReport = wbRenderReport;
   window.wbRenderShops = wbRenderShops;
+  window.wbRenderSummary = wbRenderSummary;
   window.wbRefresh = function () { wbReady = false; wbInit(); };
   window.addEventListener("DOMContentLoaded", wbInit);
   if (document.readyState !== "loading") { wbInit(); }
