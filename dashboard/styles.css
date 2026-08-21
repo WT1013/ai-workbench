@@ -76,6 +76,16 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   position: relative; width: 100%; height: 52px; padding: 0 16px; border: 0; border-radius: 14px; background: transparent; display: flex; align-items: center; gap: 14px; color: #9aa39f; cursor: pointer; text-align: left; font-size: 15px; transition: .2s ease;
 }
 .nav-item svg { width: 18px; height: 18px; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 7px;
+  letter-spacing: .05em;
+}
 .nav-item:hover { color: white; background: rgba(255,255,255,.035); }
 .nav-item.active { color: #f3f6f5; background: linear-gradient(90deg, rgba(255,255,255,.11), rgba(255,255,255,.055)); border: 1px solid rgba(255,255,255,.09); box-shadow: 0 5px 18px rgba(0,0,0,.25); }
 .nav-item.active > svg:not(.nav-arrow) { display: none; }
@@ -714,3 +724,190 @@ html[data-theme-resolved="light"] .material-actions button.primary { color: var(
 .monthly-table tbody tr:hover td { background: rgba(255, 255, 255, 0.04); }
 .monthly-table tbody tr:hover td:first-child { background: var(--panel-soft); }
 .monthly-table td.monthly-avg { color: var(--accent-300); font-weight: 700; }
+
+/* ===== 达标提醒条 ===== */
+/* ===== 提醒条（可折叠卡片，点击标题展开数据） ===== */
+.notice-bar {
+  margin: 0 0 10px;
+  border-radius: 12px;
+  border: 1px solid;
+  overflow: hidden;
+}
+.notice-bar[hidden] { display: none; }
+.std-notice-bar {
+  background: linear-gradient(135deg, rgba(255, 149, 0, .10), rgba(255, 74, 169, .05));
+  border-color: rgba(255, 149, 0, .26);
+}
+.gap-notice-bar {
+  background: linear-gradient(135deg, rgba(86, 184, 255, .10), rgba(56, 130, 246, .05));
+  border-color: rgba(86, 184, 255, .26);
+}
+.down-notice-bar {
+  background: linear-gradient(135deg, rgba(255, 74, 107, .10), rgba(255, 105, 63, .05));
+  border-color: rgba(255, 107, 130, .28);
+}
+.notice-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font-size: 12.5px;
+}
+.notice-title { font-weight: 650; }
+.std-notice-bar .notice-title { color: #ffb454; }
+.gap-notice-bar .notice-title { color: #56b8ff; }
+.down-notice-bar .notice-title { color: #ff7d90; }
+.notice-count { font-size: 11px; color: var(--muted); }
+.notice-chevron { margin-left: auto; width: 14px; height: 14px; color: var(--muted); transition: transform .2s ease; }
+.notice-bar.open .notice-chevron { transform: rotate(90deg); }
+.notice-body {
+  display: none;
+  padding: 2px 12px 12px;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 250px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.notice-bar.open .notice-body { display: flex; }
+.notice-ok { font-size: 12.5px; color: var(--accent-300); padding: 2px 0; }
+.notice-shop {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .04);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background .15s ease;
+}
+.notice-shop:hover { background: rgba(255, 255, 255, .09); }
+.notice-shop-name { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.notice-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.notice-tag {
+  font-style: normal;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.std-notice-bar .notice-tag { background: rgba(255, 149, 0, .14); color: #ffb454; }
+.gap-notice-bar .notice-tag { background: rgba(86, 184, 255, .12); color: #7cc0ff; }
+.down-notice-bar .notice-tag { background: rgba(255, 107, 130, .14); color: #ff7d90; }
+.notice-action {
+  align-self: flex-start;
+  margin-top: 2px;
+  border: 1px solid rgba(255, 180, 84, .3);
+  background: rgba(255, 180, 84, .1);
+  color: #ffb454;
+  border-radius: 7px;
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.notice-action:hover { background: rgba(255, 180, 84, .2); }
+.queue-empty {
+  padding: 26px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 当前选中指标的明细高亮 */
+.detail-content .current-metric {
+  color: var(--accent-300);
+  font-weight: 700;
+}
+
+/* ===== 达标标准设置弹窗 ===== */
+.std-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .55);
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.std-modal-overlay.open { opacity: 1; }
+.std-modal {
+  width: 360px;
+  max-width: calc(100vw - 40px);
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line-bright);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .5);
+  transform: translateY(10px) scale(.97);
+  transition: transform .2s ease;
+}
+.std-modal-overlay.open .std-modal { transform: none; }
+.std-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+.std-modal-close {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.std-modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.std-modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+}
+.std-modal-row input {
+  width: 90px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line-bright);
+  background: var(--panel-2);
+  color: var(--text);
+  text-align: right;
+}
+.std-modal-hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.std-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 13px 18px;
+  border-top: 1px solid var(--line);
+}
+.std-modal-foot button {
+  border-radius: 9px;
+  padding: 7px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--line-bright);
+  background: transparent;
+  color: var(--text);
+}
+.std-modal-foot button.std-modal-save {
+  background: var(--accent-400);
+  border-color: transparent;
+  color: var(--accent-ink);
+  font-weight: 650;
+}

@@ -1,6 +1,17 @@
 let documents = [];
+let currentViewDate = null;
+let currentMetricIdx = 0;
 
 let groups = [];
+
+/* 卡片展示的指标切换：与 metricCards[0..3] 一一对应 */
+const METRIC_KEYS = [
+  { doc: "adopt", label: "采纳率", unit: "%" },
+  { doc: "gen", label: "生成率", unit: "%" },
+  { doc: "conv", label: "转化率", unit: "%" },
+  { doc: "pure", label: "纯智能体", unit: "%" }
+];
+function currentMetric() { return METRIC_KEYS[currentMetricIdx] || METRIC_KEYS[0]; }
 
 /* ===== 数据层：从云端拉取远山店铺数据 ===== */
 const CLOUD_URL = "https://kocuowtqklojxkhzlwpe.supabase.co";
@@ -46,7 +57,19 @@ function metricVal(sd, field) {
   return (v !== undefined && v !== null && String(v) !== "") ? parseFloat(v) : null;
 }
 
+function monthAvgVal(days, monthPrefix, shopId, metric) {
+  let sum = 0, n = 0;
+  Object.keys(days || {}).forEach((k) => {
+    if (monthPrefix && k.indexOf(monthPrefix) !== 0) return;
+    const sd = days[k] && days[k].shopData && days[k].shopData[shopId];
+    const v = metricVal(sd, metric);
+    if (v !== null) { sum += v; n++; }
+  });
+  return n ? sum / n : null;
+}
+
 function buildDocuments(shops, days, date) {
+  const monthPrefix = date ? date.slice(0, 7) : null;
   return shops.map((shop) => {
     const sd = (days[date] && days[date].shopData && days[date].shopData[shop.id]) || {};
     const adopt = metricVal(sd, "adoptionRate");
@@ -55,12 +78,14 @@ function buildDocuments(shops, days, date) {
     const pure = metricVal(sd, "pureAgentRatio");
     const reply = metricVal(sd, "threeMinReplyRate");
     const exp = metricVal(sd, "experienceScore");
+    const expAvg = (exp !== null && monthPrefix) ? monthAvgVal(days, monthPrefix, shop.id, "experienceScore") : null;
     const isKey = shop.key === true;
     const fmt = (v) => (v === null ? "--" : String(v));
+    const missCore = [adopt, gen, conv, pure, reply].some((v) => v === null);
     let status = "达标", priority = "中";
-    if (adopt === null || exp === null) { status = "缺数据"; priority = "高"; }
-    else if (exp < 3.5) { status = "体验分偏低"; priority = "高"; }
-    else if (reply !== null && reply < 95) { status = "回复率偏低"; priority = "高"; }
+    if (missCore) { status = "缺数据"; priority = "高"; }
+    else if (reply !== null && reply > 0 && reply < 95) { status = "回复率偏低"; priority = "高"; }
+    else if (exp !== null && expAvg !== null && expAvg - exp >= 0.3) { status = "体验分下跌"; priority = "高"; }
     return {
       id: shop.id,
       short: shop.name.slice(0, 4) + " · 采纳" + fmt(adopt) + "%",
@@ -82,20 +107,75 @@ function buildDocuments(shops, days, date) {
       ],
       accent: isKey ? "warm" : (adopt !== null && adopt >= 50 ? "green" : "mist"),
       completion: adopt === null ? 0 : Math.round(adopt),
-      metrics: { adopt, gen, conv, pure, reply, exp }
+      metrics: { adopt, gen, conv, pure, reply, exp, expAvg }
     };
   });
 }
 
 function buildGroups(docs) {
-  const missCore = docs.filter((d) => d.metrics.adopt === null || d.metrics.gen === null || d.metrics.conv === null || d.metrics.pure === null);
-  const lowExp = docs.filter((d) => d.metrics.exp !== null && d.metrics.exp < 3.5);
+  // 缺数据：扫描本月所有日期，列出每个店铺累计缺失明细
+  const base = cloudLatestDate || todayKeyStr();
+  const monthPrefix = base.slice(0, 7);
+  const missFields = [
+    { key: "adoptionRate", label: "采纳率" },
+    { key: "generationRate", label: "生成率" },
+    { key: "conversionRate", label: "转化率" },
+    { key: "pureAgentRatio", label: "纯智" },
+    { key: "threeMinReplyRate", label: "3分钟回复率" }
+  ];
+  const missItems = []; // { name, days: [day] }
+  const todayKey = todayKeyStr();
+  cloudShops.forEach((shop) => {
+    const map = {}; // day -> [metrics]
+    Object.keys(cloudDays).forEach((dt) => {
+      if (dt.indexOf(monthPrefix) !== 0) return;
+      if (dt >= todayKey) return; // 今天及未来不算缺数据
+      const sd = cloudDays[dt] && cloudDays[dt].shopData && cloudDays[dt].shopData[shop.id];
+      missFields.forEach((f) => {
+        if (metricVal(sd, f.key) === null) {
+          (map[dt.slice(8)] = map[dt.slice(8)] || []).push(f.label);
+        }
+      });
+    });
+    const days = Object.keys(map).sort();
+    if (!days.length) return;
+    missItems.push({ name: shop.name, days });
+  });
+  missItems.sort((a, b) => b.days.length - a.days.length);
+  const lowExp = docs.filter((d) => d.metrics.exp !== null && d.metrics.expAvg !== null && d.metrics.expAvg - d.metrics.exp >= 0.3);
   const lowReply = docs.filter((d) => d.metrics.reply !== null && d.metrics.reply > 0 && d.metrics.reply < 95);
+  // 指标异常 = 昨日较前日 4 项指标下降 ≥20 个百分点
+  const todayK = todayKeyStr();
+  const yKey = yesterdayKeyOf(todayK);
+  const pKey = yesterdayKeyOf(yKey);
+  const dropFields = [
+    { key: "adoptionRate", label: "采纳率" },
+    { key: "generationRate", label: "生成率" },
+    { key: "conversionRate", label: "转化率" },
+    { key: "pureAgentRatio", label: "纯智能体" }
+  ];
+  const dropItems = [];
+  cloudShops.forEach((shop) => {
+    const downs = [];
+    dropFields.forEach((m) => {
+      const sdY = cloudDays[yKey] && cloudDays[yKey].shopData && cloudDays[yKey].shopData[shop.id];
+      const sdP = cloudDays[pKey] && cloudDays[pKey].shopData && cloudDays[pKey].shopData[shop.id];
+      const latest = metricVal(sdY, m.key);
+      const prev = metricVal(sdP, m.key);
+      if (latest !== null && prev !== null) {
+        const diff = Math.round((latest - prev) * 100) / 100;
+        if (diff <= -20) downs.push({ label: m.label, diff: Math.abs(diff) });
+      }
+    });
+    if (downs.length) dropItems.push({ name: shop.name, downs });
+  });
+  dropItems.sort((a, b) => b.downs.length - a.downs.length);
   const groups = [];
-  if (missCore.length) groups.push({ name: "缺数据店铺", count: missCore.length, color: "#ff8539", items: missCore.map((d) => [d.title, "待补数据", "今日"]) });
-  if (lowExp.length) groups.push({ name: "体验分偏低(<3.5)", count: lowExp.length, color: "#ff4aa9", items: lowExp.map((d) => [d.title, "体验" + d.metrics.exp, "关注"]) });
-  if (lowReply.length) groups.push({ name: "回复率偏低(<95%)", count: lowReply.length, color: "#56b8ff", items: lowReply.map((d) => [d.title, "回复" + d.metrics.reply + "%", "关注"]) });
-  if (!groups.length) groups.push({ name: "数据健康", count: docs.length, color: "var(--accent-400)", items: [["全部店铺指标正常", "达标", docs.length + " 家"]] });
+  if (missItems.length) groups.push({ type: "miss", name: "本月缺数据", count: missItems.length, color: "#ff8539", items: missItems.map((it) => [it.name, "本月缺 " + it.days.length + " 天", it.days.map((d) => d + "日").join("·")]) });
+  if (dropItems.length) groups.push({ type: "drop", name: "昨日大幅下降(≥20%)", count: dropItems.length, color: "#ff4aa9", items: dropItems.map((it) => [it.name, it.downs.map((m) => m.label + "↓" + m.diff + "%").join("、"), "昨日"]) });
+  if (lowExp.length) groups.push({ type: "abn", name: "体验分较月均下跌(≥0.3)", count: lowExp.length, color: "#ff8539", items: lowExp.map((d) => [d.title, "体验" + d.metrics.exp + " · 月均" + (d.metrics.expAvg === null ? "--" : Math.round(d.metrics.expAvg * 10) / 10), "关注"]) });
+  if (lowReply.length) groups.push({ type: "abn", name: "回复率偏低(<95% 且非0)", count: lowReply.length, color: "#56b8ff", items: lowReply.map((d) => [d.title, "回复" + d.metrics.reply + "%", "关注"]) });
+  if (!groups.length) groups.push({ type: "ok", name: "数据健康", count: docs.length, color: "var(--accent-400)", items: [["全部店铺指标正常", "达标", docs.length + " 家"]] });
   return groups;
 }
 
@@ -265,44 +345,358 @@ function icon(name) {
   return `<svg aria-hidden="true"><use href="#${name}"/></svg>`;
 }
 
+let queueFilter = "all";
+let searchQuery = "";
+
+function applyNoticeFilter() {
+  const f = queueFilter;
+  const std = document.querySelector("#stdNoticeBar");
+  const gap = document.querySelector("#gapNoticeBar");
+  const down = document.querySelector("#downNoticeBar");
+  // 全部：三个都显示；缺数据：只显示缺口；指标异常：只显示昨日大幅下降
+  if (std) std.hidden = (f !== "all");
+  if (gap) gap.hidden = (f === "abn");
+  if (down) down.hidden = (f === "miss");
+}
+
 function renderQueue() {
   const container = document.querySelector("#queueGroups");
-  container.innerHTML = groups.map((group, groupIndex) => `
+  const list = groups.filter((g) => {
+    if (queueFilter === "miss") return g.type === "miss";
+    if (queueFilter === "abn") return g.type === "drop";
+    return true;
+  });
+  applyNoticeFilter();
+  const q = searchQuery.trim().toLowerCase();
+  const rows = list.map((group) => ({
+    ...group,
+    items: q ? group.items.filter((it) => it[0].toLowerCase().includes(q)) : group.items
+  })).filter((group) => group.items.length > 0);
+  container.innerHTML = rows.length
+    ? rows.map((group, groupIndex) => `
     <article class="queue-group ${groupIndex === 0 ? "open" : ""}">
-      <button class="group-head" style="--group-color:${group.color}"><span><i></i>${group.name} <b>${group.count}</b></span><svg><use href="#i-chevron"/></svg></button>
+      <button class="group-head" style="--group-color:${group.color}"><span><i></i>${group.name} <b>${group.items.length}</b></span><svg><use href="#i-chevron"/></svg></button>
       <div class="group-items">
-        ${group.items.map((item) => `<button class="queue-item"><span>${item[0]}</span><em class="${item[1] === "在读" ? "reading" : ""}">${item[1]}</em><small>${item[2]}</small></button>`).join("")}
+        ${group.items.map((item) => `<button class="queue-item"><span>${item[0]}</span><em>${item[1]}</em><small>${item[2]}</small></button>`).join("")}
       </div>
     </article>
-  `).join("");
+  `).join("")
+    : '<div class="queue-empty">暂无匹配项</div>';
 
   container.querySelectorAll(".group-head").forEach((button) => {
     button.addEventListener("click", () => button.closest(".queue-group").classList.toggle("open"));
   });
-  container.querySelectorAll(".queue-item").forEach((button) => button.addEventListener("click", () => showToast(`已打开「${button.querySelector("span").textContent}」`)));
+  container.querySelectorAll(".queue-item").forEach((button) => button.addEventListener("click", () => {
+    const name = button.querySelector("span").textContent;
+    const idx = documents.findIndex((d) => d.title === name);
+    if (idx >= 0) selectCard(idx, true);
+    else showToast(`已打开「${name}」`);
+  }));
+}
+
+/* ===== 达标提醒（当月均值 vs 自定义阈值，兼容老工作台 csa-metric-thresholds） ===== */
+const THRESH_KEY = "csa-metric-thresholds";
+const THRESH_FIELDS = [
+  { key: "adoptionRate", label: "采纳率", unit: "%" },
+  { key: "generationRate", label: "生成率", unit: "%" },
+  { key: "conversionRate", label: "转化率", unit: "%" },
+  { key: "pureAgentRatio", label: "纯智能体占比", unit: "%" }
+];
+const THRESH_DEFAULT = { adoptionRate: 50, generationRate: 90, conversionRate: 20, pureAgentRatio: 30 };
+
+function thresholdSettings() {
+  let t = THRESH_DEFAULT;
+  try {
+    const s = JSON.parse(localStorage.getItem(THRESH_KEY) || "null");
+    if (s && typeof s === "object") t = Object.assign({}, THRESH_DEFAULT, s);
+  } catch (e) {}
+  return t;
+}
+function saveThresholds(t) {
+  try { localStorage.setItem(THRESH_KEY, JSON.stringify(t)); } catch (e) {}
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderStdNotice() {
+  const bar = document.querySelector("#stdNoticeBar");
+  if (!bar) return;
+  const t = thresholdSettings();
+  const latest = cloudLatestDate;
+  const monthPrefix = latest ? latest.slice(0, 7) : null;
+  const items = [];
+  if (latest) {
+    cloudShops.forEach((shop) => {
+      const lows = [];
+      THRESH_FIELDS.forEach((f) => {
+        const std = t[f.key];
+        if (std === undefined || std === null || std === "") return;
+        const v = monthAvgVal(cloudDays, monthPrefix, shop.id, f.key);
+        if (v !== null && v < std) lows.push({ label: f.label, value: v, std: std });
+      });
+      if (lows.length) items.push({ name: shop.name, lows: lows });
+    });
+  }
+  const lm = latest ? parseInt(latest.slice(5, 7), 10) : null;
+  const ok = !items.length;
+  bar.hidden = false;
+  bar.className = "notice-bar std-notice-bar";
+  bar.innerHTML = `
+    <button class="notice-head" type="button" aria-expanded="false">
+      <span class="notice-title">${ok ? "✓" : "⚠"} 数据达标提醒${lm ? "（" + lm + "月均值）" : ""}</span>
+      <span class="notice-count">${ok ? (latest ? "全部达标" : "暂无数据") : items.length + " 家未达标"}</span>
+      <svg class="notice-chevron"><use href="#i-chevron"/></svg>
+    </button>
+    <div class="notice-body">
+      ${ok
+        ? `<div class="notice-ok">${latest ? "所有店铺数据均达到标准 ✓" : "暂无店铺数据，请先同步"}</div>`
+        : items.map((it) => `<button class="notice-shop" type="button" data-shop="${esc(it.name)}"><span class="notice-shop-name">${esc(it.name)}</span><span class="notice-tags">${it.lows.map((l) => `<em class="notice-tag">${l.label} ${(+l.value).toFixed(1)}%（标准 ≥${l.std}%）</em>`).join("")}</span></button>`).join("")}
+      <button class="notice-action" type="button" id="stdSetBtn">⚙ 设置达标标准</button>
+    </div>`;
+}
+
+function editStdThresholds() {
+  const t = thresholdSettings();
+  const body = document.createElement("div");
+  body.className = "std-modal-body";
+  THRESH_FIELDS.forEach((f) => {
+    const row = document.createElement("label");
+    row.className = "std-modal-row";
+    row.innerHTML = `<span>${f.label}（${f.unit}）</span>`;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = 0;
+    input.max = 100;
+    input.step = 1;
+    input.value = t[f.key] ?? "";
+    input.setAttribute("data-thresh-key", f.key);
+    row.appendChild(input);
+    body.appendChild(row);
+  });
+  const hint = document.createElement("div");
+  hint.className = "std-modal-hint";
+  hint.textContent = "低于设定标准的店铺将显示在「数据达标提醒」中（按当月均值判断）";
+  body.appendChild(hint);
+
+  const overlay = document.createElement("div");
+  overlay.className = "std-modal-overlay";
+  const box = document.createElement("div");
+  box.className = "std-modal";
+  const head = document.createElement("div");
+  head.className = "std-modal-head";
+  head.innerHTML = "<strong>达标标准设置</strong><button type='button' class='std-modal-close'>×</button>";
+  const foot = document.createElement("div");
+  foot.className = "std-modal-foot";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "取消";
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "std-modal-save";
+  saveBtn.textContent = "保存";
+  foot.appendChild(cancelBtn);
+  foot.appendChild(saveBtn);
+  box.appendChild(head);
+  box.appendChild(body);
+  box.appendChild(foot);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add("open"));
+
+  const close = () => { overlay.classList.remove("open"); setTimeout(() => overlay.remove(), 200); };
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  head.querySelector(".std-modal-close").addEventListener("click", close);
+  cancelBtn.addEventListener("click", close);
+  saveBtn.addEventListener("click", () => {
+    const nt = {};
+    THRESH_FIELDS.forEach((f) => {
+      const el = body.querySelector(`[data-thresh-key="${f.key}"]`);
+      const v = el ? parseFloat(el.value) : NaN;
+      nt[f.key] = isNaN(v) ? "" : v;
+    });
+    saveThresholds(nt);
+    close();
+    renderStdNotice();
+    showToast("达标标准已保存");
+  });
+}
+
+/* ===== 日期工具（以今日为基准，与老工作台逻辑一致） ===== */
+function todayKeyStr() {
+  const n = new Date();
+  const p = (x) => String(x).padStart(2, "0");
+  return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
+}
+function toKeyStr(d) {
+  const p = (x) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function yesterdayKeyOf(key) {
+  const parts = key.split("-").map(Number);
+  return toKeyStr(new Date(parts[0], parts[1] - 1, parts[2] - 1));
+}
+
+/* ===== 数据缺口提醒（最近 7 天 4 项核心指标缺失） ===== */
+function renderGapNotice() {
+  const bar = document.querySelector("#gapNoticeBar");
+  if (!bar) return;
+  const today = todayKeyStr();
+  const start = new Date(today);
+  start.setDate(start.getDate() - 1); // 从昨天开始往前 7 天（今天未结束不算缺）
+  const dates = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(start);
+    d.setDate(d.getDate() - i);
+    dates.push(toKeyStr(d));
+  }
+  const fields = [
+    { key: "adoptionRate", label: "采纳率" },
+    { key: "generationRate", label: "生成率" },
+    { key: "conversionRate", label: "转化率" },
+    { key: "pureAgentRatio", label: "纯智能体占比" }
+  ];
+  const items = [];
+  cloudShops.forEach((shop) => {
+    const gaps = [];
+    dates.forEach((dt) => {
+      fields.forEach((f) => {
+        const sd = cloudDays[dt] && cloudDays[dt].shopData && cloudDays[dt].shopData[shop.id];
+        if (metricVal(sd, f.key) === null) gaps.push(dt.slice(8) + "日缺" + f.label);
+      });
+    });
+    if (gaps.length) items.push({ name: shop.name, gaps: gaps });
+  });
+  bar.hidden = false;
+  const ok = !items.length;
+  bar.className = "notice-bar gap-notice-bar";
+  bar.innerHTML = `
+    <button class="notice-head" type="button" aria-expanded="false">
+      <span class="notice-title">${ok ? "✓" : "⚠"} 数据缺口检查（最近 7 天）</span>
+      <span class="notice-count">${ok ? "数据完整" : items.length + " 家缺数据"}</span>
+      <svg class="notice-chevron"><use href="#i-chevron"/></svg>
+    </button>
+    <div class="notice-body">
+      ${ok
+        ? `<div class="notice-ok">最近 7 天所有店铺数据完整 ✓</div>`
+        : items.map((it) => `<button class="notice-shop" type="button" data-shop="${esc(it.name)}"><span class="notice-shop-name">${esc(it.name)}</span><span class="notice-tags">${it.gaps.map((g) => `<em class="notice-tag">${g}</em>`).join("")}</span></button>`).join("")}
+    </div>`;
+}
+
+/* ===== 昨日下降通知（较前日 4 项指标下降 ≥10 个百分点） ===== */
+function renderDownNotice() {
+  const bar = document.querySelector("#downNoticeBar");
+  if (!bar) return;
+  const today = todayKeyStr();
+  const yKey = yesterdayKeyOf(today);
+  const pKey = yesterdayKeyOf(yKey);
+  const metrics = [
+    { key: "adoptionRate", label: "采纳率" },
+    { key: "generationRate", label: "生成率" },
+    { key: "conversionRate", label: "转化率" },
+    { key: "pureAgentRatio", label: "纯智能体占比" }
+  ];
+  const items = [];
+  cloudShops.forEach((shop) => {
+    const downs = [];
+    metrics.forEach((m) => {
+      const sdY = cloudDays[yKey] && cloudDays[yKey].shopData && cloudDays[yKey].shopData[shop.id];
+      const sdP = cloudDays[pKey] && cloudDays[pKey].shopData && cloudDays[pKey].shopData[shop.id];
+      const latest = metricVal(sdY, m.key);
+      const prev = metricVal(sdP, m.key);
+      if (latest !== null && prev !== null) {
+        const diff = Math.round((latest - prev) * 100) / 100;
+        if (diff <= -20) downs.push({ label: m.label, diff: Math.abs(diff) });
+      }
+    });
+    if (downs.length) items.push({ name: shop.name, downs: downs });
+  });
+  bar.hidden = false;
+  const ok = !items.length;
+  bar.className = "notice-bar down-notice-bar";
+  bar.innerHTML = `
+    <button class="notice-head" type="button" aria-expanded="false">
+      <span class="notice-title">${ok ? "✓" : "⚠"} 昨日大幅下降（较前日 ↓≥20%）</span>
+      <span class="notice-count">${ok ? "无大幅下降" : items.length + " 家下跌"}</span>
+      <svg class="notice-chevron"><use href="#i-chevron"/></svg>
+    </button>
+    <div class="notice-body">
+      ${ok
+        ? `<div class="notice-ok">昨日无指标下降 ≥20% 的店铺 ✓</div>`
+        : items.map((it) => `<button class="notice-shop" type="button" data-shop="${esc(it.name)}"><span class="notice-shop-name">${esc(it.name)}</span><span class="notice-tags">${it.downs.map((m) => `<em class="notice-tag">${m.label}↓${m.diff}%</em>`).join("")}</span></button>`).join("")}
+    </div>`;
 }
 
 function renderCards() {
-  scene.innerHTML = documents.map((doc, index) => `
-    <button class="doc-card ${doc.accent} tone-${doc.tone || "green"}" data-index="${index}" aria-label="打开${doc.title}">
+  const m = currentMetric();
+  scene.innerHTML = documents.map((doc, index) => {
+    const v = doc.metrics[m.doc];
+    const display = v === null ? "--" : v;
+    const kicker = doc.title.slice(0, 4) + " · " + m.label + " " + display + m.unit;
+    return `
+    <button class="doc-card ${doc.accent} tone-${doc.tone || "green"}" data-index="${index}" aria-label="打开${doc.title} ${m.label}${display}${m.unit}">
       <span class="paper-shine"></span>
-      <span class="doc-kicker">${doc.short}</span>
+      <span class="doc-kicker">${kicker}</span>
       <span class="doc-lines"><i></i><i></i><i></i><i></i><i></i></span>
       <span class="doc-symbol">${index === 2 ? "!" : index === 0 ? "⌘" : index === 3 ? "↑" : "·"}</span>
-      <span class="doc-copy"><strong>${doc.title}</strong><small>${doc.subtitle} · ${doc.state}</small></span>
-    </button>
-  `).join("");
+      <span class="doc-copy"><strong>${doc.title}</strong><small>${m.label} ${display}${m.unit} · 体验 ${doc.metrics.exp === null ? "--" : doc.metrics.exp}</small></span>
+    </button>`;
+  }).join("");
   scene.querySelectorAll(".doc-card").forEach((card) => card.addEventListener("click", () => selectCard(Number(card.dataset.index), true)));
 }
 
+function viewOnDate(dateKey) {
+  if (!dateKey || !cloudDays || !cloudDays[dateKey]) {
+    showToast(`${dateKey} 无数据`);
+    document.querySelectorAll("#timelineDates button").forEach((b) => b.classList.toggle("active", parseInt(b.dataset.dayIndex, 10) === parseInt(dateKey.slice(8), 10)));
+    return;
+  }
+  currentViewDate = dateKey;
+  documents = buildDocuments(cloudShops, cloudDays, dateKey);
+  groups = buildGroups(documents);
+  updateMetricCards(documents);
+  renderStdNotice();
+  renderGapNotice();
+  renderDownNotice();
+  selectedIndex = 0; visualPosition = 0; targetPosition = 0;
+  if (!documents.length) {
+    renderCards(); renderQueue();
+    showToast(`${dateKey} 无店铺数据`);
+  } else {
+    selectMetricCard(0, { syncDrawer: false });
+    updateCardPositions(0);
+    updateDetails(documents[0]);
+    renderCards();
+    renderQueue();
+  }
+  document.querySelectorAll("#timelineDates button").forEach((b) => b.classList.toggle("active", parseInt(b.dataset.dayIndex, 10) === parseInt(dateKey.slice(8), 10)));
+  // 月度汇总也同步切到该月
+  const m = dateKey.match(/^(\d{4})-(\d{2})/);
+  if (m && (monthlyYear !== parseInt(m[1], 10) || monthlyMonth !== parseInt(m[2], 10) - 1)) {
+    monthlyYear = parseInt(m[1], 10);
+    monthlyMonth = parseInt(m[2], 10) - 1;
+    renderMonthlyTable();
+  }
+}
+
 function renderTimeline() {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const base = cloudLatestDate || todayStr;
+  const year = parseInt(base.slice(0, 4), 10);
+  const month = parseInt(base.slice(5, 7), 10);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const monthEl = document.querySelector("#timelineMonth");
+  if (monthEl) monthEl.innerHTML = `<svg><use href="#i-calendar"/></svg> ${year}年${month}月`;
   const days = [];
-  for (let i = 1; i <= 31; i++) days.push(String(i).padStart(2, "0"));
+  for (let i = 1; i <= daysInMonth; i++) days.push(String(i).padStart(2, "0"));
+  const prefix = base.slice(0, 7);
   const hasData = new Set();
   if (cloudDays) {
     Object.keys(cloudDays).forEach((k) => {
-      const m = k.match(/^2026-08-(\d{2})$/);
-      if (m) hasData.add(parseInt(m[1], 10));
+      const m = k.match(/^\d{4}-\d{2}-(\d{2})$/);
+      if (m && k.slice(0, 7) === prefix) hasData.add(parseInt(m[1], 10));
     });
   }
   const latestDay = cloudLatestDate ? parseInt(cloudLatestDate.slice(8), 10) : 0;
@@ -313,9 +707,9 @@ function renderTimeline() {
     return `<button data-day-index="${n}" class="${cls}">${mark}${day}</button>`;
   }).join("");
   timelineDates.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
-    timelineDates.querySelector(".active")?.classList.remove("active");
-    button.classList.add("active");
-    selectCard(Number(button.dataset.dayIndex) % documents.length);
+    const day = String(button.dataset.dayIndex).padStart(2, "0");
+    const ym = (currentViewDate || cloudLatestDate || todayKeyStr()).slice(0, 7);
+    viewOnDate(`${ym}-${day}`);
   }));
 }
 
@@ -373,8 +767,8 @@ function setViewMode(mode) {
   fanModeBtn.classList.toggle("active", fanView);
   fanModeBtn.classList.toggle("quiet", !fanView);
   fanModeBtn.setAttribute("aria-pressed", String(fanView));
-  viewport.setAttribute("aria-label", fanView ? "可滚轮切换的侧向层叠复习卡片" : "可滚轮切换的复习卡片");
-  document.querySelector(".scroll-tip p").textContent = fanView ? "连续滚动浏览侧向层叠；点击卡片展开" : "连续滚动转动复习卡片环；点击卡片展开";
+  viewport.setAttribute("aria-label", fanView ? "可滚轮切换的侧向层叠店铺卡片" : "可滚轮切换的店铺卡片");
+  document.querySelector(".scroll-tip p").textContent = fanView ? "连续滚动浏览侧向层叠；点击卡片查看详情" : "连续滚动切换店铺卡片；点击卡片查看详情";
   updateCardPositions(visualPosition);
   window.setTimeout(() => viewport.classList.remove("view-switching"), 760);
 }
@@ -424,6 +818,19 @@ function kickScene(direction) {
 function updateDetails(doc) {
   const m = doc.metrics || {};
   const fmt = (v, suffix) => (v === null || v === undefined ? "--" : String(v) + (suffix || ""));
+  const cur = currentMetric();
+  // completion 卡片：跟随当前指标
+  const curVal = m[cur.doc];
+  const labelEl = document.querySelector("#completionLabel");
+  const smallEl = document.querySelector("#completionSmall");
+  if (labelEl) labelEl.textContent = cur.label;
+  if (smallEl) smallEl.textContent = "当前店铺" + cur.label;
+  document.querySelector("#completionValue").textContent = fmt(curVal, cur.unit);
+  const tipTitle = document.querySelector("#tipTitle");
+  if (tipTitle) tipTitle.textContent = cur.label + " · " + (doc.title || "");
+  const completionBar = document.querySelector(".completion-card i b");
+  if (completionBar) completionBar.style.width = `${curVal === null || curVal === undefined ? 0 : Math.min(100, curVal)}%`;
+  // 详情字段
   document.querySelector("#detailId").textContent = doc.id;
   document.querySelector("#detailTitle").textContent = doc.detailTitle || doc.title;
   document.querySelector("#detailStatus").textContent = doc.status;
@@ -433,7 +840,12 @@ function updateDetails(doc) {
   document.querySelector("#detailState").textContent = fmt(m.adopt, "%");
   document.querySelector("#detailPriority").textContent = fmt(m.exp);
   document.querySelector("#detailTags").innerHTML = doc.tags.map((tag) => `<span>${tag}</span>`).join("");
-  document.querySelector("#detailAdvice").innerHTML = doc.advice.map((line) => `<li>${line}</li>`).join("");
+  // 指标明细：当前指标置顶+高亮
+  const ordered = METRIC_KEYS.map((k) => {
+    const v = m[k.doc];
+    return { k, v, line: `${k.label} ${fmt(v, k.unit)}`, isCur: k === cur };
+  }).sort((a, b) => (b.isCur ? 1 : 0) - (a.isCur ? 1 : 0));
+  document.querySelector("#detailAdvice").innerHTML = ordered.map((a) => `<li class="${a.isCur ? "current-metric" : ""}">${a.isCur ? "★ " : ""}${a.line}</li>`).join("");
   document.querySelector("#completionValue").textContent = fmt(m.adopt, "%");
   document.querySelector(".completion-card b").style.width = `${m.adopt === null || m.adopt === undefined ? 0 : Math.min(100, m.adopt)}%`;
   document.querySelector("#tipTitle").textContent = doc.title;
@@ -522,7 +934,7 @@ function applyTheme(preference, { persist = true, announce = false } = {}) {
   themeToggleBtn.setAttribute("aria-label", `切换显示主题，当前${labels[themePreference]}${resolvedHint}`);
   themeToggleBtn.title = `${labels[themePreference]}${resolvedHint} · 点击切换为${labels[nextTheme]}`;
   if (persist) {
-    try { localStorage.setItem("kaoyan-workbench-theme", themePreference); } catch {}
+    try { localStorage.setItem("yuanshan-workbench-theme", themePreference); } catch {}
   }
   if (announce) showToast(`已切换为${labels[themePreference]}${resolvedHint}`);
 }
@@ -538,7 +950,7 @@ function applyAccent(accent, { persist = true, announce = false } = {}) {
   });
   document.querySelector("#accentName").textContent = accentNames[accentPreference];
   if (persist) {
-    try { localStorage.setItem("kaoyan-workbench-accent", accentPreference); } catch {}
+    try { localStorage.setItem("yuanshan-workbench-accent", accentPreference); } catch {}
   }
   if (announce) showToast(`界面强调色已切换为「${accentNames[accentPreference]}」`);
 }
@@ -725,11 +1137,20 @@ function bindEvents() {
       card.style.setProperty("--metric-rx", "0deg");
       card.style.setProperty("--metric-ry", "0deg");
     });
-    card.addEventListener("click", () => selectMetricCard(index, { announce: true }));
+    card.addEventListener("click", () => {
+      currentMetricIdx = index;
+      selectMetricCard(index, { announce: false, syncDrawer: false });
+      renderCards();
+      if (documents[selectedIndex]) updateDetails(documents[selectedIndex]);
+      showToast(`已切换到「${METRIC_KEYS[index].label}」视图`);
+    });
     card.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      selectMetricCard(index, { announce: true });
+      currentMetricIdx = index;
+      selectMetricCard(index, { announce: false, syncDrawer: false });
+      renderCards();
+      if (documents[selectedIndex]) updateDetails(documents[selectedIndex]);
     });
   });
   orbitModeBtn.addEventListener("click", () => setViewMode("orbit"));
@@ -785,9 +1206,10 @@ function bindEvents() {
       if (snapTarget === Math.round(dragOriginPosition)) snapTarget += direction;
       commitCarouselTarget(snapTarget, true, direction);
     } else if (!event.target.closest(".doc-card")) {
-      const currentBounds = scene.querySelector(".doc-card.selected").getBoundingClientRect();
-      if (event.clientX > currentBounds.right) commitCarouselTarget(Math.round(visualPosition) + 1, true, 1);
-      else if (event.clientX < currentBounds.left) commitCarouselTarget(Math.round(visualPosition) - 1, true, -1);
+      const selectedEl = scene.querySelector(".doc-card.selected");
+      const currentBounds = selectedEl ? selectedEl.getBoundingClientRect() : null;
+      if (currentBounds && event.clientX > currentBounds.right) commitCarouselTarget(Math.round(visualPosition) + 1, true, 1);
+      else if (currentBounds && event.clientX < currentBounds.left) commitCarouselTarget(Math.round(visualPosition) - 1, true, -1);
       else commitCarouselTarget(snapTarget, true);
     } else {
       commitCarouselTarget(snapTarget, true);
@@ -830,25 +1252,76 @@ function bindEvents() {
     if (monthlyMonth > 11) { monthlyMonth = 0; monthlyYear += 1; }
     renderMonthlyTable();
   });
-  // 顶栏同步按钮 + 详情页操作按钮：跳转回原工作台对应功能
+  // 同步服务地址（本地局域网服务，线上不可达时给出提示）
+  const LOCAL_BASE = "http://10.10.12.157:8080";
+  const SYNC_URLS = {
+    sync: `${LOCAL_BASE}/sync`,
+    fillDingtalk: `${LOCAL_BASE}/fill-dingtalk`,
+    fixShopData: `${LOCAL_BASE}/fix-shop-data`,
+    syncGaps: `${LOCAL_BASE}/sync-gaps`
+  };
+  const openLocal = (url, label) => {
+    const win = window.open(url, "_blank");
+    if (!win) showToast(`无法打开${label}（本地服务可能未启动）`);
+  };
   const syncBtn = document.querySelector("#syncBtn");
-  if (syncBtn) syncBtn.addEventListener("click", () => window.open("http://10.10.12.157:8080/sync", "_blank"));
+  if (syncBtn) syncBtn.addEventListener("click", () => openLocal(SYNC_URLS.sync, "同步页"));
   const openWorkbenchBtn = document.querySelector("#openWorkbenchBtn");
   if (openWorkbenchBtn) openWorkbenchBtn.addEventListener("click", () => window.open("https://wt1013.github.io/ai-workbench/", "_blank"));
   const viewReportBtn = document.querySelector("#viewReportBtn");
   if (viewReportBtn) viewReportBtn.addEventListener("click", () => window.open("https://wt1013.github.io/ai-workbench/", "_blank"));
   const syncShopBtn = document.querySelector("#syncShopBtn");
-  if (syncShopBtn) syncShopBtn.addEventListener("click", () => window.open("http://10.10.12.157:8080/sync", "_blank"));
+  if (syncShopBtn) syncShopBtn.addEventListener("click", () => openLocal(SYNC_URLS.sync, "同步页"));
   document.querySelectorAll(".scene-actions button").forEach((button) => button.addEventListener("click", () => {
     const t = button.textContent.trim();
-    if (t === "同步昨日") window.open("http://10.10.12.157:8080/sync", "_blank");
-    else if (t === "补缺数据") window.open("http://10.10.12.157:8080/sync-gaps", "_blank");
+    if (t === "同步昨日") openLocal(SYNC_URLS.sync, "同步页");
+    else if (t === "补缺数据") openLocal(SYNC_URLS.syncGaps, "补缺页");
     else showToast(`${t}成功`);
   }));
-  document.querySelectorAll(".queue-tabs button").forEach((button) => button.addEventListener("click", () => {
+  // 数据体检 tab 筛选
+  document.querySelectorAll(".queue-tabs button").forEach((button, i) => button.addEventListener("click", () => {
     button.parentElement.querySelector(".active").classList.remove("active");
     button.classList.add("active");
+    queueFilter = ["all", "miss", "abn"][i] || "all";
+    renderQueue();
   }));
+  // 提醒条：点击标题展开/收起；点击店铺跳转对应卡片；点击设置标准
+  const queuePane = document.querySelector(".queue-pane");
+  if (queuePane) queuePane.addEventListener("click", (e) => {
+    const bar = e.target.closest(".notice-bar");
+    if (!bar) return;
+    if (e.target.closest("#stdSetBtn")) { editStdThresholds(); return; }
+    const shopBtn = e.target.closest(".notice-shop");
+    if (shopBtn) {
+      const idx = documents.findIndex((d) => d.title === shopBtn.dataset.shop);
+      if (idx >= 0) selectCard(idx, true);
+      return;
+    }
+    if (e.target.closest(".notice-head")) {
+      const open = bar.classList.toggle("open");
+      bar.querySelector(".notice-head").setAttribute("aria-expanded", String(open));
+    }
+  });
+  // 顶栏搜索（店铺名过滤 + ⌘K 聚焦）
+  const searchInput = document.querySelector("#searchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      searchQuery = searchInput.value;
+      renderQueue();
+      const q = searchQuery.trim().toLowerCase();
+      if (q) {
+        const idx = documents.findIndex((d) => d.title.toLowerCase().includes(q));
+        if (idx >= 0) selectCard(idx, true);
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+    });
+  }
 
   document.querySelectorAll("[data-open-material]").forEach((button) => button.addEventListener("click", openMaterialDrawer));
   document.querySelector("#closeMaterialBtn").addEventListener("click", () => closeMaterialDrawer());
@@ -874,18 +1347,14 @@ bindEvents();
 async function initDashboard() {
   try {
     const data = await fetchCloud();
-    documents = buildDocuments(data.shops, data.days, data.latestDate);
-    groups = buildGroups(documents);
-    updateMetricCards(documents);
-    renderQueue();
-    renderCards();
-    renderTimeline();
-    selectedIndex = 0;
-    visualPosition = 0;
-    targetPosition = 0;
-    selectMetricCard(0, { syncDrawer: false });
-    updateCardPositions(0);
-    updateDetails(documents[0]);
+    renderTimeline(); // 先渲染时间轴按钮
+    viewOnDate(data.latestDate); // 加载最新数据日并联动仪表盘所有视图
+    if (!documents.length) {
+      showToast("暂无店铺数据，请先同步昨日数据");
+      renderMonthlySeg();
+      renderMonthlyTable();
+      return;
+    }
     setPlaying(false);
     // 月度汇总：初始化指标切换 + 定位到最新数据月份
     if (data.latestDate) {

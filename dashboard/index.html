@@ -8,7 +8,7 @@
     <script>
       (() => {
         let preference = "dark";
-        try { preference = localStorage.getItem("kaoyan-workbench-theme") || "dark"; } catch {}
+        try { preference = localStorage.getItem("yuanshan-workbench-theme") || "dark"; } catch {}
         const resolved = preference === "system"
           ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
           : preference;
@@ -16,7 +16,7 @@
         document.documentElement.dataset.themeResolved = resolved;
         document.documentElement.style.colorScheme = resolved;
         let accent = "ocean";
-        try { accent = localStorage.getItem("kaoyan-workbench-accent") || "ocean"; } catch {}
+        try { accent = localStorage.getItem("yuanshan-workbench-accent") || "ocean"; } catch {}
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
@@ -52,10 +52,10 @@
         <nav class="primary-nav" aria-label="主导航">
           <button class="nav-item active" data-view="dashboard"><span class="live-dot"></span><svg><use href="#i-book"/></svg><span>数据驾驶舱</span><svg class="nav-arrow"><use href="#i-chevron"/></svg></button>
           <button class="nav-item" data-view="monthly"><svg><use href="#i-calendar"/></svg><span>月度汇总</span></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/"><svg><use href="#i-grid"/></svg><span>今日工作台</span></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/"><svg><use href="#i-list"/></svg><span>日报表格</span></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/"><svg><use href="#i-columns"/></svg><span>店铺库</span></button>
-          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/"><svg><use href="#i-link"/></svg><span>数据总览</span></button>
+          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="今日任务/排班/数据录入（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-grid"/></svg><span>今日工作台</span><em class="nav-badge">原站</em></button>
+          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="日报生成/复制下载图片（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-list"/></svg><span>日报表格</span><em class="nav-badge">原站</em></button>
+          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="店铺库/每日数据（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-columns"/></svg><span>店铺库</span><em class="nav-badge">原站</em></button>
+          <button class="nav-item" data-href="https://wt1013.github.io/ai-workbench/" title="数据总览/单店图表（原工作台视图，驾驶舱内置开发中）"><svg><use href="#i-link"/></svg><span>数据总览</span><em class="nav-badge">原站</em></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync"><svg><use href="#i-spark"/></svg><span>同步昨日数据</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/fill-dingtalk"><svg><use href="#i-list"/></svg><span>同步钉钉表格</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/fix-shop-data"><svg><use href="#i-grid"/></svg><span>修复店铺数据</span></button>
@@ -71,7 +71,7 @@
       <section class="core">
         <header class="topbar">
           <div class="page-title"><h1>远山数据驾驶舱</h1><p>23 店核心指标 · 采纳/生成/转化/纯智 · 异常提醒</p></div>
-          <label class="search-box"><svg><use href="#i-search"/></svg><input aria-label="搜索店铺" placeholder="搜索店铺名称、日期或指标…"/><kbd>⌘ K</kbd></label>
+          <label class="search-box"><svg><use href="#i-search"/></svg><input id="searchInput" aria-label="搜索店铺" placeholder="搜索店铺名称、日期或指标…"/><kbd>⌘ K</kbd></label>
           <div class="top-actions">
             <div class="theme-control">
               <button id="themeToggleBtn" class="round-btn theme-toggle" aria-label="切换显示主题，当前暗色" title="暗色">
@@ -94,11 +94,14 @@
         <div class="workspace-grid">
           <section class="queue-pane">
             <div class="section-heading"><h2>数据体检</h2><span>异常提醒</span></div>
+            <div id="stdNoticeBar" class="std-notice-bar" hidden></div>
+            <div id="gapNoticeBar" class="gap-notice-bar" hidden></div>
+            <div id="downNoticeBar" class="down-notice-bar" hidden></div>
             <div class="queue-tabs" role="tablist"><button class="active">全部</button><button>缺数据</button><button>指标异常</button></div>
             <div id="queueGroups" class="queue-groups"></div>
           </section>
 
-          <section class="carousel-panel panel" aria-label="考研科目卡片演示">
+          <section class="carousel-panel panel" aria-label="店铺卡片演示">
             <div class="carousel-toolbar">
               <div>
                 <button id="orbitModeBtn" class="pill-btn active" aria-pressed="true"><span>✦</span>3D 环绕</button>
@@ -112,15 +115,15 @@
               </div>
             </div>
             <div class="live-badge"><i></i>实时交互</div>
-            <div id="carouselViewport" class="carousel-viewport" tabindex="0" aria-label="可滚轮切换的考研复习卡片">
+            <div id="carouselViewport" class="carousel-viewport" tabindex="0" aria-label="可滚轮切换的店铺卡片">
               <div class="ambient-glow"></div>
               <div class="card-aura" aria-hidden="true"><i></i><b></b></div>
-              <div class="completion-card"><span>采纳率</span><strong id="completionValue">--%</strong><small>当前店铺</small><i><b></b></i></div>
+              <div class="completion-card"><span id="completionLabel">采纳率</span><strong id="completionValue">--%</strong><small id="completionSmall">当前店铺采纳率</small><i><b></b></i></div>
               <div id="cardScene" class="card-scene"></div>
-              <div class="scroll-tip"><span class="mouse-icon"><i></i></span><p>连续滚动转动复习卡片环；点击卡片展开</p><strong id="tipTitle">数学二强化</strong></div>
+              <div class="scroll-tip"><span class="mouse-icon"><i></i></span><p>连续滚动切换店铺卡片；点击卡片查看详情</p><strong id="tipTitle">远山 · 数据驾驶舱</strong></div>
             </div>
             <div class="timeline-panel">
-              <div class="timeline-head"><b>数据同步时间轴</b><span><svg><use href="#i-calendar"/></svg> 2026年8月</span><div><button>周⌄</button><button>今天</button></div></div>
+              <div class="timeline-head"><b>数据同步时间轴</b><span id="timelineMonth"><svg><use href="#i-calendar"/></svg> 2026年8月</span><div><button>周⌄</button><button>今天</button></div></div>
               <div id="timelineDates" class="timeline-dates"></div>
               <div class="timeline-track"><i id="timelineProgress"></i></div>
               <div class="scene-actions"><button>补缺数据</button><button class="primary">同步昨日</button><button>导出数据</button><button>全屏</button></div>
@@ -176,7 +179,7 @@
           <button id="closeMaterialBtn" aria-label="关闭材质设置">×</button>
         </header>
         <div class="material-body">
-          <label class="material-select"><span>当前卡片</span><select id="materialCardSelect"><option value="0" selected>今日学习</option><option value="1">待完成</option><option value="2">本周复习</option><option value="3">距初试</option></select></label>
+          <label class="material-select"><span>当前卡片</span><select id="materialCardSelect"><option value="0" selected>采纳率</option><option value="1">生成率</option><option value="2">转化率</option><option value="3">纯智能体占比</option></select></label>
           <section class="accent-section" aria-labelledby="accentTitle">
             <div class="accent-section-heading"><div><h3 id="accentTitle">界面强调色</h3><p>按统一明暗比例同步按钮、状态、光晕与选中效果</p></div><output id="accentName">静海</output></div>
             <div class="accent-swatches" role="group" aria-label="选择界面强调色">
@@ -187,7 +190,7 @@
               <button class="accent-swatch" data-accent-option="sakura" aria-pressed="false"><i></i><span>绯樱</span></button>
             </div>
           </section>
-          <div id="materialPreview" class="material-preview" data-material="cyan" style="--mat-a:#27e8df;--mat-b:#11a9c8;--mat-c:#17346f"><small>LIVE PREVIEW</small><strong>今日学习</strong><span>动态实时调整 · 背景会发生视觉变化</span></div>
+          <div id="materialPreview" class="material-preview" data-material="cyan" style="--mat-a:#27e8df;--mat-b:#11a9c8;--mat-c:#17346f"><small>LIVE PREVIEW</small><strong>采纳率</strong><span>动态实时调整 · 背景会发生视觉变化</span></div>
 
           <section class="material-section"><h3>配色预设</h3><div class="material-swatches">
             <button class="material-swatch active" data-material="cyan"><i></i><span>Cyan</span></button>
