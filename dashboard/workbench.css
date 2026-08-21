@@ -303,3 +303,8 @@ html, body { overflow-x: hidden; }
 .sum-tip-date { color: var(--muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sum-tip-val { font-size: 12px; }
 .sum-tip-val b { color: var(--accent-300); font-weight: 500; }
+
+/* 侧栏底部：只在 sidebar 加 overflow:hidden 保险防止越界，不改 sidebar-bottom 流式布局（保留原版 margin-top: auto 行为） */
+.app-shell .sidebar { overflow-y: auto; overflow-x: hidden; }
+.app-shell .sidebar::-webkit-scrollbar { width: 4px; }
+.app-shell .sidebar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
