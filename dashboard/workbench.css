@@ -26,6 +26,45 @@
 /* 材质抽屉为 absolute 定位且默认 opacity:0 仍占布局，禁止页面横向滚动（原版遗留） */
 html, body { overflow-x: hidden; }
 
+/* ---- 月度汇总：月份标题 + 月份选择器 ---- */
+.monthly-title {
+  font-size: 24px !important; line-height: 1.2; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: color .15s;
+}
+.monthly-title:hover { color: var(--accent-300); }
+.monthly-title::after {
+  content: "▾"; font-size: 12px; opacity: .55; transform: translateY(2px);
+}
+.monthly-head-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.monthly-subtitle { font-size: 13px; color: var(--muted); letter-spacing: 0.02em; }
+.month-picker {
+  position: absolute; z-index: 60; top: 38px; left: 0;
+  background: var(--panel-soft); border: 1px solid var(--line-bright);
+  border-radius: 14px; padding: 14px; width: 232px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55), 0 4px 12px rgba(0,0,0,.35);
+}
+/* 弹层打开时，head 区域展开容纳弹层（不覆盖表格）；关闭时恢复紧凑 */
+.monthly-head { position: relative; transition: padding-bottom .18s ease; }
+.monthly-head.mp-open { padding-bottom: 210px; }
+.month-picker[hidden] { display: none; }
+.mp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mp-head b { font-size: 14px; font-weight: 500; color: var(--text); }
+.mp-head button {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--text); font-size: 14px; cursor: pointer; line-height: 1;
+}
+.mp-head button:hover { border-color: var(--accent-400); color: var(--accent-300); }
+.mp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mp-month {
+  padding: 8px 0; border-radius: 9px; border: 1px solid transparent;
+  background: var(--panel-2); color: var(--text); font-size: 12px; cursor: pointer;
+  transition: all .12s;
+}
+.mp-month:hover { border-color: var(--accent-400); }
+.mp-month.active { background: var(--accent-400); color: var(--accent-foreground); font-weight: 500; }
+.monthly-head .section-heading { position: relative; }
+
 /* 云端同步状态（顶栏右侧轻量徽章） */
 .cloud-status {
   display: inline-flex; align-items: center; gap: 5px;

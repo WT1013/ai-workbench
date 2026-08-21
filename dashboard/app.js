@@ -225,6 +225,58 @@ function renderMonthlySeg() {
   }));
 }
 
+/* 月份选择器：点击月份标题弹出整年 12 个月，点击切换月份 */
+function renderMonthPicker() {
+  const yearLabel = document.querySelector("#mpYearLabel");
+  const grid = document.querySelector("#mpGrid");
+  if (!yearLabel || !grid) return;
+  yearLabel.textContent = monthlyYear;
+  grid.innerHTML = "";
+  for (let m = 0; m < 12; m++) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mp-month" + (m === monthlyMonth ? " active" : "");
+    btn.textContent = (m + 1) + "月";
+    btn.title = monthlyYear + "年" + (m + 1) + "月";
+    btn.addEventListener("click", () => {
+      monthlyMonth = m;
+      renderMonthlyTable();
+      hideMonthPicker();
+    });
+    grid.appendChild(btn);
+  }
+}
+function showMonthPicker() {
+  const picker = document.querySelector("#monthPicker");
+  const head = document.querySelector(".monthly-head");
+  if (!picker) return;
+  renderMonthPicker();
+  picker.hidden = false;
+  if (head) head.classList.add("mp-open");
+}
+function hideMonthPicker() {
+  const picker = document.querySelector("#monthPicker");
+  const head = document.querySelector(".monthly-head");
+  if (picker) picker.hidden = true;
+  if (head) head.classList.remove("mp-open");
+}
+function toggleMonthPicker() {
+  const picker = document.querySelector("#monthPicker");
+  if (!picker) return;
+  if (picker.hidden) showMonthPicker(); else hideMonthPicker();
+}
+function bindMonthPicker() {
+  const title = document.querySelector("#monthlyDateTitle");
+  const prev = document.querySelector("#mpYearPrev");
+  const next = document.querySelector("#mpYearNext");
+  if (title) title.addEventListener("click", toggleMonthPicker);
+  if (prev) prev.addEventListener("click", (e) => { e.stopPropagation(); monthlyYear -= 1; renderMonthPicker(); });
+  if (next) next.addEventListener("click", (e) => { e.stopPropagation(); monthlyYear += 1; renderMonthPicker(); });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".month-picker") && !e.target.closest("#monthlyDateTitle")) hideMonthPicker();
+  });
+}
+
 function renderMonthlyTable() {
   document.querySelector("#monthlyDateTitle").textContent = monthlyYear + "年" + (monthlyMonth + 1) + "月";
   const daysInMonth = new Date(monthlyYear, monthlyMonth + 1, 0).getDate();
@@ -1272,6 +1324,7 @@ function bindEvents() {
     if (monthlyMonth > 11) { monthlyMonth = 0; monthlyYear += 1; }
     renderMonthlyTable();
   });
+  bindMonthPicker();
   // 同步服务地址（本地局域网服务，线上不可达时给出提示）
   const LOCAL_BASE = "http://10.10.12.157:8080";
   const SYNC_URLS = {

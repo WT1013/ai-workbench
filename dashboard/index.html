@@ -137,7 +137,20 @@
 
         <section id="monthlyView" class="monthly-view panel" hidden>
           <header class="monthly-head">
-            <div class="section-heading"><h2>月度汇总</h2><span id="monthlyDateTitle">2026年8月</span></div>
+            <div class="monthly-head-left">
+              <div class="section-heading">
+                <h2 id="monthlyDateTitle" class="monthly-title" title="点击选择月份">2026年8月</h2>
+                <div class="month-picker" id="monthPicker" hidden>
+                  <div class="mp-head">
+                    <button type="button" id="mpYearPrev" aria-label="上一年">‹</button>
+                    <b id="mpYearLabel">2026</b>
+                    <button type="button" id="mpYearNext" aria-label="下一年">›</button>
+                  </div>
+                  <div class="mp-grid" id="mpGrid"></div>
+                </div>
+              </div>
+              <div class="monthly-subtitle">月度汇总</div>
+            </div>
             <div class="monthly-toolbar">
               <button id="monthPrev" class="pill-btn quiet">‹ 上月</button>
               <div class="monthly-metric-seg" id="monthlyMetricSeg"></div>

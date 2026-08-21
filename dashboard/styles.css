@@ -645,6 +645,7 @@ html[data-theme-resolved="light"] .material-actions button.primary { color: var(
   flex-direction: column;
   gap: 12px;
   overflow: hidden;
+  padding: 20px 24px;
 }
 .app-shell.monthly-mode { grid-template-columns: 226px minmax(0, 1fr); }
 .app-shell.monthly-mode .details-panel { display: none; }
