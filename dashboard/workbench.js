@@ -386,7 +386,7 @@
       var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
       var kb = KEY_SHOPS.indexOf(b.name) >= 0 ? 1 : 0;
       return kb - ka;
-    });
+    }).filter(shopKey);
     var metrics4 = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
@@ -444,7 +444,7 @@
       var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
       var kb = KEY_SHOPS.indexOf(b.name) >= 0 ? 1 : 0;
       return kb - ka;
-    });
+    }).filter(shopKey);
     var metrics4 = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
@@ -485,7 +485,7 @@
       var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
       var kb = KEY_SHOPS.indexOf(b.name) >= 0 ? 1 : 0;
       return kb - ka;
-    }).forEach(function (shop) {
+    }).filter(shopKey).forEach(function (shop) {
       rows.push([
         shop.name,
         shopMetricVal(key, shop.id, "adoptionRate") === null ? "" : shopMetricVal(key, shop.id, "adoptionRate"),

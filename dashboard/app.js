@@ -273,7 +273,10 @@ function setDashboardMode(mode) {
   // dashboard 内容显隐: dashboard=全部; monthly=保留指标卡; 工作台视图=隐藏
   if (metricGrid) metricGrid.style.display = (mode === "today" || mode === "report" || mode === "shops") ? "none" : "";
   if (workspaceGrid) workspaceGrid.style.display = (mode === "dashboard") ? "" : "none";
-  if (shell) shell.classList.toggle("monthly-mode", mode === "monthly");
+  if (shell) {
+    shell.classList.toggle("monthly-mode", mode === "monthly");
+    shell.classList.toggle("workbench-mode", mode === "today" || mode === "report" || mode === "shops");
+  }
 
   if (mode === "monthly") {
     monthlyView.hidden = false;
@@ -1369,10 +1372,10 @@ function setCloudStatus(text, cls) {
 }
 
 async function initDashboard() {
-  setCloudStatus("正在加载云端数据…", "loading");
+  setCloudStatus("同步中…", "loading");
   try {
     const data = await fetchCloud();
-    setCloudStatus("云端已同步 · 最新数据 " + (data.latestDate || "暂无"), "ok");
+    setCloudStatus("已同步 · " + (data.latestDate ? data.latestDate.slice(5) : "暂无"), "ok");
     renderTimeline(); // 先渲染时间轴按钮
     viewOnDate(data.latestDate); // 加载最新数据日并联动仪表盘所有视图
     if (!documents.length) {
