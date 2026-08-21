@@ -730,36 +730,40 @@
     });
     var lineD = "", dots = "";
     var started = false;
+    var accent = getComputedStyle(document.documentElement).getPropertyValue("--accent-400").trim() || "#23e2a0";
+    var dotIndex = 0;
     points.forEach(function (p, i) {
       if (!p) { started = false; return; }
       if (!started) { lineD += "M" + p.x.toFixed(1) + "," + p.y.toFixed(1); started = true; }
       else { lineD += " L" + p.x.toFixed(1) + "," + p.y.toFixed(1); }
-      dots += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3.5" fill="' + accent + '"/>';
+      var delay = (1.5 + dotIndex * 0.05).toFixed(2);
+      dots += '<circle class="sum-dot" style="animation-delay:' + delay + 's" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3.5" fill="' + accent + '"/>';
+      dotIndex += 1;
     });
     var grid = "", labels = "";
     for (var gi = 0; gi <= 4; gi++) {
       var gv = min + (span * gi) / 4;
       var gy = yf(gv).toFixed(1);
       grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/>';
-      labels += '<text x="' + (padL - 8) + '" y="' + (Number(gy) + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + (Math.round(gv * 10) / 10) + suffix + '</text>';
+      labels += '<text x="' + (padL - 8) + '" y="' + (Number(gy) + 4) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + (Math.round(gv * 10) / 10) + suffix + '</text>';
     }
     var step = Math.max(1, Math.ceil(dates.length / 8));
     dates.forEach(function (d, i) {
       if (i % step === 0 || i === dates.length - 1) {
-        labels += '<text x="' + xf(i) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + d.slice(5) + '</text>';
+        labels += '<text x="' + xf(i) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + d.slice(5) + '</text>';
       }
     });
-    var accent = getComputedStyle(document.documentElement).getPropertyValue("--accent-400").trim() || "#23e2a0";
     var firstPt = null, lastPt = null;
     points.forEach(function (p) { if (p) { if (!firstPt) { firstPt = p; } lastPt = p; } });
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="display:block;width:100%;min-height:' + H + 'px;min-width:100%" role="img">' +
+    var fontFamily = "-apple-system, BlinkMacSystemFont, 'PingFSystem SC', 'Microsoft YaHei', system-ui, sans-serif";
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="display:block;width:100%;min-height:' + H + 'px;min-width:100%" role="img" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">' +
       '<defs><linearGradient id="sumFill" x1="0" y1="0" x2="0" y2="1">' +
       '<stop offset="0%" stop-color="' + accent + '" stop-opacity=".22"/>' +
       '<stop offset="100%" stop-color="' + accent + '" stop-opacity="0"/>' +
       '</linearGradient></defs>' +
-      grid + labels +
-      (lineD ? '<path d="' + lineD + '" fill="none" stroke="' + accent + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
-      (lineD && firstPt && lastPt ? '<path d="' + lineD + ' L' + lastPt.x.toFixed(1) + ',' + (H - padB) + ' L' + firstPt.x.toFixed(1) + ',' + (H - padB) + ' Z" fill="url(#sumFill)"/>' : '') +
+      '<g style="font-family:' + fontFamily + '">' + grid + labels + '</g>' +
+      (lineD && firstPt && lastPt ? '<path class="sum-area" d="' + lineD + ' L' + lastPt.x.toFixed(1) + ',' + (H - padB) + ' L' + firstPt.x.toFixed(1) + ',' + (H - padB) + ' Z" fill="url(#sumFill)"/>' : '') +
+      (lineD ? '<path class="sum-line" pathLength="100" d="' + lineD + '" fill="none" stroke="' + accent + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
       dots +
       '</svg>';
   }

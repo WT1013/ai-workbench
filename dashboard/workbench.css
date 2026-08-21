@@ -308,3 +308,30 @@ html, body { overflow-x: hidden; }
 .app-shell .sidebar { overflow-y: auto; overflow-x: hidden; }
 .app-shell .sidebar::-webkit-scrollbar { width: 4px; }
 .app-shell .sidebar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+/* 折线图：动画绘制（path 沿路径展开）+ 圆点逐个延迟出现 */
+.sum-line {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: sum-draw 1.6s ease-out forwards;
+}
+.sum-area {
+  opacity: 0;
+  animation: sum-fade 0.8s ease-out 1.2s forwards;
+}
+.sum-dot {
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: sum-dot 0.35s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes sum-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sum-fade {
+  to { opacity: 1; }
+}
+@keyframes sum-dot {
+  to { opacity: 1; transform: scale(1); }
+}
