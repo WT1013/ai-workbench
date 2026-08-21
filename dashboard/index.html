@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260821c" />
-    <link rel="stylesheet" href="workbench.css?v=20260821c" />
+    <link rel="stylesheet" href="styles.css?v=20260821d" />
+    <link rel="stylesheet" href="workbench.css?v=20260821d" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -211,7 +211,7 @@
 
         <section id="reportView" class="workbench-view panel" hidden>
           <header class="workbench-head">
-            <div class="section-heading"><h2>日报表格</h2><span id="reportDateLabel"></span></div>
+            <div class="section-heading"><h2>每日工作日报</h2><span id="reportDateLabel" class="report-date-badge"></span></div>
             <div class="workbench-toolbar">
               <button id="reportGenBtn" class="pill-btn primary">生成日报</button>
               <button id="reportCopyBtn" class="pill-btn">复制文本</button>
@@ -334,7 +334,17 @@
     </div>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="workbench.js?v=20260821c"></script>
-    <script type="module" src="app.js?v=20260821c"></script>
+
+    <!-- 日报弹窗（参考老版日报绿色主题，点击"生成日报"显示） -->
+    <div id="reportModal" class="report-modal" hidden>
+      <div class="report-modal-mask" data-modal-close></div>
+      <div class="report-modal-body" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+        <button class="report-modal-close" type="button" aria-label="关闭" data-modal-close>×</button>
+        <div id="reportModalContent" class="report-paper"></div>
+      </div>
+    </div>
+
+    <script src="workbench.js?v=20260821d"></script>
+    <script type="module" src="app.js?v=20260821d"></script>
   </body>
 </html>

@@ -81,6 +81,28 @@
     d.setDate(d.getDate() - 1);
     return toKey(d);
   }
+  // 日报默认日期：最近一天有店铺指标数据的（跳过空壳天）
+  function lastReportKey() {
+    if (!state || !state.days) { return yesterdayKeyOf(todayKey()); }
+    var keys = Object.keys(state.days).filter(function (k) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || k === "__library__" || k === "__logs__") { return false; }
+      var d = state.days[k];
+      if (!d || !d.shopData) { return false; }
+      // 必须至少有 1 家店有任意 4 项指标之一非空
+      var shops = Object.keys(d.shopData);
+      for (var i = 0; i < shops.length; i++) {
+        var sd = d.shopData[shops[i]] || {};
+        if (sd.adoptionRate !== undefined && sd.adoptionRate !== "" && sd.adoptionRate !== null) { return true; }
+        if (sd.generationRate !== undefined && sd.generationRate !== "" && sd.generationRate !== null) { return true; }
+        if (sd.conversionRate !== undefined && sd.conversionRate !== "" && sd.conversionRate !== null) { return true; }
+        if (sd.pureAgentRatio !== undefined && sd.pureAgentRatio !== "" && sd.pureAgentRatio !== null) { return true; }
+      }
+      return false;
+    }).sort();
+    var picked = keys.length ? keys[keys.length - 1] : yesterdayKeyOf(todayKey());
+    if (typeof console !== "undefined" && console.log) { console.log("[report] lastReportKey:", { candidates: keys.length, picked: picked, currentDateKey: currentDateKey }); }
+    return picked;
+  }
   function esc(s) { return String(s === undefined || s === null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
   function toast(msg) {
     var t = document.querySelector(".wb-toast");
@@ -383,8 +405,9 @@
     var content = $id("reportContent");
     var dateLabel = $id("reportDateLabel");
     if (!content) { return; }
-    var key = currentDateKey || todayKey();
-    if (dateLabel) { dateLabel.textContent = key + " · " + weekdayLabel(key); }
+    // 日报独立取数：自动找最近一天有店铺指标的（跳过今天空壳日）
+    var key = lastReportKey();
+    if (dateLabel) { dateLabel.textContent = "数据截止 " + key + "（" + weekdayLabel(key) + "）"; }
     var day = state.days[key];
     var draft = reportDraft()[key] || {};
     var shopRows = "";
@@ -415,7 +438,7 @@
     });
     var tableHtml =
       '<div class="wb-report-card">' +
-      '<h3>一、重点店铺核心指标（' + key + '）</h3>' +
+      '<h3>一、重点店铺核心指标（数据截止 ' + key + '）</h3>' +
       '<div class="wb-table-wrap"><table class="wb-report-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th><th>纯智能体占比</th></tr></thead><tbody>' +
       (shopRows || '<tr><td colspan="5" style="color:var(--muted)">今日暂无店铺数据，请先同步</td></tr>') +
       '</tbody></table></div></div>';
@@ -441,7 +464,7 @@
   }
 
   function collectReportText() {
-    var key = currentDateKey || todayKey();
+    var key = lastReportKey();
     var draft = reportDraft()[key] || {};
     var lines = [];
     lines.push("【" + key + " 日报】");
@@ -485,7 +508,7 @@
   }
 
   function exportCsv() {
-    var key = currentDateKey || todayKey();
+    var key = lastReportKey();
     var rows = [["店铺", "采纳率%", "生成率%", "转化率%", "纯智能体占比%"]];
     shopLibrary.slice().sort(function (a, b) {
       var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
@@ -544,6 +567,111 @@
   function wbRenderReport() {
     if (!wbReady) { wbLoad().then(function () { renderDailyReport(); }); return; }
     renderDailyReport();
+  }
+
+  /* ---------- 日报弹窗（参考老版日报绿色主题）---------- */
+  function showReportModal() {
+    var modal = $id("reportModal");
+    var content = $id("reportModalContent");
+    if (!modal || !content) { return; }
+    var key = lastReportKey();
+    var day = state.days[key] || {};
+    var draft = (reportDraft() || {})[key] || {};
+    var shops = (shopLibrary || []).filter(shopKey);
+    var metrics4 = [
+      { key: "adoptionRate", label: "采纳率" },
+      { key: "generationRate", label: "生成率" },
+      { key: "conversionRate", label: "转化率" },
+      { key: "pureAgentRatio", label: "纯智能体占比" }
+    ];
+    var prevKey = null;
+    if (key) {
+      var prev = fromKey(key);
+      prev.setDate(prev.getDate() - 1);
+      prevKey = toKey(prev);
+    }
+    // 行渲染：店名 + 4 指标 + 环比（对齐老版 shot-table）
+    var rows = "";
+    var todoItems = [];
+    shops.forEach(function (shop) {
+      var hasDown = false;
+      var downTexts = [];
+      var cells = '<td>' + esc(shop.name) + '</td>';
+      metrics4.forEach(function (m) {
+        var v = shopMetricVal(key, shop.id, m.key);
+        var pv = shopMetricVal(prevKey, shop.id, m.key);
+        var valStr = v === null ? "—" : (Math.round(v * 100) / 100) + "%";
+        var deltaCls = "shot-delta-flat", deltaTxt = "—";
+        if (v !== null && pv !== null) {
+          var diff = Math.round((v - pv) * 100) / 100;
+          if (diff < 0) {
+            hasDown = true;
+            downTexts.push({ label: m.label, diff: Math.abs(diff) });
+            deltaCls = "shot-delta-down";
+            deltaTxt = "↓ " + Math.abs(diff);
+          } else if (diff > 0) {
+            deltaCls = "shot-delta-up";
+            deltaTxt = "↑ " + diff;
+          } else {
+            deltaTxt = "— 持平";
+          }
+        } else {
+          deltaTxt = v === null ? "无数据" : "首次";
+        }
+        cells += '<td><div class="shot-val">' + valStr + '</div><div class="' + deltaCls + '">' + deltaTxt + '</div></td>';
+      });
+      rows += '<tr class="' + (hasDown ? "shot-row-down" : "") + '">' + cells + '</tr>';
+      if (hasDown) {
+        var worst = downTexts.reduce(function (a, b) { return b.diff > a.diff ? b : a; }, downTexts[0]);
+        todoItems.push({ name: shop.name, detail: downTexts.map(function (d) { return d.label + " ↓ " + d.diff; }).join("、"), worst: worst });
+      }
+    });
+    var summaryTxt = (draft.summary || "").trim();
+    var problemTxt = (draft.problem || "").trim();
+    // 明日待办（对齐老版 shot-todo-grid）
+    var todoHtml = "";
+    if (todoItems.length) {
+      todoHtml = '<div class="shot-todo-grid">' + todoItems.map(function (item) {
+        var worstTxt = item.worst.label === "转化率" ? "优先调优转化话术" :
+          (item.worst.label === "生成率" ? "优先调优生成话术" : "优先调优采纳话术");
+        return '<div class="shot-todo-item"><div class="shot-todo-tag">' + esc(item.name) + '</div>' +
+          '<div class="shot-todo-detail">' + esc(item.detail) + '</div>' +
+          (item.worst.diff >= 3 ? '<div class="shot-todo-priority">' + worstTxt + '</div>' : '') +
+          '</div>';
+      }).join("") + '</div>';
+    } else {
+      todoHtml = '<div class="shot-todo-empty">今日重点店铺指标均未下降，无明日调优重点</div>';
+    }
+    content.innerHTML =
+      '<div class="shot-hero"><div class="shot-hero-top">' +
+        '<div class="shot-hero-left">' +
+          '<div class="shot-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>' +
+          '<div><div class="shot-title">每日工作日报</div><div class="shot-subtitle">客服 AI 训练师 · ' + todayKey() + '（' + weekdayLabel(todayKey()) + '）</div></div>' +
+        '</div>' +
+        '<div class="shot-meta"><span>姓名：远山</span><span>重点店铺：' + shops.length + ' 家</span></div>' +
+      '</div></div>' +
+      '<div class="shot-body"><div class="shot-layout">' +
+        '<div class="shot-card">' +
+          '<div class="shot-card-top"><div class="shot-card-head">重点店铺核心指标</div><div class="shot-note">数据截至 ' + key + '（昨日）</div></div>' +
+          '<table class="shot-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th><th>纯智能体占比</th></tr></thead><tbody>' +
+          (rows || '<tr><td colspan="5" style="text-align:center;color:#9aa19b">暂无数据</td></tr>') +
+          '</tbody></table>' +
+        '</div>' +
+        '<div class="shot-layout-right">' +
+          '<div class="shot-card flex1"><div class="shot-card-head">当日配置总结</div>' +
+            '<div class="shot-text">' + (summaryTxt ? esc(summaryTxt) : "（无）") + '</div></div>' +
+          '<div class="shot-card flex1"><div class="shot-card-head">问题反馈</div>' +
+            '<div class="shot-text">' + (problemTxt ? esc(problemTxt) : "（无）") + '</div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="shot-todo-card"><div class="shot-card-head">明日待办 · 调优重点</div>' + todoHtml + '</div>' +
+      '</div>' +
+      '<div class="shot-footer">— 远山工作台 出品 —</div>';
+    modal.hidden = false;
+  }
+  function hideReportModal() {
+    var modal = $id("reportModal");
+    if (modal) { modal.hidden = true; }
   }
 
   /* ---------- 店铺库视图 ---------- */
@@ -941,7 +1069,14 @@
     }
     // 日报操作
     var genBtn = $id("reportGenBtn");
-    if (genBtn) { genBtn.onclick = function () { wbRenderReport(); toast("日报已生成"); }; }
+    if (genBtn) { genBtn.onclick = function () { wbRenderReport(); showReportModal(); }; }
+    // 弹窗关闭（遮罩 + 关闭按钮）
+    document.querySelectorAll("[data-modal-close]").forEach(function (el) {
+      el.addEventListener("click", hideReportModal);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { hideReportModal(); }
+    });
     var wbCopyReport = $id("wbCopyReportBtn");
     if (wbCopyReport) { wbCopyReport.onclick = function () { copyTextToClipboard(collectReportText()); }; }
     var copyBtn = $id("reportCopyBtn");
