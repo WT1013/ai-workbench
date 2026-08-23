@@ -694,6 +694,7 @@
         (shopKey(shop) ? '<span class="shop-key-badge">重点</span>' : '') + '</div>' +
         '<div class="shop-card-meta"><span>负责人：' + esc(shop.owner || "—") + '</span></div>' +
         '<div class="shop-card-actions">' +
+        '<button class="pill-btn quiet sync-shop-btn" data-action="sync-shop" title="单独同步该店铺的探域数据(最近3天)">同步 ↻</button>' +
         '<button class="pill-btn quiet" data-action="edit-shop">编辑</button>' +
         '<button class="pill-btn quiet" data-action="daily-shop">昨日数据</button>' +
         '<button class="pill-btn quiet" data-action="remove-shop">移除</button>' +
@@ -1130,6 +1131,12 @@
             wbSave(true);
             renderRoster();
           }
+        } else if (action === "sync-shop" && shop) {
+          // 单店同步: 打开本地服务 /sync-shop?idx=店名
+          toast("正在同步「" + shop.name + "」…");
+          var base = "http://10.10.12.157:8080";
+          try { window.open(base + "/sync-shop?idx=" + encodeURIComponent(shop.name), "_blank"); }
+          catch (err) { toast("无法打开同步页(本地服务可能未启动)"); }
         }
       });
     }

@@ -1343,7 +1343,13 @@ function bindEvents() {
   const viewReportBtn = document.querySelector("#viewReportBtn");
   if (viewReportBtn) viewReportBtn.addEventListener("click", () => window.open("https://wt1013.github.io/ai-workbench/", "_blank"));
   const syncShopBtn = document.querySelector("#syncShopBtn");
-  if (syncShopBtn) syncShopBtn.addEventListener("click", () => openLocal(SYNC_URLS.sync, "同步页"));
+  if (syncShopBtn) syncShopBtn.addEventListener("click", () => {
+    // 单店同步: 只同步当前选中店铺(探域四项, 最近3天)
+    const titleEl = document.querySelector("#detailTitle");
+    const shopName = (titleEl ? titleEl.textContent : "").trim();
+    if (!shopName) { showToast("未获取到当前店铺"); return; }
+    openLocal(SYNC_URLS.sync + "?idx=" + encodeURIComponent(shopName), "单店同步页");
+  });
   document.querySelectorAll(".scene-actions button").forEach((button) => button.addEventListener("click", () => {
     const t = button.textContent.trim();
     if (t === "同步昨日") openLocal(SYNC_URLS.sync, "同步页");
