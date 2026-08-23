@@ -855,6 +855,7 @@ function editDownThreshold() {
 function renderCards() {
   const m = currentMetric();
   scene.innerHTML = documents.map((doc, index) => {
+    const v = doc.metrics[m.doc];
     const display = v === null ? "--" : v;
     const kicker = doc.title.slice(0, 4) + " · " + m.label + " " + display + m.unit;
     return `
