@@ -1182,12 +1182,45 @@
     document.head.appendChild(s);
   }
 
+  /* ---------- 同步状态轮询: 同步进行中显示浮动条(可一键取消) ---------- */
+  function initSyncStatusPoll() {
+    var bar = $id("syncStatusBar");
+    if (!bar || window.__syncPollStarted) { return; }
+    window.__syncPollStarted = true;
+    var SYNC_HOST = "http://10.10.12.157:8080";
+    var taskEl = $id("syncStatusTask");
+    var cancelBtn = $id("syncCancelBtn");
+    function poll() {
+      fetch(SYNC_HOST + "/sync-status", { cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function (s) {
+          if (s && s.busy) {
+            if (taskEl) { taskEl.textContent = s.task || "同步任务"; }
+            if (cancelBtn) { cancelBtn.style.display = s.cancelable ? "" : "none"; }
+            bar.hidden = false;
+          } else {
+            bar.hidden = true;
+          }
+        })
+        .catch(function () { bar.hidden = true; });
+    }
+    if (cancelBtn) {
+      cancelBtn.onclick = function () {
+        window.open(SYNC_HOST + "/sync-cancel", "_blank");
+        toast("正在取消同步…");
+      };
+    }
+    poll();
+    setInterval(poll, 5000);
+  }
+
   /* ---------- 初始化 ---------- */
   function wbInit() {
     if (wbReady) { return; }
     wbLoad().then(function () {
       if (!currentDateKey) { currentDateKey = todayKey(); }
       bindEvents();
+      initSyncStatusPoll();
       loadHtml2canvas();
     });
   }

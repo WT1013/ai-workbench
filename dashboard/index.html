@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260821e" />
-    <link rel="stylesheet" href="workbench.css?v=20260821e" />
+    <link rel="stylesheet" href="styles.css?v=20260821f" />
+    <link rel="stylesheet" href="workbench.css?v=20260821f" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -335,6 +335,13 @@
 
     <div id="toast" class="toast" role="status"></div>
 
+    <!-- 同步状态浮动条（同步进行中显示，可一键取消） -->
+    <div id="syncStatusBar" class="sync-status-bar" hidden>
+      <span class="sync-spinner" aria-hidden="true"></span>
+      <span class="sync-status-text">正在同步：<b id="syncStatusTask"></b></span>
+      <button id="syncCancelBtn" class="sync-cancel-btn" type="button">取消同步</button>
+    </div>
+
     <!-- 日报弹窗（参考老版日报绿色主题，点击"生成日报"显示） -->
     <div id="reportModal" class="report-modal" hidden>
       <div class="report-modal-mask" data-modal-close></div>
@@ -344,7 +351,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260821e"></script>
-    <script type="module" src="app.js?v=20260821e"></script>
+    <script src="workbench.js?v=20260821f"></script>
+    <script type="module" src="app.js?v=20260821f"></script>
   </body>
 </html>
