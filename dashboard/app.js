@@ -171,7 +171,7 @@ function buildGroups(docs) {
   });
   dropItems.sort((a, b) => b.downs.length - a.downs.length);
   const groups = [];
-  if (missItems.length) groups.push({ type: "miss", name: "本月缺数据", count: missItems.length, color: "#ff8539", items: missItems.map((it) => [it.name, "本月缺 " + it.days.length + " 天", it.days.map((d) => d + "日").join("·")]) });
+  if (missItems.length) groups.push({ type: "miss", name: "本月缺数据", count: missItems.length, color: "#ff8539", defaultCollapsed: true, items: missItems.map((it) => [it.name, "本月缺 " + it.days.length + " 天", it.days.map((d) => d + "日").join("·")]) });
   if (dropItems.length) groups.push({ type: "drop", name: "昨日大幅下降(≥20%)", count: dropItems.length, color: "#ff4aa9", items: dropItems.map((it) => [it.name, it.downs.map((m) => m.label + "↓" + m.diff + "%").join("、"), "昨日"]) });
   if (lowExp.length) groups.push({ type: "abn", name: "体验分较月均下跌(≥0.3)", count: lowExp.length, color: "#ff8539", items: lowExp.map((d) => [d.title, "体验" + d.metrics.exp + " · 月均" + (d.metrics.expAvg === null ? "--" : Math.round(d.metrics.expAvg * 10) / 10), "关注"]) });
   if (lowReply.length) groups.push({ type: "abn", name: "回复率偏低(<95% 且非0)", count: lowReply.length, color: "#56b8ff", items: lowReply.map((d) => [d.title, "回复" + d.metrics.reply + "%", "关注"]) });
@@ -446,9 +446,11 @@ function renderQueue() {
     ...group,
     items: q ? group.items.filter((it) => it[0].toLowerCase().includes(q)) : group.items
   })).filter((group) => group.items.length > 0);
+  // 默认展开"缺数据"之外的第一个分组(避免缺数据始终展开占据视觉)
+  const firstOpenIdx = rows.findIndex((g) => g.type !== "miss");
   container.innerHTML = rows.length
     ? rows.map((group, groupIndex) => `
-    <article class="queue-group ${groupIndex === 0 ? "open" : ""}">
+    <article class="queue-group ${(!group.defaultCollapsed && groupIndex === firstOpenIdx) ? "open" : ""}">
       <button class="group-head" style="--group-color:${group.color}"><span><i></i>${group.name} <b>${group.items.length}</b></span><svg><use href="#i-chevron"/></svg></button>
       <div class="group-items">
         ${group.items.map((item) => `<button class="queue-item"><span>${item[0]}</span><em>${item[1]}</em><small>${item[2]}</small></button>`).join("")}
@@ -488,6 +490,34 @@ function thresholdSettings() {
 }
 function saveThresholds(t) {
   try { localStorage.setItem(THRESH_KEY, JSON.stringify(t)); } catch (e) {}
+}
+
+/* ===== 缺口检查设置(检查天数) ===== */
+const GAP_DAYS_KEY = "csa-gap-days";
+const GAP_DAYS_DEFAULT = 7;
+function gapDays() {
+  try {
+    const v = parseInt(localStorage.getItem(GAP_DAYS_KEY), 10);
+    if (!isNaN(v) && v >= 1 && v <= 30) return v;
+  } catch (e) {}
+  return GAP_DAYS_DEFAULT;
+}
+function saveGapDays(v) {
+  try { localStorage.setItem(GAP_DAYS_KEY, String(v)); } catch (e) {}
+}
+
+/* ===== 昨日大幅下降设置(下跌阈值%) ===== */
+const DOWN_THRESH_KEY = "csa-down-threshold";
+const DOWN_THRESH_DEFAULT = 20;
+function downThreshold() {
+  try {
+    const v = parseInt(localStorage.getItem(DOWN_THRESH_KEY), 10);
+    if (!isNaN(v) && v >= 5 && v <= 50) return v;
+  } catch (e) {}
+  return DOWN_THRESH_DEFAULT;
+}
+function saveDownThreshold(v) {
+  try { localStorage.setItem(DOWN_THRESH_KEY, String(v)); } catch (e) {}
 }
 
 function esc(s) {
@@ -616,11 +646,12 @@ function yesterdayKeyOf(key) {
 function renderGapNotice() {
   const bar = document.querySelector("#gapNoticeBar");
   if (!bar) return;
+  const days = gapDays();
   const today = todayKeyStr();
   const start = new Date(today);
-  start.setDate(start.getDate() - 1); // 从昨天开始往前 7 天（今天未结束不算缺）
+  start.setDate(start.getDate() - 1); // 从昨天开始往前 N 天（今天未结束不算缺）
   const dates = [];
-  for (let i = 6; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(start);
     d.setDate(d.getDate() - i);
     dates.push(toKeyStr(d));
@@ -647,14 +678,15 @@ function renderGapNotice() {
   bar.className = "notice-bar gap-notice-bar";
   bar.innerHTML = `
     <button class="notice-head" type="button" aria-expanded="false">
-      <span class="notice-title">${ok ? "✓" : "⚠"} 数据缺口检查（最近 7 天）</span>
+      <span class="notice-title">${ok ? "✓" : "⚠"} 数据缺口检查（最近 ${days} 天）</span>
       <span class="notice-count">${ok ? "数据完整" : items.length + " 家缺数据"}</span>
       <svg class="notice-chevron"><use href="#i-chevron"/></svg>
     </button>
     <div class="notice-body">
       ${ok
-        ? `<div class="notice-ok">最近 7 天所有店铺数据完整 ✓</div>`
+        ? `<div class="notice-ok">最近 ${days} 天所有店铺数据完整 ✓</div>`
         : items.map((it) => `<button class="notice-shop" type="button" data-shop="${esc(it.name)}"><span class="notice-shop-name">${esc(it.name)}</span><span class="notice-tags">${it.gaps.map((g) => `<em class="notice-tag">${g}</em>`).join("")}</span></button>`).join("")}
+      <button class="notice-action" type="button" id="gapSetBtn">⚙ 设置检查天数</button>
     </div>`;
 }
 
@@ -672,6 +704,7 @@ function renderDownNotice() {
     { key: "pureAgentRatio", label: "纯智能体占比" }
   ];
   const items = [];
+  const thresh = downThreshold();
   cloudShops.forEach((shop) => {
     const downs = [];
     metrics.forEach((m) => {
@@ -681,7 +714,7 @@ function renderDownNotice() {
       const prev = metricVal(sdP, m.key);
       if (latest !== null && prev !== null) {
         const diff = Math.round((latest - prev) * 100) / 100;
-        if (diff <= -20) downs.push({ label: m.label, diff: Math.abs(diff) });
+        if (diff <= -thresh) downs.push({ label: m.label, diff: Math.abs(diff) });
       }
     });
     if (downs.length) items.push({ name: shop.name, downs: downs });
@@ -691,21 +724,137 @@ function renderDownNotice() {
   bar.className = "notice-bar down-notice-bar";
   bar.innerHTML = `
     <button class="notice-head" type="button" aria-expanded="false">
-      <span class="notice-title">${ok ? "✓" : "⚠"} 昨日大幅下降（较前日 ↓≥20%）</span>
+      <span class="notice-title">${ok ? "✓" : "⚠"} 昨日大幅下降（较前日 ↓≥${thresh}%）</span>
       <span class="notice-count">${ok ? "无大幅下降" : items.length + " 家下跌"}</span>
       <svg class="notice-chevron"><use href="#i-chevron"/></svg>
     </button>
     <div class="notice-body">
       ${ok
-        ? `<div class="notice-ok">昨日无指标下降 ≥20% 的店铺 ✓</div>`
+        ? `<div class="notice-ok">昨日无指标下降 ≥${thresh}% 的店铺 ✓</div>`
         : items.map((it) => `<button class="notice-shop" type="button" data-shop="${esc(it.name)}"><span class="notice-shop-name">${esc(it.name)}</span><span class="notice-tags">${it.downs.map((m) => `<em class="notice-tag">${m.label}↓${m.diff}%</em>`).join("")}</span></button>`).join("")}
+      <button class="notice-action" type="button" id="downSetBtn">⚙ 设置下跌阈值</button>
     </div>`;
+}
+
+/* ===== 缺口检查设置弹窗(检查天数) ===== */
+function editGapDays() {
+  const cur = gapDays();
+  const overlay = document.createElement("div");
+  overlay.className = "std-modal-overlay";
+  const box = document.createElement("div");
+  box.className = "std-modal";
+  box.style.width = "320px";
+  const head = document.createElement("div");
+  head.className = "std-modal-head";
+  head.innerHTML = "<strong>缺口检查天数设置</strong><button type='button' class='std-modal-close'>×</button>";
+  const body = document.createElement("div");
+  body.className = "std-modal-body";
+  const row = document.createElement("label");
+  row.className = "std-modal-row";
+  row.innerHTML = "<span>检查天数（1-30）</span>";
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = 1;
+  input.max = 30;
+  input.step = 1;
+  input.value = cur;
+  row.appendChild(input);
+  body.appendChild(row);
+  const hint = document.createElement("div");
+  hint.className = "std-modal-hint";
+  hint.textContent = "「数据缺口检查」将扫描最近 N 天各店铺四项指标缺失情况（今天未结束不算缺）";
+  body.appendChild(hint);
+  const foot = document.createElement("div");
+  foot.className = "std-modal-foot";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "取消";
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "std-modal-save";
+  saveBtn.textContent = "保存";
+  foot.appendChild(cancelBtn);
+  foot.appendChild(saveBtn);
+  box.appendChild(head);
+  box.appendChild(body);
+  box.appendChild(foot);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add("open"));
+  const close = () => { overlay.classList.remove("open"); setTimeout(() => overlay.remove(), 200); };
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  head.querySelector(".std-modal-close").addEventListener("click", close);
+  cancelBtn.addEventListener("click", close);
+  saveBtn.addEventListener("click", () => {
+    const v = parseInt(input.value, 10);
+    saveGapDays(isNaN(v) ? GAP_DAYS_DEFAULT : Math.max(1, Math.min(30, v)));
+    close();
+    renderGapNotice();
+    showToast("缺口检查天数已保存");
+  });
+}
+
+/* ===== 昨日大幅下降设置弹窗(下跌阈值%) ===== */
+function editDownThreshold() {
+  const cur = downThreshold();
+  const overlay = document.createElement("div");
+  overlay.className = "std-modal-overlay";
+  const box = document.createElement("div");
+  box.className = "std-modal";
+  box.style.width = "320px";
+  const head = document.createElement("div");
+  head.className = "std-modal-head";
+  head.innerHTML = "<strong>大幅下降阈值设置</strong><button type='button' class='std-modal-close'>×</button>";
+  const body = document.createElement("div");
+  body.className = "std-modal-body";
+  const row = document.createElement("label");
+  row.className = "std-modal-row";
+  row.innerHTML = "<span>下跌阈值（5%-50%）</span>";
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = 5;
+  input.max = 50;
+  input.step = 1;
+  input.value = cur;
+  row.appendChild(input);
+  body.appendChild(row);
+  const hint = document.createElement("div");
+  hint.className = "std-modal-hint";
+  hint.textContent = "「昨日大幅下降」将标记较前日下跌 ≥ 该百分点的指标（4 项指标逐一判断）";
+  body.appendChild(hint);
+  const foot = document.createElement("div");
+  foot.className = "std-modal-foot";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "取消";
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "std-modal-save";
+  saveBtn.textContent = "保存";
+  foot.appendChild(cancelBtn);
+  foot.appendChild(saveBtn);
+  box.appendChild(head);
+  box.appendChild(body);
+  box.appendChild(foot);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add("open"));
+  const close = () => { overlay.classList.remove("open"); setTimeout(() => overlay.remove(), 200); };
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  head.querySelector(".std-modal-close").addEventListener("click", close);
+  cancelBtn.addEventListener("click", close);
+  saveBtn.addEventListener("click", () => {
+    const v = parseInt(input.value, 10);
+    saveDownThreshold(isNaN(v) ? DOWN_THRESH_DEFAULT : Math.max(5, Math.min(50, v)));
+    close();
+    renderDownNotice();
+    showToast("下跌阈值已保存");
+  });
 }
 
 function renderCards() {
   const m = currentMetric();
   scene.innerHTML = documents.map((doc, index) => {
-    const v = doc.metrics[m.doc];
     const display = v === null ? "--" : v;
     const kicker = doc.title.slice(0, 4) + " · " + m.label + " " + display + m.unit;
     return `
@@ -1369,6 +1518,8 @@ function bindEvents() {
     const bar = e.target.closest(".notice-bar");
     if (!bar) return;
     if (e.target.closest("#stdSetBtn")) { editStdThresholds(); return; }
+    if (e.target.closest("#gapSetBtn")) { editGapDays(); return; }
+    if (e.target.closest("#downSetBtn")) { editDownThreshold(); return; }
     const shopBtn = e.target.closest(".notice-shop");
     if (shopBtn) {
       const idx = documents.findIndex((d) => d.title === shopBtn.dataset.shop);
