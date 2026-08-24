@@ -617,7 +617,9 @@
       }
     });
     var summaryTxt = (draft.summary || "").trim();
-    var problemTxt = (draft.problem || "").trim();
+    var feedbackTxt = (draft.feedback || "").trim();
+    var weekFocusTxt = (draft.weekFocus || "").trim();
+    var tomorrowTxt = (draft.tomorrow || "").trim();
     // 明日待办（对齐老版 shot-todo-grid）
     var todoHtml = "";
     if (todoItems.length) {
@@ -632,6 +634,14 @@
     } else {
       todoHtml = '<div class="shot-todo-empty">今日重点店铺指标均未下降，无明日调优重点</div>';
     }
+    // 本周重点: 仅当编辑页有填写才渲染(避免空 card 撑高布局)
+    var weekFocusHtml = weekFocusTxt
+      ? '<div class="shot-week-focus"><span class="shot-week-focus-label">本周重点</span>' + esc(weekFocusTxt) + '</div>'
+      : '';
+    // 明日待办(用户补充): 仅当编辑页有填写才追加在自动分析下方
+    var tomorrowUserHtml = tomorrowTxt
+      ? '<div class="shot-todo-user"><span class="shot-todo-user-label">远山补充</span>' + esc(tomorrowTxt) + '</div>'
+      : '';
     return '<div class="report-paper">' +
       '<div class="shot-hero"><div class="shot-hero-top">' +
         '<div class="shot-hero-left">' +
@@ -651,10 +661,11 @@
           '<div class="shot-card flex1"><div class="shot-card-head">当日配置总结</div>' +
             '<div class="shot-text">' + (summaryTxt ? esc(summaryTxt) : "（无）") + '</div></div>' +
           '<div class="shot-card flex1"><div class="shot-card-head">问题反馈</div>' +
-            '<div class="shot-text">' + (problemTxt ? esc(problemTxt) : "（无）") + '</div></div>' +
+            '<div class="shot-text">' + (feedbackTxt ? esc(feedbackTxt) : "（无）") + '</div></div>' +
         '</div>' +
       '</div>' +
-      '<div class="shot-todo-card"><div class="shot-card-head">明日待办 · 调优重点</div>' + todoHtml + '</div>' +
+      '<div class="shot-todo-card"><div class="shot-card-head">明日待办 · 调优重点</div>' + todoHtml + tomorrowUserHtml + '</div>' +
+      weekFocusHtml +
       '</div>' +
       '<div class="shot-footer">— 远山工作台 出品 —</div>' +
       '</div>';
