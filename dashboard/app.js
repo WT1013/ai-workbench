@@ -40,14 +40,13 @@ function findLatestFullDate(days) {
   for (let i = keys.length - 1; i >= 0; i--) {
     const sd = days[keys[i]] && days[keys[i]].shopData;
     if (!sd) continue;
-    let hasAdopt = false, hasExp = false;
+    // 最新一天"有探域数据(采纳率)"即为最新日期(体验分可能因拼多多T+1/未登录缺失, 不影响日期推进)
+    let hasAdopt = false;
     Object.keys(sd).forEach((id) => {
       const v = sd[id] || {};
       if (v.adoptionRate !== undefined && v.adoptionRate !== null && String(v.adoptionRate) !== "") hasAdopt = true;
-      if (v.experienceScore !== undefined && v.experienceScore !== null && String(v.experienceScore) !== "") hasExp = true;
     });
-    if (hasAdopt && hasExp) { latest = keys[i]; break; }
-    if (hasAdopt && !latest) latest = keys[i];
+    if (hasAdopt) { latest = keys[i]; break; }
   }
   return latest;
 }
