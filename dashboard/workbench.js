@@ -783,6 +783,7 @@
     { key: "generationRate", label: "生成率" },
     { key: "conversionRate", label: "转化率" },
     { key: "pureAgentRatio", label: "纯智能体" },
+    { key: "riskRate", label: "风控率" },
     { key: "experienceScore", label: "体验分" },
     { key: "threeMinReplyRate", label: "3分钟回复率" }
   ];

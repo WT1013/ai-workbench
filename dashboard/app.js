@@ -77,6 +77,7 @@ function buildDocuments(shops, days, date) {
     const pure = metricVal(sd, "pureAgentRatio");
     const reply = metricVal(sd, "threeMinReplyRate");
     const exp = metricVal(sd, "experienceScore");
+    const risk = metricVal(sd, "riskRate");
     const expAvg = (exp !== null && monthPrefix) ? monthAvgVal(days, monthPrefix, shop.id, "experienceScore") : null;
     const isKey = shop.key === true;
     const fmt = (v) => (v === null ? "--" : String(v));
@@ -106,7 +107,7 @@ function buildDocuments(shops, days, date) {
       ],
       accent: isKey ? "warm" : (adopt !== null && adopt >= 50 ? "green" : "mist"),
       completion: adopt === null ? 0 : Math.round(adopt),
-      metrics: { adopt, gen, conv, pure, reply, exp, expAvg }
+      metrics: { adopt, gen, conv, pure, reply, exp, expAvg, risk }
     };
   });
 }
@@ -1065,12 +1066,13 @@ function updateDetails(doc) {
   document.querySelector("#detailState").textContent = fmt(m.adopt, "%");
   document.querySelector("#detailPriority").textContent = fmt(m.exp);
   document.querySelector("#detailTags").innerHTML = doc.tags.map((tag) => `<span>${tag}</span>`).join("");
-  // 指标明细：当前指标置顶+高亮（sort 把 isCur=true 排前面）
+  // 指标明细：当前指标置顶+高亮（sort 把 isCur=true 排前面）；风控率固定追加在末尾
   const ordered = METRIC_KEYS.map((k) => {
     const v = m[k.doc];
     return { k, v, line: `${k.label} ${fmt(v, k.unit)}`, isCur: k === cur };
   }).sort((a, b) => (a.isCur ? -1 : 0) - (b.isCur ? -1 : 0));
-  document.querySelector("#detailAdvice").innerHTML = ordered.map((a) => `<li class="${a.isCur ? "current-metric" : ""}">${a.isCur ? "★ " : ""}${a.line}</li>`).join("");
+  document.querySelector("#detailAdvice").innerHTML = ordered.map((a) => `<li class="${a.isCur ? "current-metric" : ""}">${a.isCur ? "★ " : ""}${a.line}</li>`).join("") +
+    `<li>风控率 ${fmt(m.risk, "%")}</li>`;
   progress.style.width = `${25 + selectedIndex * (56 / Math.max(1, documents.length - 1))}%`;
   detailsContent.classList.remove("detail-refresh");
   void detailsContent.offsetWidth;
