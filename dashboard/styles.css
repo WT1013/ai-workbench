@@ -649,10 +649,10 @@ html[data-theme-resolved="light"] .material-actions button.primary { color: var(
 }
 .app-shell.monthly-mode { grid-template-columns: 226px minmax(0, 1fr); }
 .app-shell.monthly-mode .details-panel { display: none; }
-.app-shell.monthly-mode .core { grid-template-rows: 70px minmax(0, 1fr); }
+.app-shell.monthly-mode .core { grid-template-rows: 70px minmax(0, 1fr); overflow: hidden; }
 .app-shell.monthly-mode .core .metric-grid { display: none; }
 .app-shell.monthly-mode .core .workspace-grid { display: none; }
-.app-shell.monthly-mode .core .monthly-view { display: flex; }
+.app-shell.monthly-mode .core .monthly-view { display: flex; min-height: 0; }
 
 .monthly-head {
   display: flex;

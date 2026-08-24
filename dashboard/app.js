@@ -179,15 +179,17 @@ function buildGroups(docs) {
   return groups;
 }
 
-function updateMetricCards(docs) {
+function updateMetricCards(docs, focusIdx) {
+  const focus = (focusIdx !== undefined && docs[focusIdx]) ? docs[focusIdx] : null;
   const avg = (f) => {
+    if (focus) return focus.metrics[f] === null ? null : focus.metrics[f];
     const vals = docs.map((d) => d.metrics[f]).filter((v) => v !== null);
     return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : null;
   };
   const set = (vid, sid, val, unit) => {
     const vEl = document.querySelector("#" + vid), sEl = document.querySelector("#" + sid);
     if (vEl) vEl.innerHTML = (val === null ? "--" : val) + "<small>" + unit + "</small>";
-    if (sEl) sEl.textContent = "全店均值 · " + docs.length + " 家";
+    if (sEl) sEl.textContent = focus ? "已选：" + focus.title : "全店均值 · " + docs.length + " 家";
   };
   set("valAdopt", "subAdopt", avg("adopt"), "%");
   set("valGen", "subGen", avg("gen"), "%");
@@ -1094,9 +1096,11 @@ function selectCard(index, explicit = false, requestedDirection = 0) {
     targetPosition = normalizedIndex;
     updateCardPositions(visualPosition);
     updateDetails(documents[selectedIndex]);
+    if (explicit) updateMetricCards(documents, selectedIndex); // 用户操作时顶部卡同步切换到该店
     return;
   }
   commitCarouselTarget(visualPosition + delta, explicit, Math.sign(delta));
+  if (explicit) updateMetricCards(documents, normalizedIndex); // 用户操作(键盘/拖动)切换顶部卡
 }
 
 function nextCard(direction = 1) {
