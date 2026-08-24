@@ -351,7 +351,30 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260821j"></script>
-    <script type="module" src="app.js?v=20260821j"></script>
+    <!-- 新增店铺弹窗（店铺信息 + 拼多多账号密码，账号保存到本地同步服务 pdd-accounts.json） -->
+    <div id="shopModal" class="shop-modal" hidden>
+      <div class="shop-modal-mask" data-shop-modal-close></div>
+      <div class="shop-modal-body" role="dialog" aria-modal="true" aria-labelledby="shopModalTitle">
+        <button class="shop-modal-close" type="button" aria-label="关闭" data-shop-modal-close>×</button>
+        <header class="shop-modal-head">
+          <h3 id="shopModalTitle">添加店铺</h3>
+          <p>店铺名称与拼多多后台店铺名保持一致，账号密码用于同步体验分 / 3分钟回复率</p>
+        </header>
+        <div class="shop-modal-fields">
+          <label class="shop-field"><span>店铺名称 <em>*</em></span><input id="shopNameInput" type="text" placeholder="如：PANAPOPO居家官方旗舰店" autocomplete="off"></label>
+          <label class="shop-field"><span>负责人</span><input id="shopOwnerInput" type="text" value="远山" autocomplete="off"></label>
+          <label class="shop-field"><span>拼多多账号</span><input id="shopPddAccountInput" type="text" placeholder="商家后台登录账号（可留空稍后补）" autocomplete="off"></label>
+          <label class="shop-field"><span>拼多多密码</span><input id="shopPddPasswordInput" type="password" placeholder="商家后台登录密码（可留空稍后补）" autocomplete="new-password"></label>
+        </div>
+        <p id="shopModalHint" class="shop-modal-hint" hidden></p>
+        <footer class="shop-modal-actions">
+          <button type="button" class="pill-btn quiet" data-shop-modal-close>取消</button>
+          <button type="button" class="pill-btn primary" id="shopModalConfirm">添加店铺</button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="workbench.js?v=20260821k"></script>
+    <script type="module" src="app.js?v=20260821k"></script>
   </body>
 </html>

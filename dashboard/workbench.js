@@ -1090,20 +1090,103 @@
     Array.prototype.forEach.call(tabs, function (t) {
       t.addEventListener("click", function () { shopsTab = t.dataset.shopTab; renderShopsInternal(); });
     });
+    // ---- 新增店铺弹窗（店铺信息 + 拼多多账号密码） ----
+    var SHOP_LOCAL_BASE = "http://10.10.12.157:8080";
+    var pddAccountCache = []; // 本地同步服务账号列表缓存(GET /pdd-account)
+    var shopModal = $id("shopModal");
+    function shopModalOpen() {
+      if (!shopModal) { return; }
+      var nameEl = $id("shopNameInput"), ownerEl = $id("shopOwnerInput"),
+          acctEl = $id("shopPddAccountInput"), pwdEl = $id("shopPddPasswordInput"),
+          hintEl = $id("shopModalHint");
+      [nameEl, acctEl, pwdEl].forEach(function (el) { if (el) { el.value = ""; } });
+      if (ownerEl) { ownerEl.value = "远山"; }
+      if (hintEl) { hintEl.hidden = true; hintEl.textContent = ""; }
+      shopModal.hidden = false;
+      nameEl && nameEl.focus();
+      // 拉取本地同步服务的账号列表(用于已存在账号时自动填充提示), 失败静默
+      try {
+        fetch(SHOP_LOCAL_BASE + "/pdd-account", { method: "GET" }).then(function (r) { return r.json(); }).then(function (res) {
+          pddAccountCache = (res && res.ok && Array.isArray(res.accounts)) ? res.accounts : [];
+        }).catch(function () { pddAccountCache = []; });
+      } catch (e) { pddAccountCache = []; }
+    }
+    function shopModalClose() { if (shopModal) { shopModal.hidden = true; } }
+    // 店铺名输入时, 若本地已有该店账号则自动填充(供更新/沿用)
+    var shopNameInput = $id("shopNameInput");
+    if (shopNameInput) {
+      shopNameInput.addEventListener("input", function () {
+        var hintEl = $id("shopModalHint"), acctEl = $id("shopPddAccountInput"), pwdEl = $id("shopPddPasswordInput");
+        if (!hintEl) { return; }
+        var name = shopNameInput.value.trim();
+        var norm = function (s) { return String(s || "").replace(/娟娟|运营|客服|小号/g, "").replace(/\s+/g, ""); };
+        var hit = pddAccountCache.filter(function (a) { return a && norm(a.cloudName) === norm(name); })[0];
+        if (hit) {
+          hintEl.textContent = "该店已有拼多多账号（idx " + hit.idx + "），确认后仅更新填写的字段";
+          hintEl.hidden = false;
+          if (acctEl && !acctEl.value) { acctEl.value = hit.account || ""; }
+          if (pwdEl && !pwdEl.value && hit.password) { pwdEl.value = hit.password; }
+        } else {
+          hintEl.hidden = true;
+        }
+      });
+    }
     var addBtn = $id("addShopBtn");
-    if (addBtn) {
-      addBtn.onclick = function () {
-        var name = prompt("新店铺名称：");
-        if (!name || !name.trim()) { return; }
-        var owner = prompt("负责人（默认远山）：", "远山");
+    if (addBtn) { addBtn.onclick = shopModalOpen; }
+    var shopModalConfirm = $id("shopModalConfirm");
+    if (shopModalConfirm) {
+      shopModalConfirm.onclick = function () {
+        var nameEl = $id("shopNameInput"), ownerEl = $id("shopOwnerInput"),
+            acctEl = $id("shopPddAccountInput"), pwdEl = $id("shopPddPasswordInput");
+        var name = nameEl ? nameEl.value.trim() : "";
+        if (!name) { toast("请填写店铺名称"); nameEl && nameEl.focus(); return; }
+        var account = acctEl ? acctEl.value.trim() : "";
+        var password = pwdEl ? pwdEl.value : "";
+        var owner = ownerEl ? ownerEl.value.trim() : "";
+        // 1) 有账号信息则写入本地同步服务 pdd-accounts.json（upsert; 失败不阻断店铺入库）
+        var saveAcct = null;
+        if (account || password) {
+          var body = { cloudName: name };
+          if (account) { body.account = account; }
+          if (password) { body.password = password; }
+          saveAcct = fetch(SHOP_LOCAL_BASE + "/pdd-account", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          }).then(function (r) { return r.json(); }).then(function (res) {
+            if (res && res.ok) {
+              toast(res.isNew ? "拼多多账号已登记（idx " + res.idx + "）" : "拼多多账号已更新");
+              return true;
+            }
+            toast("账号保存失败：" + ((res && res.error) || "未知错误"));
+            return false;
+          }).catch(function () {
+            toast("本地同步服务未连接，拼多多账号未保存");
+            return false;
+          });
+        }
+        // 2) 入库店铺库(云端)
         var id = "s" + (shopLibrary.length + 1);
         while (shopLibrary.some(function (s) { return s.id === id; })) { id += "x"; }
-        shopLibrary.push({ id: id, name: name.trim(), owner: owner || "远山", adoptionRate: "", generationRate: "", conversionRate: "", pureAgentRatio: "", experienceScore: "", note: "" });
+        shopLibrary.push({ id: id, name: name, owner: owner || "远山", adoptionRate: "", generationRate: "", conversionRate: "", pureAgentRatio: "", experienceScore: "", note: "" });
         wbSave(true);
         renderRoster();
-        toast("已添加店铺");
+        shopModalClose();
+        if (saveAcct) {
+          // 等账号保存完成后再提示主结果(避免 toast 被覆盖)
+          saveAcct.then(function () { toast("已添加店铺「" + name + "」"); });
+        } else {
+          toast("已添加店铺「" + name + "」" + (account || password ? "" : "（未填账号，拼多多同步将跳过）"));
+        }
       };
     }
+    // 弹窗关闭(遮罩 + 关闭按钮 + Esc)
+    document.querySelectorAll("[data-shop-modal-close]").forEach(function (el) {
+      el.addEventListener("click", shopModalClose);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && shopModal && !shopModal.hidden) { shopModalClose(); }
+    });
     var searchInput = $id("shopSearchInput");
     if (searchInput) {
       searchInput.oninput = function () { shopsSearchQuery = searchInput.value.trim(); renderRoster(); };

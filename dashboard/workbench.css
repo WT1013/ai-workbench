@@ -489,3 +489,59 @@ html, body { overflow-x: hidden; }
   transition: background .15s, transform .15s;
 }
 .sync-cancel-btn:hover { background: #f2555a; transform: scale(1.04); }
+
+/* ===== 新增店铺弹窗（暗色卡片，与驾驶舱风格统一） ===== */
+.shop-modal {
+  position: fixed; inset: 0; z-index: 210;
+  display: flex; align-items: center; justify-content: center;
+}
+.shop-modal[hidden] { display: none !important; }
+.shop-modal-mask {
+  position: absolute; inset: 0;
+  background: rgba(5, 9, 7, 0.78); backdrop-filter: blur(5px);
+}
+.shop-modal-body {
+  position: relative; z-index: 1;
+  width: min(460px, 92vw);
+  background: var(--panel-2);
+  border: 1px solid var(--line-bright);
+  border-radius: 18px;
+  box-shadow: 0 30px 90px rgba(0,0,0,.65);
+  padding: 24px 24px 20px;
+  animation: shopModalIn .28s cubic-bezier(.16,1,.3,1);
+}
+@keyframes shopModalIn {
+  from { opacity: 0; transform: translateY(22px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.shop-modal-close {
+  position: absolute; top: 14px; right: 14px; z-index: 3;
+  width: 34px; height: 34px; border: 0; border-radius: 50%;
+  background: var(--panel); color: var(--muted);
+  font-size: 20px; line-height: 1; cursor: pointer;
+  transition: background .15s, color .15s, transform .15s;
+}
+.shop-modal-close:hover { background: var(--panel-soft); color: var(--text); transform: scale(1.06); }
+.shop-modal-head h3 { font-size: 16px; color: var(--text); margin: 0 0 4px; }
+.shop-modal-head p { font-size: 12px; color: var(--muted); margin: 0 0 16px; line-height: 1.6; }
+.shop-modal-fields { display: flex; flex-direction: column; gap: 12px; }
+.shop-field { display: flex; flex-direction: column; gap: 6px; }
+.shop-field > span { font-size: 12px; color: var(--muted); }
+.shop-field > span em { color: var(--accent-400); font-style: normal; }
+.shop-field input {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--text); font-size: 13px; padding: 9px 12px; outline: none;
+  transition: border-color .15s;
+}
+.shop-field input:focus { border-color: var(--accent-400); }
+.shop-field input::placeholder { color: var(--muted); opacity: .7; }
+.shop-modal-hint {
+  margin: 12px 0 0; padding: 8px 12px; border-radius: 8px;
+  background: var(--panel); border: 1px solid var(--line);
+  font-size: 12px; color: var(--accent-300); line-height: 1.5;
+}
+.shop-modal-actions {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
