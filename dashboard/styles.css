@@ -747,6 +747,10 @@ html[data-theme-resolved="light"] .material-actions button.primary { color: var(
   background: linear-gradient(135deg, rgba(255, 74, 107, .10), rgba(255, 105, 63, .05));
   border-color: rgba(255, 107, 130, .28);
 }
+.risk-notice-bar {
+  background: linear-gradient(135deg, rgba(167, 110, 255, .12), rgba(124, 58, 237, .05));
+  border-color: rgba(167, 110, 255, .3);
+}
 .notice-head {
   width: 100%;
   display: flex;
@@ -764,6 +768,7 @@ html[data-theme-resolved="light"] .material-actions button.primary { color: var(
 .std-notice-bar .notice-title { color: #ffb454; }
 .gap-notice-bar .notice-title { color: #56b8ff; }
 .down-notice-bar .notice-title { color: #ff7d90; }
+.risk-notice-bar .notice-title { color: #c4a0ff; }
 .notice-count { font-size: 11px; color: var(--muted); }
 .notice-chevron { margin-left: auto; width: 14px; height: 14px; color: var(--muted); transition: transform .2s ease; }
 .notice-bar.open .notice-chevron { transform: rotate(90deg); }
@@ -807,6 +812,7 @@ html[data-theme-resolved="light"] .material-actions button.primary { color: var(
 .std-notice-bar .notice-tag { background: rgba(255, 149, 0, .14); color: #ffb454; }
 .gap-notice-bar .notice-tag { background: rgba(86, 184, 255, .12); color: #7cc0ff; }
 .down-notice-bar .notice-tag { background: rgba(255, 107, 130, .14); color: #ff7d90; }
+.risk-notice-bar .notice-tag { background: rgba(167, 110, 255, .15); color: #c4a0ff; }
 .notice-action {
   align-self: flex-start;
   margin-top: 2px;

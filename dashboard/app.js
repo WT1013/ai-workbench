@@ -440,10 +440,12 @@ function applyNoticeFilter() {
   const std = document.querySelector("#stdNoticeBar");
   const gap = document.querySelector("#gapNoticeBar");
   const down = document.querySelector("#downNoticeBar");
-  // 全部：三个都显示；缺数据：只显示缺口；指标异常：只显示昨日大幅下降
+  const risk = document.querySelector("#riskNoticeBar");
+  // 全部：全部显示；缺数据：只显示缺口；指标异常：只显示昨日大幅下降 + 风控率
   if (std) std.hidden = (f !== "all");
   if (gap) gap.hidden = (f === "abn");
   if (down) down.hidden = (f === "miss");
+  if (risk) risk.hidden = (f === "miss");
 }
 
 function renderQueue() {
@@ -517,6 +519,20 @@ function gapDays() {
 }
 function saveGapDays(v) {
   try { localStorage.setItem(GAP_DAYS_KEY, String(v)); } catch (e) {}
+}
+
+/* ===== 风控率提醒设置(最新一天话术风控拦截率阈值%, 超过则提醒) ===== */
+const RISK_THRESH_KEY = "csa-risk-threshold";
+const RISK_THRESH_DEFAULT = 25;
+function riskThreshold() {
+  try {
+    const v = parseFloat(localStorage.getItem(RISK_THRESH_KEY));
+    if (!isNaN(v) && v >= 1 && v <= 100) return v;
+  } catch (e) {}
+  return RISK_THRESH_DEFAULT;
+}
+function saveRiskThreshold(v) {
+  try { localStorage.setItem(RISK_THRESH_KEY, String(v)); } catch (e) {}
 }
 
 /* ===== 昨日大幅下降设置(下跌阈值%) ===== */
@@ -865,6 +881,96 @@ function editDownThreshold() {
   });
 }
 
+/* ===== 风控率提醒（最新一天话术风控拦截率 > 阈值, 越低越好） ===== */
+function renderRiskNotice() {
+  const bar = document.querySelector("#riskNoticeBar");
+  if (!bar) return;
+  const thresh = riskThreshold();
+  const latest = cloudLatestDate;
+  const items = [];
+  if (latest) {
+    cloudShops.forEach((shop) => {
+      const sd = cloudDays[latest] && cloudDays[latest].shopData && cloudDays[latest].shopData[shop.id];
+      const v = metricVal(sd, "riskRate");
+      if (v !== null && v > thresh) items.push({ name: shop.name, risk: v });
+    });
+  }
+  items.sort((a, b) => b.risk - a.risk);
+  bar.hidden = false;
+  const ok = !items.length;
+  bar.className = "notice-bar risk-notice-bar";
+  bar.innerHTML = `
+    <button class="notice-head" type="button" aria-expanded="false">
+      <span class="notice-title">${ok ? "✓" : "⚠"} 风控率提醒${latest ? "（" + latest.slice(5).replace("-", "月") + "日）" : ""}</span>
+      <span class="notice-count">${ok ? (latest ? "全部正常" : "暂无数据") : items.length + " 家偏高"}</span>
+      <svg class="notice-chevron"><use href="#i-chevron"/></svg>
+    </button>
+    <div class="notice-body">
+      ${ok
+        ? `<div class="notice-ok">${latest ? `风控率均未超过阈值 ${thresh}% ✓` : "暂无店铺数据，请先同步"}</div>`
+        : items.map((it) => `<button class="notice-shop" type="button" data-shop="${esc(it.name)}"><span class="notice-shop-name">${esc(it.name)}</span><span class="notice-tags"><em class="notice-tag">风控率 ${it.risk}%（标准 ≤${thresh}%）</em></span></button>`).join("")}
+      <button class="notice-action" type="button" id="riskSetBtn">⚙ 设置风控阈值</button>
+    </div>`;
+}
+
+/* ===== 风控率提醒设置弹窗(阈值%) ===== */
+function editRiskThreshold() {
+  const cur = riskThreshold();
+  const overlay = document.createElement("div");
+  overlay.className = "std-modal-overlay";
+  const box = document.createElement("div");
+  box.className = "std-modal";
+  box.style.width = "320px";
+  const head = document.createElement("div");
+  head.className = "std-modal-head";
+  head.innerHTML = "<strong>风控率阈值设置</strong><button type='button' class='std-modal-close'>×</button>";
+  const body = document.createElement("div");
+  body.className = "std-modal-body";
+  const row = document.createElement("label");
+  row.className = "std-modal-row";
+  row.innerHTML = "<span>风控率阈值（1%-100%）</span>";
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = 1;
+  input.max = 100;
+  input.step = 1;
+  input.value = cur;
+  row.appendChild(input);
+  body.appendChild(row);
+  const hint = document.createElement("div");
+  hint.className = "std-modal-hint";
+  hint.textContent = "「风控率提醒」将标记最新一天话术风控拦截率超过该阈值的店铺（风控率越低越好）";
+  body.appendChild(hint);
+  const foot = document.createElement("div");
+  foot.className = "std-modal-foot";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "取消";
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "std-modal-save";
+  saveBtn.textContent = "保存";
+  foot.appendChild(cancelBtn);
+  foot.appendChild(saveBtn);
+  box.appendChild(head);
+  box.appendChild(body);
+  box.appendChild(foot);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add("open"));
+  const close = () => { overlay.classList.remove("open"); setTimeout(() => overlay.remove(), 200); };
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  head.querySelector(".std-modal-close").addEventListener("click", close);
+  cancelBtn.addEventListener("click", close);
+  saveBtn.addEventListener("click", () => {
+    const v = parseFloat(input.value);
+    saveRiskThreshold(isNaN(v) ? RISK_THRESH_DEFAULT : Math.max(1, Math.min(100, v)));
+    close();
+    renderRiskNotice();
+    showToast("风控率阈值已保存");
+  });
+}
+
 function renderCards() {
   const m = currentMetric();
   scene.innerHTML = documents.map((doc, index) => {
@@ -896,6 +1002,7 @@ function viewOnDate(dateKey) {
   renderStdNotice();
   renderGapNotice();
   renderDownNotice();
+  renderRiskNotice();
   selectedIndex = 0; visualPosition = 0; targetPosition = 0;
   if (!documents.length) {
     renderCards(); renderQueue();
@@ -1567,6 +1674,7 @@ function bindEvents() {
     if (e.target.closest("#stdSetBtn")) { editStdThresholds(); return; }
     if (e.target.closest("#gapSetBtn")) { editGapDays(); return; }
     if (e.target.closest("#downSetBtn")) { editDownThreshold(); return; }
+    if (e.target.closest("#riskSetBtn")) { editRiskThreshold(); return; }
     const shopBtn = e.target.closest(".notice-shop");
     if (shopBtn) {
       const idx = documents.findIndex((d) => d.title === shopBtn.dataset.shop);
