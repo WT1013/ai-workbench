@@ -8,6 +8,8 @@
   var CLOUD_URL = "https://kocuowtqklojxkhzlwpe.supabase.co";
   var CLOUD_KEY = "sb_publishable_EinGWbe2S8hHl0kqngnmIg_uyZ5xRnp";
   var STORAGE_KEY = "csa-workbench-v1";
+  // 镜像模式: CloudStudio 国内镜像(无法访问 Supabase 海外域名)时改读同源 state.json 快照
+  var IS_MIRROR = (typeof location !== "undefined" && (location.hostname.indexOf("app.workbuddy.link") >= 0 || /[?&]mirror=1/.test(location.search)));
 
   var TASKS = [
     { id: "data-update", name: "数据更新" },
@@ -186,6 +188,24 @@
   }
 
   function wbLoad() {
+    if (IS_MIRROR) {
+      // 镜像模式: 读同源 state.json 快照(国内可访问), 失败回退本地 localStorage
+      return fetch("./state.json").then(function (r) { return r.json(); }).then(function (obj) {
+        state.days = obj.days || {};
+        state.shifts = obj.shifts || {};
+        if (!state.shifts || Object.keys(state.shifts).length === 0) { seedDefaultShifts(); }
+        ensureShopLibrary(false);
+        wbReady = true;
+      }).catch(function () {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) { var parsed = JSON.parse(raw); state.days = parsed.days || {}; state.shifts = parsed.shifts || {}; }
+        } catch (e) { state.days = {}; state.shifts = {}; }
+        if (!state.shifts || Object.keys(state.shifts).length === 0) { seedDefaultShifts(); }
+        ensureShopLibrary(false);
+        wbReady = true;
+      });
+    }
     return fetch(CLOUD_URL + "/rest/v1/state?select=days,shifts&id=eq.1", {
       headers: { apikey: CLOUD_KEY, Authorization: "Bearer " + CLOUD_KEY }
     }).then(function (r) { return r.json(); }).then(function (rows) {
@@ -215,6 +235,11 @@
     try {
       state.days["__library__"] = { shops: shopLibrary };
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days: state.days, shifts: state.shifts }));
+      if (IS_MIRROR) {
+        // 镜像模式只读: 仅存本地, 不写云端(查看者无 Supabase 访问权限)
+        if (showTip) { toast("已保存到本地（镜像只读模式）"); }
+        return;
+      }
       if (saveTimer) { clearTimeout(saveTimer); }
       saveTimer = setTimeout(function () {
         fetch(CLOUD_URL + "/rest/v1/state", {
@@ -1279,6 +1304,7 @@
 
   /* ---------- 同步状态轮询: 同步进行中显示浮动条(可一键取消) ---------- */
   function initSyncStatusPoll() {
+    if (IS_MIRROR) { return; } // 镜像模式: 无内网同步服务, 跳过轮询
     var bar = $id("syncStatusBar");
     if (!bar || window.__syncPollStarted) { return; }
     window.__syncPollStarted = true;

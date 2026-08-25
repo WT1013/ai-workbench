@@ -21,13 +21,24 @@ let cloudDays = null;
 let cloudShops = [];
 let cloudLatestDate = null;
 
+/* 镜像模式: CloudStudio 国内镜像(无法访问 Supabase 海外域名)时改读同源 state.json 快照; 支持 ?mirror=1 调试 */
+const IS_MIRROR = typeof location !== "undefined" && (location.hostname.indexOf("app.workbuddy.link") >= 0 || /[?&]mirror=1/.test(location.search));
+
 async function fetchCloud() {
-  const res = await fetch(`${CLOUD_URL}/rest/v1/state?select=days&id=eq.1`, {
-    headers: { apikey: CLOUD_KEY, Authorization: `Bearer ${CLOUD_KEY}` }
-  });
-  if (!res.ok) throw new Error("云端请求失败 " + res.status);
-  const data = await res.json();
-  const days = (data[0] && data[0].days) || {};
+  let days;
+  if (IS_MIRROR) {
+    const res = await fetch("./state.json");
+    if (!res.ok) throw new Error("镜像数据加载失败 " + res.status);
+    const obj = await res.json();
+    days = obj.days || {};
+  } else {
+    const res = await fetch(`${CLOUD_URL}/rest/v1/state?select=days&id=eq.1`, {
+      headers: { apikey: CLOUD_KEY, Authorization: `Bearer ${CLOUD_KEY}` }
+    });
+    if (!res.ok) throw new Error("云端请求失败 " + res.status);
+    const data = await res.json();
+    days = (data[0] && data[0].days) || {};
+  }
   cloudDays = days;
   cloudShops = (days.__library__ && days.__library__.shops) || [];
   cloudLatestDate = findLatestFullDate(days);
