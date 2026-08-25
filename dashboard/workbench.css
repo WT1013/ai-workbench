@@ -571,3 +571,23 @@ html, body { overflow-x: hidden; }
   background: #B58A1F; color: #fff; border-radius: 6px; padding: 2px 8px;
   font-size: 11px; font-weight: 600; margin-right: 6px; vertical-align: middle;
 }
+
+/* ===== 同步选择弹窗（探域 / 拼多多 分开同步） ===== */
+.sync-options { display: flex; flex-direction: column; gap: 10px; }
+.sync-option {
+  position: relative; display: flex; align-items: flex-start; gap: 10px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.sync-option:hover { border-color: var(--line-bright); }
+.sync-option.active { border-color: var(--accent-400); background: var(--panel-soft); }
+.sync-option input[type="radio"] { margin-top: 3px; accent-color: var(--accent-400); cursor: pointer; }
+.sync-option-body { display: flex; flex-direction: column; gap: 3px; }
+.sync-option-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.sync-option-title em {
+  font-style: normal; font-size: 10.5px; font-weight: 500;
+  background: var(--accent-400); color: var(--accent-foreground);
+  border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px;
+}
+.sync-option-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }

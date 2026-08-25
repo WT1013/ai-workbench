@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260821m" />
-    <link rel="stylesheet" href="workbench.css?v=20260821m" />
+    <link rel="stylesheet" href="styles.css?v=20260821n" />
+    <link rel="stylesheet" href="workbench.css?v=20260821n" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -374,7 +374,47 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260821m"></script>
-    <script type="module" src="app.js?v=20260821m"></script>
+    <!-- 同步选择弹窗（探域 / 拼多多 分开同步） -->
+    <div id="syncModal" class="shop-modal" hidden>
+      <div class="shop-modal-mask" data-sync-modal-close></div>
+      <div class="shop-modal-body" role="dialog" aria-modal="true" aria-labelledby="syncModalTitle">
+        <button class="shop-modal-close" type="button" aria-label="关闭" data-sync-modal-close>×</button>
+        <header class="shop-modal-head">
+          <h3 id="syncModalTitle">同步昨日数据</h3>
+          <p>选择本次同步的数据来源，可单独同步探域或拼多多</p>
+        </header>
+        <div class="sync-options" id="syncOptions">
+          <label class="sync-option active">
+            <input type="radio" name="syncScope" value="all" checked>
+            <span class="sync-option-body">
+              <span class="sync-option-title">全部同步 <em>推荐</em></span>
+              <span class="sync-option-desc">探域四项+风控率 → 拼多多体验分/回复率 → 自动补缺</span>
+            </span>
+          </label>
+          <label class="sync-option">
+            <input type="radio" name="syncScope" value="tanyu">
+            <span class="sync-option-body">
+              <span class="sync-option-title">仅同步探域</span>
+              <span class="sync-option-desc">采纳率 / 生成率 / 询单转化率 / 纯智能体占比 / 风控率</span>
+            </span>
+          </label>
+          <label class="sync-option">
+            <input type="radio" name="syncScope" value="pdd">
+            <span class="sync-option-body">
+              <span class="sync-option-title">仅同步拼多多</span>
+              <span class="sync-option-desc">服务体验分 / 3分钟回复率</span>
+            </span>
+          </label>
+        </div>
+        <p class="shop-modal-hint">需要本地同步服务已启动（10.10.12.157:8080），同步过程中请勿关闭页面</p>
+        <footer class="shop-modal-actions">
+          <button type="button" class="pill-btn quiet" data-sync-modal-close>取消</button>
+          <button type="button" class="pill-btn primary" id="syncModalConfirm">开始同步</button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="workbench.js?v=20260821n"></script>
+    <script type="module" src="app.js?v=20260821n"></script>
   </body>
 </html>

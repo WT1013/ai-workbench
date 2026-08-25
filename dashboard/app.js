@@ -1491,8 +1491,38 @@ function bindEvents() {
     const win = window.open(url, "_blank");
     if (!win) showToast(`无法打开${label}（本地服务可能未启动）`);
   };
+  // 同步选择弹窗：探域 / 拼多多 可分开同步
+  const syncModal = document.querySelector("#syncModal");
+  const openSyncModal = () => {
+    if (!syncModal) { openLocal(SYNC_URLS.sync, "同步页"); return; }
+    syncModal.hidden = false;
+  };
+  const closeSyncModal = () => { if (syncModal) syncModal.hidden = true; };
+  if (syncModal) {
+    syncModal.addEventListener("click", (e) => {
+      // 选项卡片选中态
+      const opt = e.target.closest(".sync-option");
+      if (opt) {
+        syncModal.querySelectorAll(".sync-option").forEach((o) => o.classList.remove("active"));
+        opt.classList.add("active");
+        const radio = opt.querySelector("input[type=radio]");
+        if (radio) radio.checked = true;
+        return;
+      }
+      // 关闭（遮罩 + 关闭按钮 + 取消）
+      if (e.target.closest("[data-sync-modal-close]")) { closeSyncModal(); return; }
+    });
+    const syncConfirm = document.querySelector("#syncModalConfirm");
+    if (syncConfirm) syncConfirm.addEventListener("click", () => {
+      const checked = syncModal.querySelector("input[name=syncScope]:checked");
+      const scope = (checked && checked.value) || "all";
+      const label = scope === "tanyu" ? "探域同步页" : (scope === "pdd" ? "拼多多同步页" : "同步页");
+      closeSyncModal();
+      openLocal(SYNC_URLS.sync + "?scope=" + scope, label);
+    });
+  }
   const syncBtn = document.querySelector("#syncBtn");
-  if (syncBtn) syncBtn.addEventListener("click", () => openLocal(SYNC_URLS.sync, "同步页"));
+  if (syncBtn) syncBtn.addEventListener("click", openSyncModal);
   const openWorkbenchBtn = document.querySelector("#openWorkbenchBtn");
   if (openWorkbenchBtn) openWorkbenchBtn.addEventListener("click", () => window.open("https://wt1013.github.io/ai-workbench/", "_blank"));
   const viewReportBtn = document.querySelector("#viewReportBtn");
@@ -1507,7 +1537,7 @@ function bindEvents() {
   });
   document.querySelectorAll(".scene-actions button").forEach((button) => button.addEventListener("click", () => {
     const t = button.textContent.trim();
-    if (t === "同步昨日") openLocal(SYNC_URLS.sync, "同步页");
+    if (t === "同步昨日") openSyncModal();
     else if (t === "补缺数据") openLocal(SYNC_URLS.syncGaps, "补缺页");
     else showToast(`${t}成功`);
   }));
