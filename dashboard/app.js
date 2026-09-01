@@ -1715,12 +1715,13 @@ function bindEvents() {
           <div class="m-cell m-num${adoptCls}">${fmtPct(r.adoptRate)}</div>
           <div class="m-cell m-num">${fmtPct(r.genRate)}</div>
           <div class="m-cell m-num${riskCls}">${fmtPct(r.riskRate)}</div>
+          <div class="m-cell m-num">${fmtPct(r.pureRatio)}</div>
           <div class="m-cell m-num">${fmtPct(r.conversionRate)}</div>
           <div class="m-cell m-num">${fmtPct(r.threeMinReplyRate)}</div>
           <div class="m-cell m-num${expCls}">${r.experienceScore === null || r.experienceScore === undefined ? "--" : r.experienceScore}</div>`;
       }).join("");
     }
-    if (hint) hint.textContent = `${monthlyMonth} · ${rows.length} 家店铺 · 采纳率/生成率/风控率=计数÷总事件数(探域) · 转化率/回复率/体验分=日数据月均(拼多多)`;
+    if (hint) hint.textContent = `${monthlyMonth} · ${rows.length} 家店铺 · 探域采纳/生成/风控率=计数÷总事件数 · 纯智占比=探域整月接待方式 · 转化率/回复率/体验分=日数据月均`;
   }
   if (monthlyModal) {
     monthlyModal.addEventListener("click", (e) => {
