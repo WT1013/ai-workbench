@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260821r" />
-    <link rel="stylesheet" href="workbench.css?v=20260821r" />
+    <link rel="stylesheet" href="styles.css?v=20260821s" />
+    <link rel="stylesheet" href="workbench.css?v=20260821s" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -407,6 +407,20 @@
               <span class="sync-option-desc">服务体验分 / 3分钟回复率</span>
             </span>
           </label>
+          <label class="sync-option">
+            <input type="radio" name="syncScope" value="monthly">
+            <span class="sync-option-body">
+              <span class="sync-option-title">同步月度数据</span>
+              <span class="sync-option-desc">探域自然月：销售额 / 采纳数 / 拦截数 / 采纳率 / 生成率 / 风控率（默认上月整月，约 5-8 分钟）</span>
+            </span>
+          </label>
+          <label class="sync-option">
+            <input type="radio" name="syncScope" value="pddmonthly">
+            <span class="sync-option-body">
+              <span class="sync-option-title">同步拼多多月度</span>
+              <span class="sync-option-desc">拼多多：询单转化率 / 3分钟回复率 / 商家体验分（默认上月整月，跑拼多多抓取后按月汇总）</span>
+            </span>
+          </label>
         </div>
         <p class="shop-modal-hint">需要本地同步服务已启动（10.10.12.157:8080），同步过程中请勿关闭页面</p>
         <footer class="shop-modal-actions">
@@ -428,7 +442,7 @@
         <div class="monthly-tabs" id="monthlyMonthTabs"></div>
         <div class="monthly-table-wrap">
           <div class="monthly-grid" id="monthlyGrid">
-            <div class="m-head">店铺</div><div class="m-head">销售额</div><div class="m-head">采纳数<br><small>自动/手动</small></div><div class="m-head">拦截数</div><div class="m-head">采纳率</div><div class="m-head">生成率</div><div class="m-head">风控率</div><div class="m-head">3分钟回复率</div><div class="m-head">生成时间</div>
+            <div class="m-head">店铺</div><div class="m-head">采纳率</div><div class="m-head">生成率</div><div class="m-head">风控率</div><div class="m-head">询单转化率</div><div class="m-head">3分钟回复率</div><div class="m-head">商家体验分</div>
             <div id="monthlyRows" class="monthly-rows"></div>
           </div>
         </div>
@@ -439,7 +453,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260821r"></script>
-    <script type="module" src="app.js?v=20260821r"></script>
+    <script src="workbench.js?v=20260821s"></script>
+    <script type="module" src="app.js?v=20260821s"></script>
   </body>
 </html>

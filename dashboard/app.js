@@ -1634,7 +1634,7 @@ function bindEvents() {
     if (syncConfirm) syncConfirm.addEventListener("click", () => {
       const checked = syncModal.querySelector("input[name=syncScope]:checked");
       const scope = (checked && checked.value) || "all";
-      const label = scope === "tanyu" ? "探域同步页" : (scope === "pdd" ? "拼多多同步页" : "同步页");
+      const label = scope === "tanyu" ? "探域同步页" : (scope === "pdd" ? "拼多多同步页" : (scope === "monthly" ? "月度同步页" : (scope === "pddmonthly" ? "拼多多月度同步页" : "同步页")));
       closeSyncModal();
       openLocal(SYNC_URLS.sync + "?scope=" + scope, label);
     });
@@ -1673,25 +1673,54 @@ function bindEvents() {
     const libMap = {};
     cloudShops.forEach((s) => { libMap[s.id] = s.name; });
     const rows = Object.keys(data).map((id) => ({ id, name: libMap[id] || id, ...data[id] }));
-    rows.sort((a, b) => (b.sale || 0) - (a.sale || 0));
+    // 按店铺库顺序排序(与「月度汇总」视图一致, 不按销售额)
+    const shopOrder = {};
+    cloudShops.forEach((s, i) => { shopOrder[s.id] = i; });
+    rows.sort((a, b) => (shopOrder[a.id] !== undefined ? shopOrder[a.id] : 999) - (shopOrder[b.id] !== undefined ? shopOrder[b.id] : 999));
+    // 拼多多侧月度: 优先用同步抓取的 monthly[month].pdd (拼多多网站口径), 否则回退云端日数据月均
+    // pdd = { replyRate: xls月均, expScore: 当月抓取值 }; 转化率用云端 conversionRate (探域/拼多多询单转化率同源)
+    const pddFields = [
+      { key: "conversionRate", label: "转化率" },
+      { key: "threeMinReplyRate", label: "回复率" },
+      { key: "experienceScore", label: "体验分" }
+    ];
+    const monthPrefix = monthlyMonth + "-";
+    const dim = new Date(Number(monthlyMonth.slice(0, 4)), Number(monthlyMonth.slice(5, 7)), 0).getDate();
+    rows.forEach((r) => {
+      pddFields.forEach((f) => {
+        const vals = [];
+        for (let d = 1; d <= dim; d++) {
+          const dateKey = monthPrefix + String(d).padStart(2, "0");
+          const sd = cloudDays[dateKey] && cloudDays[dateKey].shopData && cloudDays[dateKey].shopData[r.id];
+          const v = sd && sd[f.key];
+          if (v !== undefined && v !== null && String(v) !== "") vals.push(parseFloat(v));
+        }
+        r[f.key] = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 100) / 100 : null;
+      });
+      // 用拼多多网站口径覆盖(同步"拼多多月度"后写入)
+      if (r.pdd) {
+        if (r.pdd.replyRate !== null && r.pdd.replyRate !== undefined) r.threeMinReplyRate = r.pdd.replyRate;
+        if (r.pdd.expScore !== null && r.pdd.expScore !== undefined) r.experienceScore = r.pdd.expScore;
+      }
+    });
     if (!rows.length) {
       rowsEl.innerHTML = `<div class="m-empty">该月暂无店铺数据</div>`;
     } else {
+      // 探域: 采纳率/生成率/风控率 | 拼多多: 询单转化率/3分钟回复率/商家体验分
       rowsEl.innerHTML = rows.map((r) => {
         const riskCls = r.riskRate !== null && r.riskRate >= 25 ? " m-risk" : "";
         const adoptCls = r.adoptRate !== null && r.adoptRate < 30 ? " m-warn" : "";
+        const expCls = r.experienceScore !== null && r.experienceScore < 3 ? " m-warn" : "";
         return `<div class="m-cell m-shop">${esc(r.name)}</div>
-          <div class="m-cell m-num">${fmtNum(r.sale)}</div>
-          <div class="m-cell m-num">${fmtInt(r.adoptCnt)}<small class="m-sub">${fmtInt(r.adoptAuto)}/${fmtInt(r.adoptManual)}</small></div>
-          <div class="m-cell m-num">${fmtInt(r.riskCnt)}</div>
           <div class="m-cell m-num${adoptCls}">${fmtPct(r.adoptRate)}</div>
           <div class="m-cell m-num">${fmtPct(r.genRate)}</div>
           <div class="m-cell m-num${riskCls}">${fmtPct(r.riskRate)}</div>
-          <div class="m-cell m-num">${fmtPct(r.replyRate)}</div>
-          <div class="m-cell m-num">${r.genTime === null || r.genTime === undefined ? "--" : r.genTime + "s"}</div>`;
+          <div class="m-cell m-num">${fmtPct(r.conversionRate)}</div>
+          <div class="m-cell m-num">${fmtPct(r.threeMinReplyRate)}</div>
+          <div class="m-cell m-num${expCls}">${r.experienceScore === null || r.experienceScore === undefined ? "--" : r.experienceScore}</div>`;
       }).join("");
     }
-    if (hint) hint.textContent = `${monthlyMonth} · ${rows.length} 家店铺 · 采纳率/生成率/风控率 = 计数 ÷ 总事件数（与探域页面一致）`;
+    if (hint) hint.textContent = `${monthlyMonth} · ${rows.length} 家店铺 · 采纳率/生成率/风控率=计数÷总事件数(探域) · 转化率/回复率/体验分=日数据月均(拼多多)`;
   }
   if (monthlyModal) {
     monthlyModal.addEventListener("click", (e) => {

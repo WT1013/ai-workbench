@@ -604,11 +604,11 @@ html, body { overflow-x: hidden; }
 .monthly-tab.active { background: var(--accent-400); border-color: var(--accent-400); color: var(--accent-foreground); font-weight: 600; }
 /* 表格区: 固定高度+overflow, 不用 flex column 避免 wrap 被压缩 */
 .monthly-table-wrap { overflow: auto; height: 460px; border: 1px solid var(--line); border-radius: 12px; }
-/* 用 CSS Grid 9 列布局渲染月度数据(规避 table + sticky + table-layout:fixed 在某些场景下 tr 高度为 0 的渲染问题) */
+/* 用 CSS Grid 7 列布局(探域3率 + 拼多多3指标) */
 .monthly-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1.1fr .8fr .7fr .7fr .7fr .8fr .7fr;
-  min-width: 760px;
+  grid-template-columns: 1.7fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  min-width: 860px;
   font-size: 12.5px;
 }
 .monthly-grid .m-head {
@@ -625,7 +625,7 @@ html, body { overflow-x: hidden; }
   color: var(--text); font-variant-numeric: tabular-nums;
   min-height: 22px;
 }
-.monthly-grid > .m-cell:nth-child(9n+1) { text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.monthly-grid > .m-cell:nth-child(7n+1) { text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .monthly-grid .m-num .m-sub { color: var(--muted); font-size: 10.5px; margin-left: 3px; }
 .monthly-grid .m-cell:hover { background: var(--panel-soft); }
 .monthly-rows { display: contents; } /* grid 容器, 子项直接参与 grid */
