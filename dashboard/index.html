@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260821q" />
-    <link rel="stylesheet" href="workbench.css?v=20260821q" />
+    <link rel="stylesheet" href="styles.css?v=20260821r" />
+    <link rel="stylesheet" href="workbench.css?v=20260821r" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -84,6 +84,7 @@
             </div>
             <button id="materialSettingsBtn" class="round-btn filter-btn active" data-open-material aria-label="打开四张流体卡片设置" aria-controls="materialOverlay" aria-expanded="false" title="四张流体卡片设置"><svg><use href="#i-filter"/></svg></button>
             <button class="round-btn" aria-label="提醒"><svg><use href="#i-mail"/></svg></button>
+            <button class="scan-btn" id="monthlyBtn"><svg><use href="#i-calendar"/></svg><span>月度统计</span></button>
             <button class="scan-btn" id="syncBtn"><svg><use href="#i-scan"/></svg><span>同步昨日数据</span></button>
           </div>
         </header>
@@ -415,7 +416,30 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260821q"></script>
-    <script type="module" src="app.js?v=20260821q"></script>
+    <!-- 月度数据统计弹窗（探域自然月：销售额/采纳数/拦截数/采纳率/生成率/风控率等） -->
+    <div id="monthlyModal" class="shop-modal" hidden>
+      <div class="shop-modal-mask" data-monthly-modal-close></div>
+      <div class="shop-modal-body monthly-modal-body" role="dialog" aria-modal="true" aria-labelledby="monthlyModalTitle">
+        <button class="shop-modal-close" type="button" aria-label="关闭" data-monthly-modal-close>×</button>
+        <header class="shop-modal-head">
+          <h3 id="monthlyModalTitle">月度数据统计</h3>
+          <p>探域数据罗盘 · 自然月（采纳率=采纳数/事件数，与探域页面口径一致）</p>
+        </header>
+        <div class="monthly-tabs" id="monthlyMonthTabs"></div>
+        <div class="monthly-table-wrap">
+          <div class="monthly-grid" id="monthlyGrid">
+            <div class="m-head">店铺</div><div class="m-head">销售额</div><div class="m-head">采纳数<br><small>自动/手动</small></div><div class="m-head">拦截数</div><div class="m-head">采纳率</div><div class="m-head">生成率</div><div class="m-head">风控率</div><div class="m-head">3分钟回复率</div><div class="m-head">生成时间</div>
+            <div id="monthlyRows" class="monthly-rows"></div>
+          </div>
+        </div>
+        <p class="monthly-hint" id="monthlyHint"></p>
+        <footer class="shop-modal-actions">
+          <button type="button" class="pill-btn quiet" data-monthly-modal-close>关闭</button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="workbench.js?v=20260821r"></script>
+    <script type="module" src="app.js?v=20260821r"></script>
   </body>
 </html>

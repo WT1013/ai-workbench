@@ -1641,6 +1641,67 @@ function bindEvents() {
   }
   const syncBtn = document.querySelector("#syncBtn");
   if (syncBtn) syncBtn.addEventListener("click", openSyncModal);
+
+  // ===== 月度数据统计弹窗（探域自然月：销售额/采纳数/拦截数/采纳率/生成率/风控率等） =====
+  let monthlyMonth = null;
+  const fmtNum = (v) => (v === null || v === undefined || isNaN(v) ? "--" : "¥" + Number(v).toLocaleString("zh-CN"));
+  const fmtInt = (v) => (v === null || v === undefined || isNaN(v) ? "--" : Math.round(v).toLocaleString("zh-CN"));
+  const fmtPct = (v) => (v === null || v === undefined || isNaN(v) ? "--" : (Math.round(v * 100) / 100) + "%");
+  const monthlyModal = document.querySelector("#monthlyModal");
+  const openMonthlyModal = () => {
+    if (!monthlyModal) { showToast("月度统计暂不可用"); return; }
+    monthlyModal.hidden = false;
+    renderMonthlyModal();
+  };
+  const closeMonthlyModal = () => { if (monthlyModal) monthlyModal.hidden = true; };
+  function renderMonthlyModal() {
+    const tabsEl = document.querySelector("#monthlyMonthTabs");
+    const rowsEl = document.querySelector("#monthlyRows");
+    const hint = document.querySelector("#monthlyHint");
+    if (!tabsEl || !rowsEl) return;
+    const monthly = (cloudDays.__library__ && cloudDays.__library__.monthly) || {};
+    const months = Object.keys(monthly).sort().reverse();
+    if (!months.length) {
+      tabsEl.innerHTML = "";
+      rowsEl.innerHTML = `<div class="m-empty">暂无月度统计数据 — 请在本机运行探域月度抓取脚本后同步</div>`;
+      if (hint) hint.textContent = "提示：月度统计需在本机执行 tanyu-monthly-all.js 抓取探域数据后写入云端";
+      return;
+    }
+    if (!monthlyMonth || months.indexOf(monthlyMonth) < 0) monthlyMonth = months[0];
+    tabsEl.innerHTML = months.map((m) => `<button class="monthly-tab ${m === monthlyMonth ? "active" : ""}" data-month="${m}">${m}</button>`).join("");
+    const data = monthly[monthlyMonth] || {};
+    const libMap = {};
+    cloudShops.forEach((s) => { libMap[s.id] = s.name; });
+    const rows = Object.keys(data).map((id) => ({ id, name: libMap[id] || id, ...data[id] }));
+    rows.sort((a, b) => (b.sale || 0) - (a.sale || 0));
+    if (!rows.length) {
+      rowsEl.innerHTML = `<div class="m-empty">该月暂无店铺数据</div>`;
+    } else {
+      rowsEl.innerHTML = rows.map((r) => {
+        const riskCls = r.riskRate !== null && r.riskRate >= 25 ? " m-risk" : "";
+        const adoptCls = r.adoptRate !== null && r.adoptRate < 30 ? " m-warn" : "";
+        return `<div class="m-cell m-shop">${esc(r.name)}</div>
+          <div class="m-cell m-num">${fmtNum(r.sale)}</div>
+          <div class="m-cell m-num">${fmtInt(r.adoptCnt)}<small class="m-sub">${fmtInt(r.adoptAuto)}/${fmtInt(r.adoptManual)}</small></div>
+          <div class="m-cell m-num">${fmtInt(r.riskCnt)}</div>
+          <div class="m-cell m-num${adoptCls}">${fmtPct(r.adoptRate)}</div>
+          <div class="m-cell m-num">${fmtPct(r.genRate)}</div>
+          <div class="m-cell m-num${riskCls}">${fmtPct(r.riskRate)}</div>
+          <div class="m-cell m-num">${fmtPct(r.replyRate)}</div>
+          <div class="m-cell m-num">${r.genTime === null || r.genTime === undefined ? "--" : r.genTime + "s"}</div>`;
+      }).join("");
+    }
+    if (hint) hint.textContent = `${monthlyMonth} · ${rows.length} 家店铺 · 采纳率/生成率/风控率 = 计数 ÷ 总事件数（与探域页面一致）`;
+  }
+  if (monthlyModal) {
+    monthlyModal.addEventListener("click", (e) => {
+      if (e.target.closest("[data-monthly-modal-close]")) { closeMonthlyModal(); return; }
+      const tab = e.target.closest("[data-month]");
+      if (tab) { monthlyMonth = tab.dataset.month; renderMonthlyModal(); }
+    });
+  }
+  const monthlyBtn = document.querySelector("#monthlyBtn");
+  if (monthlyBtn) monthlyBtn.addEventListener("click", openMonthlyModal);
   const openWorkbenchBtn = document.querySelector("#openWorkbenchBtn");
   if (openWorkbenchBtn) openWorkbenchBtn.addEventListener("click", () => window.open("https://wt1013.github.io/ai-workbench/", "_blank"));
   const viewReportBtn = document.querySelector("#viewReportBtn");

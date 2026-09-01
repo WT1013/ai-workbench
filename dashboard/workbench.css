@@ -591,3 +591,45 @@ html, body { overflow-x: hidden; }
   border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px;
 }
 .sync-option-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ===== 月度数据统计弹窗（探域自然月） ===== */
+.monthly-modal-body { width: 900px; max-width: 94vw; max-height: 90vh; overflow: hidden; }
+.monthly-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.monthly-tab {
+  background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+  border-radius: 999px; padding: 5px 14px; font-size: 12.5px; cursor: pointer;
+  transition: all .15s;
+}
+.monthly-tab:hover { border-color: var(--line-bright); color: var(--text); }
+.monthly-tab.active { background: var(--accent-400); border-color: var(--accent-400); color: var(--accent-foreground); font-weight: 600; }
+/* 表格区: 固定高度+overflow, 不用 flex column 避免 wrap 被压缩 */
+.monthly-table-wrap { overflow: auto; height: 460px; border: 1px solid var(--line); border-radius: 12px; }
+/* 用 CSS Grid 9 列布局渲染月度数据(规避 table + sticky + table-layout:fixed 在某些场景下 tr 高度为 0 的渲染问题) */
+.monthly-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1.1fr .8fr .7fr .7fr .7fr .8fr .7fr;
+  min-width: 760px;
+  font-size: 12.5px;
+}
+.monthly-grid .m-head {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--panel-soft); color: var(--muted);
+  font-size: 11.5px; font-weight: 600;
+  padding: 9px 10px; text-align: center;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.monthly-grid .m-head small { font-weight: 400; }
+.monthly-grid .m-cell {
+  padding: 9px 10px; text-align: center;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+  color: var(--text); font-variant-numeric: tabular-nums;
+  min-height: 22px;
+}
+.monthly-grid > .m-cell:nth-child(9n+1) { text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.monthly-grid .m-num .m-sub { color: var(--muted); font-size: 10.5px; margin-left: 3px; }
+.monthly-grid .m-cell:hover { background: var(--panel-soft); }
+.monthly-rows { display: contents; } /* grid 容器, 子项直接参与 grid */
+.monthly-rows .m-empty { padding: 26px; color: var(--muted); grid-column: 1 / -1; text-align: center; }
+.m-risk { color: #ff6b72 !important; font-weight: 700; }
+.m-warn { color: #ff9f43 !important; font-weight: 700; }
+.monthly-hint { font-size: 11.5px; color: var(--muted); margin: 10px 0 0; }
