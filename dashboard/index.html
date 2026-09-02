@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260821t" />
-    <link rel="stylesheet" href="workbench.css?v=20260821t" />
+    <link rel="stylesheet" href="styles.css?v=20260821u" />
+    <link rel="stylesheet" href="workbench.css?v=20260821u" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -383,7 +383,7 @@
         <button class="shop-modal-close" type="button" aria-label="关闭" data-sync-modal-close>×</button>
         <header class="shop-modal-head">
           <h3 id="syncModalTitle">同步昨日数据</h3>
-          <p>选择本次同步的数据来源，可单独同步探域或拼多多</p>
+          <p>仅同步每日数据（月度数据请到「月度统计」弹窗单独同步）</p>
         </header>
         <div class="sync-options" id="syncOptions">
           <label class="sync-option active">
@@ -407,20 +407,6 @@
               <span class="sync-option-desc">服务体验分 / 3分钟回复率</span>
             </span>
           </label>
-          <label class="sync-option">
-            <input type="radio" name="syncScope" value="monthly">
-            <span class="sync-option-body">
-              <span class="sync-option-title">同步月度数据</span>
-              <span class="sync-option-desc">探域自然月：销售额 / 采纳数 / 拦截数 / 采纳率 / 生成率 / 风控率（默认上月整月，约 5-8 分钟）</span>
-            </span>
-          </label>
-          <label class="sync-option">
-            <input type="radio" name="syncScope" value="pddmonthly">
-            <span class="sync-option-body">
-              <span class="sync-option-title">同步拼多多月度</span>
-              <span class="sync-option-desc">拼多多：询单转化率 / 3分钟回复率 / 商家体验分（默认上月整月，跑拼多多抓取后按月汇总）</span>
-            </span>
-          </label>
         </div>
         <p class="shop-modal-hint">需要本地同步服务已启动（10.10.12.157:8080），同步过程中请勿关闭页面</p>
         <footer class="shop-modal-actions">
@@ -438,6 +424,7 @@
         <header class="shop-modal-head">
           <h3 id="monthlyModalTitle">月度数据统计</h3>
           <p>探域数据罗盘 · 自然月（采纳率=采纳数/事件数，与探域页面口径一致）</p>
+          <p class="shop-modal-hint">月度数据仅在本弹窗点击下方「同步」后才会更新，日常同步不会触碰</p>
         </header>
         <div class="monthly-tabs" id="monthlyMonthTabs"></div>
         <div class="monthly-table-wrap">
@@ -449,11 +436,13 @@
         <p class="monthly-hint" id="monthlyHint"></p>
         <footer class="shop-modal-actions">
           <button type="button" class="pill-btn quiet" data-monthly-modal-close>关闭</button>
+          <button type="button" class="pill-btn primary" data-sync-pddmonthly>同步拼多多月度</button>
+          <button type="button" class="pill-btn primary" data-sync-monthly>同步探域月度</button>
         </footer>
       </div>
     </div>
 
-    <script src="workbench.js?v=20260821t"></script>
-    <script type="module" src="app.js?v=20260821t"></script>
+    <script src="workbench.js?v=20260821u"></script>
+    <script type="module" src="app.js?v=20260821u"></script>
   </body>
 </html>

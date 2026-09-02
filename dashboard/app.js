@@ -1634,11 +1634,20 @@ function bindEvents() {
     if (syncConfirm) syncConfirm.addEventListener("click", () => {
       const checked = syncModal.querySelector("input[name=syncScope]:checked");
       const scope = (checked && checked.value) || "all";
-      const label = scope === "tanyu" ? "探域同步页" : (scope === "pdd" ? "拼多多同步页" : (scope === "monthly" ? "月度同步页" : (scope === "pddmonthly" ? "拼多多月度同步页" : "同步页")));
+      const label = scope === "tanyu" ? "探域同步页" : (scope === "pdd" ? "拼多多同步页" : "同步页");
       closeSyncModal();
       openLocal(SYNC_URLS.sync + "?scope=" + scope, label);
     });
   }
+  // 月度弹窗内的同步入口（唯一入口：月度数据只在点击后同步）
+  const monthlySyncBtns = document.querySelectorAll("#monthlyModal [data-sync-monthly], #monthlyModal [data-sync-pddmonthly]");
+  monthlySyncBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const scope = btn.getAttribute("data-sync-monthly") !== null ? "monthly" : "pddmonthly";
+      const label = scope === "monthly" ? "探域月度同步页" : "拼多多月度同步页";
+      openLocal(SYNC_URLS.sync + "?scope=" + scope, label);
+    });
+  });
   const syncBtn = document.querySelector("#syncBtn");
   if (syncBtn) syncBtn.addEventListener("click", openSyncModal);
 
