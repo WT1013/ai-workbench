@@ -444,6 +444,7 @@
     var metrics4 = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
+      { key: "riskRate", label: "风控率" },
       { key: "conversionRate", label: "转化率" },
       { key: "pureAgentRatio", label: "纯智能体占比" }
     ];
@@ -464,8 +465,8 @@
     var tableHtml =
       '<div class="wb-report-card">' +
       '<h3>一、重点店铺核心指标（数据截止 ' + key + '）</h3>' +
-      '<div class="wb-table-wrap"><table class="wb-report-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th><th>纯智能体占比</th></tr></thead><tbody>' +
-      (shopRows || '<tr><td colspan="5" style="color:var(--muted)">今日暂无店铺数据，请先同步</td></tr>') +
+      '<div class="wb-table-wrap"><table class="wb-report-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>风控率</th><th>转化率</th><th>纯智能体占比</th></tr></thead><tbody>' +
+      (shopRows || '<tr><td colspan="6" style="color:var(--muted)">今日暂无店铺数据，请先同步</td></tr>') +
       '</tbody></table></div></div>';
     var block = function (title, field, placeholder) {
       var val = draft[field] !== undefined ? draft[field] : "";
@@ -502,6 +503,7 @@
     var metrics4 = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
+      { key: "riskRate", label: "风控率" },
       { key: "conversionRate", label: "转化率" },
       { key: "pureAgentRatio", label: "纯智能体占比" }
     ];
@@ -534,7 +536,7 @@
 
   function exportCsv() {
     var key = lastReportKey();
-    var rows = [["店铺", "采纳率%", "生成率%", "转化率%", "纯智能体占比%"]];
+    var rows = [["店铺", "采纳率%", "生成率%", "风控率%", "转化率%", "纯智能体占比%"]];
     shopLibrary.slice().sort(function (a, b) {
       var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
       var kb = KEY_SHOPS.indexOf(b.name) >= 0 ? 1 : 0;
@@ -544,6 +546,7 @@
         shop.name,
         shopMetricVal(key, shop.id, "adoptionRate") === null ? "" : shopMetricVal(key, shop.id, "adoptionRate"),
         shopMetricVal(key, shop.id, "generationRate") === null ? "" : shopMetricVal(key, shop.id, "generationRate"),
+        shopMetricVal(key, shop.id, "riskRate") === null ? "" : shopMetricVal(key, shop.id, "riskRate"),
         shopMetricVal(key, shop.id, "conversionRate") === null ? "" : shopMetricVal(key, shop.id, "conversionRate"),
         shopMetricVal(key, shop.id, "pureAgentRatio") === null ? "" : shopMetricVal(key, shop.id, "pureAgentRatio")
       ]);
@@ -596,6 +599,7 @@
     var metrics4 = [
       { key: "adoptionRate", label: "采纳率" },
       { key: "generationRate", label: "生成率" },
+      { key: "riskRate", label: "风控率" },
       { key: "conversionRate", label: "转化率" },
       { key: "pureAgentRatio", label: "纯智能体占比" }
     ];
@@ -605,7 +609,7 @@
       prev.setDate(prev.getDate() - 1);
       prevKey = toKey(prev);
     }
-    // 行渲染：店名 + 4 指标 + 环比（对齐老版 shot-table）
+    // 行渲染：店名 + 5 指标 + 环比（对齐老版 shot-table）
     var rows = "";
     var todoItems = [];
     shops.forEach(function (shop) {
@@ -650,7 +654,8 @@
     if (todoItems.length) {
       todoHtml = '<div class="shot-todo-grid">' + todoItems.map(function (item) {
         var worstTxt = item.worst.label === "转化率" ? "优先调优转化话术" :
-          (item.worst.label === "生成率" ? "优先调优生成话术" : "优先调优采纳话术");
+          (item.worst.label === "生成率" ? "优先调优生成话术" :
+          (item.worst.label === "风控率" ? "复核高风险拦截配置" : "优先调优采纳话术"));
         return '<div class="shot-todo-item"><div class="shot-todo-tag">' + esc(item.name) + '</div>' +
           '<div class="shot-todo-detail">' + esc(item.detail) + '</div>' +
           (item.worst.diff >= 3 ? '<div class="shot-todo-priority">' + worstTxt + '</div>' : '') +
@@ -678,8 +683,8 @@
       '<div class="shot-body"><div class="shot-layout">' +
         '<div class="shot-card">' +
           '<div class="shot-card-top"><div class="shot-card-head">重点店铺核心指标</div><div class="shot-note">数据截至 ' + key + '（昨日）</div></div>' +
-          '<table class="shot-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>转化率</th><th>纯智能体占比</th></tr></thead><tbody>' +
-          (rows || '<tr><td colspan="5" style="text-align:center;color:#9aa19b">暂无数据</td></tr>') +
+          '<table class="shot-table"><thead><tr><th>店铺</th><th>采纳率</th><th>生成率</th><th>风控率</th><th>转化率</th><th>纯智能体占比</th></tr></thead><tbody>' +
+          (rows || '<tr><td colspan="6" style="text-align:center;color:#9aa19b">暂无数据</td></tr>') +
           '</tbody></table>' +
         '</div>' +
         '<div class="shot-layout-right">' +
