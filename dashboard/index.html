@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260821w" />
-    <link rel="stylesheet" href="workbench.css?v=20260821w" />
+    <link rel="stylesheet" href="styles.css?v=20260821x" />
+    <link rel="stylesheet" href="workbench.css?v=20260821x" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -57,6 +57,7 @@
           <button class="nav-item" data-view="report" title="日报生成/复制下载图片"><svg><use href="#i-list"/></svg><span>日报表格</span></button>
           <button class="nav-item" data-view="shops" title="店铺库/每日数据/月度汇总"><svg><use href="#i-columns"/></svg><span>店铺库</span></button>
           <button class="nav-item" data-view="summary" title="单店历史趋势/多店指标对比"><svg><use href="#i-link"/></svg><span>数据总览</span></button>
+          <button class="nav-item" data-view="groups" title="在售未绑商品 · 每日巡检待绑清单"><svg><use href="#i-columns"/></svg><span>待绑商品</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync"><svg><use href="#i-spark"/></svg><span>同步昨日数据</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/fill-dingtalk"><svg><use href="#i-list"/></svg><span>同步钉钉表格</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync-workshop"><svg><use href="#i-spark"/></svg><span>同步打标数据</span></button>
@@ -265,6 +266,34 @@
             </div>
           </div>
         </section>
+
+        <section id="groupsView" class="workbench-view panel" hidden>
+          <header class="workbench-head">
+            <div class="section-heading"><h2>待绑商品</h2><span id="groupsMeta">在售未绑分组 · 每日巡检清单（只读）</span></div>
+            <div class="workbench-toolbar">
+              <button id="groupsRefreshBtn" class="pill-btn quiet" aria-label="刷新清单">↻ 刷新</button>
+              <input id="groupsSearchInput" class="wb-search-input" placeholder="搜索标题/店铺/商品名">
+            </div>
+          </header>
+          <div class="shop-tabs" id="groupsTabs">
+            <button class="gtab-btn active" data-gtab="bindable">🟢 可直绑</button>
+            <button class="gtab-btn" data-gtab="pending">🟡 待拍板</button>
+            <button class="gtab-btn" data-gtab="dirty">🔴 脏组</button>
+            <button class="gtab-btn" data-gtab="newgroup">⚪ 需建新组</button>
+          </div>
+          <div id="groupsTableWrap" class="groups-table-wrap">
+            <div id="groupsEmpty" class="groups-empty">暂无数据 · 点击右上角「刷新」加载每日巡检清单</div>
+            <table id="groupsTable" class="groups-table" hidden>
+              <thead>
+                <tr>
+                  <th>店铺</th><th>探域ID</th><th>标题</th><th>7天热度</th><th>30天热度</th><th>真实商品名</th><th>建议归属</th>
+                </tr>
+              </thead>
+              <tbody id="groupsBody"></tbody>
+            </table>
+          </div>
+          <footer class="groups-foot"><span id="groupsCount"></span></footer>
+        </section>
       </section>
 
       <aside class="details-panel panel">
@@ -442,7 +471,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260821w"></script>
-    <script type="module" src="app.js?v=20260821w"></script>
+    <script src="workbench.js?v=20260821x"></script>
+    <script type="module" src="app.js?v=20260821x"></script>
   </body>
 </html>

@@ -331,17 +331,18 @@ function setDashboardMode(mode) {
     today: document.querySelector("#todayView"),
     report: document.querySelector("#reportView"),
     shops: document.querySelector("#shopsView"),
-    summary: document.querySelector("#summaryView")
+    summary: document.querySelector("#summaryView"),
+    groups: document.querySelector("#groupsView")
   };
   // 隐藏所有工作台内置视图
   Object.keys(wbViews).forEach((k) => { if (wbViews[k]) wbViews[k].hidden = true; });
   if (monthlyView) monthlyView.hidden = true;
   // dashboard 内容显隐: dashboard=全部; monthly=保留指标卡; 工作台视图=隐藏
-  if (metricGrid) metricGrid.style.display = (mode === "today" || mode === "report" || mode === "shops") ? "none" : "";
+  if (metricGrid) metricGrid.style.display = (mode === "today" || mode === "report" || mode === "shops" || mode === "groups") ? "none" : "";
   if (workspaceGrid) workspaceGrid.style.display = (mode === "dashboard") ? "" : "none";
   if (shell) {
     shell.classList.toggle("monthly-mode", mode === "monthly");
-    shell.classList.toggle("workbench-mode", mode === "today" || mode === "report" || mode === "shops" || mode === "summary");
+    shell.classList.toggle("workbench-mode", mode === "today" || mode === "report" || mode === "shops" || mode === "summary" || mode === "groups");
   }
 
   if (mode === "monthly") {
@@ -353,6 +354,7 @@ function setDashboardMode(mode) {
     else if (mode === "report" && typeof window.wbRenderReport === "function") window.wbRenderReport();
     else if (mode === "shops" && typeof window.wbRenderShops === "function") window.wbRenderShops();
     else if (mode === "summary" && typeof window.wbRenderSummary === "function") window.wbRenderSummary();
+    else if (mode === "groups" && typeof window.wbRenderGroups === "function") window.wbRenderGroups();
   }
   document.querySelectorAll('.primary-nav .nav-item[data-view]').forEach((b) => {
     b.classList.toggle("active", b.dataset.view === mode);

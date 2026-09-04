@@ -1356,6 +1356,136 @@
   window.wbRenderReport = wbRenderReport;
   window.wbRenderShops = wbRenderShops;
   window.wbRenderSummary = wbRenderSummary;
+
+  /* ---------- 待绑商品视图(形态A只读) ---------- */
+  var GROUPS_HOST = "http://10.10.12.157:8080";
+  var groupsCache = null;        // { meta, list }
+  var groupsTab = "bindable";
+  var groupsQuery = "";
+  var groupsBound = false;
+  var groupsLoading = false;
+
+  function groupsLoad() {
+    if (groupsLoading) { return Promise.resolve(); }
+    groupsLoading = true;
+    var el = $id("groupsMeta");
+    if (el) { el.textContent = "加载中…"; }
+    return fetch(GROUPS_HOST + "/tanyu-groups?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        groupsCache = res || { meta: {}, list: [] };
+        groupsLoading = false;
+        if (el) {
+          var m = groupsCache.meta || {};
+          el.textContent = (m.generatedAt ? ("生成 " + m.generatedAt + " · ") : "") + (m.total != null ? ("共 " + m.total + " 条") : "每日巡检清单（只读）");
+        }
+        renderGroupsTable();
+      })
+      .catch(function () {
+        groupsLoading = false;
+        groupsCache = null;
+        if (el) { el.textContent = "加载失败 · 请确认同步服务(10.10.12.157:8080)已启动"; }
+        showGroupsEmpty("加载失败 · 同步服务未启动或无清单数据");
+      });
+  }
+
+  function groupsSectionOf(r) {
+    if (r.section) { return r.section; }
+    var g = (r.suggestedGroup || r.targetGroup || "").toLowerCase();
+    var nm = (r.name || r.realName || "").toLowerCase();
+    if (r.bindable === true || r.zone === "green") { return "bindable"; }
+    if (/dirty|脏|残括|未闭合/.test(g + " " + nm)) { return "dirty"; }
+    if (r.zone === "white" || /需建|新组|无既有组|无匹配|待建/.test(g + " " + nm)) { return "newgroup"; }
+    return "pending";
+  }
+
+  function groupsCounts() {
+    var c = { bindable: 0, pending: 0, dirty: 0, newgroup: 0 };
+    var list = (groupsCache && groupsCache.list) || [];
+    list.forEach(function (r) { var s = groupsSectionOf(r); if (c[s] == null) { c[s] = 0; } c[s]++; });
+    return c;
+  }
+
+  function bindGroupsEvents() {
+    if (groupsBound) { return; }
+    groupsBound = true;
+    var tabs = document.querySelectorAll("#groupsTabs .gtab-btn");
+    Array.prototype.forEach.call(tabs, function (t) {
+      t.addEventListener("click", function () {
+        groupsTab = t.dataset.gtab;
+        Array.prototype.forEach.call(tabs, function (x) { x.classList.toggle("active", x === t); });
+        renderGroupsTable();
+      });
+    });
+    var si = $id("groupsSearchInput");
+    if (si) {
+      si.addEventListener("input", function () { groupsQuery = si.value.trim().toLowerCase(); renderGroupsTable(); });
+    }
+    var rb = $id("groupsRefreshBtn");
+    if (rb) { rb.addEventListener("click", function () { groupsLoad(); }); }
+  }
+
+  function showGroupsEmpty(msg) {
+    var e = $id("groupsEmpty");
+    var t = $id("groupsTable");
+    if (e) { e.hidden = false; e.textContent = msg || "暂无数据"; }
+    if (t) { t.hidden = true; }
+    var fc = $id("groupsCount");
+    if (fc) { fc.textContent = ""; }
+  }
+
+  function renderGroupsTable() {
+    bindGroupsEvents();
+    var empty = $id("groupsEmpty");
+    var table = $id("groupsTable");
+    var body = $id("groupsBody");
+    var count = $id("groupsCount");
+    var list = (groupsCache && groupsCache.list) || [];
+    if (!list.length) {
+      showGroupsEmpty("暂无数据 · 点击右上角「刷新」加载每日巡检清单");
+      return;
+    }
+    var q = groupsQuery;
+    var filtered = list.filter(function (r) {
+      if (groupsSectionOf(r) !== groupsTab) { return false; }
+      if (!q) { return true; }
+      return ((r.title || "") + " " + (r.shop || "") + " " + (r.name || "") + " " + (r.suggestedGroup || "")).toLowerCase().indexOf(q) >= 0;
+    });
+    var counts = groupsCounts();
+    if (empty) { empty.hidden = true; }
+    if (table) { table.hidden = false; }
+    if (count) {
+      count.textContent = "当前区 " + filtered.length + " 条 ｜ 可直绑 " + counts.bindable + " · 待拍板 " + counts.pending + " · 脏组 " + counts.dirty + " · 需建新组 " + counts.newgroup;
+    }
+    if (!body) { return; }
+    if (!filtered.length) {
+      body.innerHTML = "";
+      showGroupsEmpty(q ? "无匹配结果" : "当前区暂无商品");
+      return;
+    }
+    body.innerHTML = filtered.map(function (r) {
+      var h7 = r.heat7 != null ? r.heat7 : (r.heat7d != null ? r.heat7d : "");
+      var h30 = r.heat30 != null ? r.heat30 : (r.heat30d != null ? r.heat30d : "");
+      return "<tr>" +
+        "<td>" + esc(r.shop || "") + "</td>" +
+        '<td class="g-id">' + esc(r.id || r.spuId || "") + "</td>" +
+        '<td title="' + esc(r.title || "") + '">' + esc(r.title || "") + "</td>" +
+        "<td>" + esc(h7) + "</td>" +
+        "<td>" + esc(h30) + "</td>" +
+        "<td>" + esc(r.name || r.realName || "") + "</td>" +
+        "<td>" + esc(r.suggestedGroup || r.targetGroup || "") + "</td>" +
+        "</tr>";
+    }).join("");
+  }
+
+  function wbRenderGroups() {
+    bindGroupsEvents();
+    if (!groupsCache) { groupsLoad(); return; }
+    renderGroupsTable();
+  }
+
+  window.wbRenderGroups = wbRenderGroups;
+
   window.wbRefresh = function () { wbReady = false; wbInit(); };
   window.addEventListener("DOMContentLoaded", wbInit);
   if (document.readyState !== "loading") { wbInit(); }
