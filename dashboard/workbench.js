@@ -48,9 +48,8 @@
     { key: "threeMinReplyRate", label: "3分钟人工回复率 %" }
   ];
 
-  var KEY_SHOPS = [
-    "松迅医疗器械专营店", "祥佳健康企业店", "PANAPOPO居家官方旗舰店", "PANAPOPO旗舰店（众创）"
-  ];
+  // 重点店铺 = 店铺库 shop.key === true（在「店铺库」界面勾选，持久化到云端 __library__.shops[i].key）
+  // 旧硬编码 KEY_SHOPS 已废弃，全部统一读 shop.key。
 
   var DEFAULT_SHOPS = [
     "松迅医疗器械专营店", "祥佳健康企业店", "PANAPOPO居家官方旗舰店", "PANAPOPO旗舰店（众创）",
@@ -437,8 +436,8 @@
     var draft = reportDraft()[key] || {};
     var shopRows = "";
     var shops = shopLibrary.slice().sort(function (a, b) {
-      var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
-      var kb = KEY_SHOPS.indexOf(b.name) >= 0 ? 1 : 0;
+      var ka = a && a.key === true ? 1 : 0;
+      var kb = b && b.key === true ? 1 : 0;
       return kb - ka;
     }).filter(shopKey);
     var metrics4 = [
@@ -460,7 +459,7 @@
         var pv = shopMetricVal(prevKey, shop.id, m.key);
         return '<td>' + pct(v) + ' ' + deltaText(pv, v) + '</td>';
       }).join("");
-      shopRows += '<tr><td>' + esc(shop.name) + (KEY_SHOPS.indexOf(shop.name) >= 0 ? ' <span class="shop-key-badge">重点</span>' : '') + '</td>' + cells + '</tr>';
+      shopRows += '<tr><td>' + esc(shop.name) + (shop.key === true ? ' <span class="shop-key-badge">重点</span>' : '') + '</td>' + cells + '</tr>';
     });
     var tableHtml =
       '<div class="wb-report-card">' +
@@ -496,8 +495,8 @@
     lines.push("【" + key + " 日报】");
     lines.push("一、重点店铺核心指标");
     var shops = shopLibrary.slice().sort(function (a, b) {
-      var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
-      var kb = KEY_SHOPS.indexOf(b.name) >= 0 ? 1 : 0;
+      var ka = a && a.key === true ? 1 : 0;
+      var kb = b && b.key === true ? 1 : 0;
       return kb - ka;
     }).filter(shopKey);
     var metrics4 = [
@@ -538,8 +537,8 @@
     var key = lastReportKey();
     var rows = [["店铺", "采纳率%", "生成率%", "风控率%", "转化率%", "纯智能体占比%"]];
     shopLibrary.slice().sort(function (a, b) {
-      var ka = KEY_SHOPS.indexOf(a.name) >= 0 ? 1 : 0;
-      var kb = KEY_SHOPS.indexOf(b.name) >= 0 ? 1 : 0;
+      var ka = a && a.key === true ? 1 : 0;
+      var kb = b && b.key === true ? 1 : 0;
       return kb - ka;
     }).filter(shopKey).forEach(function (shop) {
       rows.push([
@@ -713,7 +712,7 @@
   }
 
   /* ---------- 店铺库视图 ---------- */
-  function shopKey(shop) { return KEY_SHOPS.indexOf(shop.name) >= 0; }
+  function shopKey(shop) { return shop && shop.key === true; }
 
   function renderRoster() {
     var view = $id("shopRosterView");
@@ -730,9 +729,11 @@
     }
     var key = currentDateKey || todayKey();
     view.innerHTML = '<div class="shop-card-grid">' + shown.map(function (shop) {
-      return '<div class="shop-card' + (shopKey(shop) ? " key-shop" : "") + '" data-shop-id="' + esc(shop.id) + '">' +
+      var isKey = shopKey(shop);
+      return '<div class="shop-card' + (isKey ? " key-shop" : "") + '" data-shop-id="' + esc(shop.id) + '">' +
         '<div class="shop-card-head"><span class="wb-shop-name">' + esc(shop.name) + '</span>' +
-        (shopKey(shop) ? '<span class="shop-key-badge">重点</span>' : '') + '</div>' +
+        '<button class="shop-key-toggle' + (isKey ? " on" : "") + '" data-action="toggle-key" title="点击切换是否为重点店铺">' +
+        (isKey ? "★ 重点" : "☆ 重点") + '</button></div>' +
         '<div class="shop-card-meta"><span>负责人：' + esc(shop.owner || "—") + '</span></div>' +
         '<div class="shop-card-actions">' +
         '<button class="pill-btn quiet sync-shop-btn" data-action="sync-shop" title="单独同步该店铺的探域数据(最近3天)">同步 ↻</button>' +
@@ -1243,7 +1244,11 @@
         var shopId = card && card.dataset.shopId;
         var shop = shopLibrary.filter(function (s) { return s.id === shopId; })[0];
         var action = btn.dataset.action;
-        if (action === "edit-shop" && shop) {
+        if (action === "toggle-key" && shop) {
+          shop.key = shop.key === true ? false : true;
+          wbSave(true);
+          renderRoster();
+        } else if (action === "edit-shop" && shop) {
           var name = prompt("店铺名称：", shop.name);
           if (name !== null && name.trim()) { shop.name = name.trim(); wbSave(true); renderRoster(); }
         } else if (action === "daily-shop" && shop) {
