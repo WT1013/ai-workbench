@@ -221,6 +221,11 @@ let monthlyMetric = "adoptionRate";
 let monthlyYear = 2026;
 let monthlyMonth = 7; // 0-based, 8月
 
+/* 重点店铺(key===true)置顶，其余保持原顺序（与「店铺库」列表一致） */
+function shopsKeyFirst(list) {
+  return list.slice().sort((a, b) => (b.key === true ? 1 : 0) - (a.key === true ? 1 : 0));
+}
+
 function pctSuffix(metric) {
   return metric === "experienceScore" ? "" : "%";
 }
@@ -303,7 +308,7 @@ function renderMonthlyTable() {
 
   const monthPrefix = `${monthlyYear}-${String(monthlyMonth + 1).padStart(2, "0")}`;
   let bodyHtml = "";
-  cloudShops.forEach((shop) => {
+  shopsKeyFirst(cloudShops).forEach((shop) => {
     const isKey = shop.key === true;
     const values = [];
     let cells = "";
@@ -1684,9 +1689,9 @@ function bindEvents() {
     const libMap = {};
     cloudShops.forEach((s) => { libMap[s.id] = s.name; });
     const rows = Object.keys(data).map((id) => ({ id, name: libMap[id] || id, ...data[id] }));
-    // 按店铺库顺序排序(与「月度汇总」视图一致, 不按销售额)
+    // 按店铺库顺序排序(重点店铺置顶, 与「月度汇总」视图一致, 不按销售额)
     const shopOrder = {};
-    cloudShops.forEach((s, i) => { shopOrder[s.id] = i; });
+    shopsKeyFirst(cloudShops).forEach((s, i) => { shopOrder[s.id] = i; });
     rows.sort((a, b) => (shopOrder[a.id] !== undefined ? shopOrder[a.id] : 999) - (shopOrder[b.id] !== undefined ? shopOrder[b.id] : 999));
     // 拼多多侧月度: 优先用同步抓取的 monthly[month].pdd (拼多多网站口径), 否则回退云端日数据月均
     // pdd = { replyRate: xls月均, expScore: 当月抓取值 }; 转化率用云端 conversionRate (探域/拼多多询单转化率同源)
