@@ -590,6 +590,36 @@
 
   /* ---------- 日报弹窗（参考老版日报绿色主题）---------- */
   // 生成老版日报示意图 HTML（弹窗 + 复制/下载图片共用）
+  // 日报长文本排版: 优先按用户换行分段 → 再按句末标点(。；!?！？) → 最后按逗号(长流水账)
+  // 切出多条且长度合理才渲染为带圆点的列表(缓解整段文字堆积感), 否则原样输出
+  // plain=true: 强制按「一整段」输出(不分点), 只保留用户自己的换行(pre-wrap)
+  function fmtShotText(txt, plain) {
+    var t = String(txt == null ? "" : txt).trim();
+    if (!t) { return "（无）"; }
+    if (plain) { return esc(t); }
+    var splitBy = function (str, re) {
+      return (str.match(re) || []).map(function (s) { return s.trim(); }).filter(Boolean);
+    };
+    var render = function (parts) {
+      return '<ul class="shot-text-list">' + parts.map(function (p) {
+        return "<li>" + esc(p.replace(/[，,、]+$/, "").trim()) + "</li>";
+      }).join("") + "</ul>";
+    };
+    // 1) 用户换行
+    var parts = t.split(/\r?\n+/).map(function (s) {
+      return s.replace(/^[\s·•\-\u2013\u2014]+/, "").trim();
+    }).filter(Boolean);
+    // 2) 句末标点
+    if (parts.length <= 1) { parts = splitBy(t, /[^。；;!?！？]+[。；;!?！？]?/g); }
+    if (parts.length >= 2 && t.length / parts.length >= 6) { return render(parts); }
+    // 3) 逗号/顿号(整段既无换行也无句末标点时, 把长流水账拆成条目; 条目过多或过短则保持原样)
+    if (parts.length <= 1) {
+      var p3 = splitBy(t, /[^，,、]+[，,、]?/g);
+      var avg3 = p3.length ? t.length / p3.length : 0;
+      if (p3.length >= 2 && p3.length <= 10 && avg3 >= 8) { return render(p3); }
+    }
+    return esc(t);
+  }
   function buildReportShotHtml() {
     var key = lastReportKey();
     var day = state.days[key] || {};
@@ -688,9 +718,9 @@
         '</div>' +
         '<div class="shot-layout-right">' +
           '<div class="shot-card flex1"><div class="shot-card-head">当日配置总结</div>' +
-            '<div class="shot-text">' + (summaryTxt ? esc(summaryTxt) : "（无）") + '</div></div>' +
+            '<div class="shot-text">' + fmtShotText(summaryTxt) + '</div></div>' +
           '<div class="shot-card flex1"><div class="shot-card-head">问题反馈</div>' +
-            '<div class="shot-text">' + (feedbackTxt ? esc(feedbackTxt) : "（无）") + '</div></div>' +
+            '<div class="shot-text shot-text-para">' + fmtShotText(feedbackTxt, true) + '</div></div>' +
         '</div>' +
       '</div>' +
       '<div class="shot-todo-card"><div class="shot-card-head">明日待办 · 调优重点</div>' + todoHtml + tomorrowUserHtml + '</div>' +
