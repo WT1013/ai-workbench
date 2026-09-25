@@ -825,6 +825,26 @@ html[data-theme-resolved="light"] .material-actions button.primary { color: var(
   cursor: pointer;
 }
 .notice-action:hover { background: rgba(255, 180, 84, .2); }
+.notice-caliber { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 2px 0 1px; }
+.caliber-btn {
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .04);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.caliber-btn:hover { background: rgba(255, 255, 255, .1); }
+.notice-caliber .caliber-btn.active {
+  border-color: rgba(255, 180, 84, .45);
+  background: rgba(255, 180, 84, .16);
+  color: #ffb454;
+}
+.caliber-hint { font-size: 10.5px; color: var(--muted); }
+html[data-theme="light"] .caliber-btn { border-color: rgba(0, 0, 0, .14); background: rgba(0, 0, 0, .03); }
+html[data-theme="light"] .notice-caliber .caliber-btn.active { border-color: rgba(214, 130, 20, .5); background: rgba(255, 180, 84, .18); color: #a15c00; }
 .queue-empty {
   padding: 26px 10px;
   text-align: center;

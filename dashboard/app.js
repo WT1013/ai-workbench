@@ -500,7 +500,24 @@ const THRESH_FIELDS = [
   { key: "conversionRate", label: "转化率", unit: "%" },
   { key: "pureAgentRatio", label: "纯智能体占比", unit: "%" }
 ];
-const THRESH_DEFAULT = { adoptionRate: 50, generationRate: 90, conversionRate: 20, pureAgentRatio: 30 };
+const THRESH_DEFAULT = { adoptionRate: 50, generationRate: 90, conversionRate: 20, pureAgentRatio: 35 };
+
+/* 考核标准变更迁移：纯智能体占比标准 30% → 35%（2026-09-24），仅抬升低于新标准的旧值 */
+const THRESH_MIGR_KEY = "csa-threshold-migr";
+const THRESH_MIGR_VERSION = 2;
+function migrateThresholds() {
+  try {
+    const cur = parseInt(localStorage.getItem(THRESH_MIGR_KEY) || "0", 10);
+    if (cur >= THRESH_MIGR_VERSION) return;
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(THRESH_KEY) || "null"); } catch (e) {}
+    const t = Object.assign({}, THRESH_DEFAULT, s && typeof s === "object" ? s : {});
+    if (!(parseFloat(t.pureAgentRatio) >= 35)) t.pureAgentRatio = 35;
+    saveThresholds(t);
+    localStorage.setItem(THRESH_MIGR_KEY, String(THRESH_MIGR_VERSION));
+  } catch (e) {}
+}
+migrateThresholds();
 
 function thresholdSettings() {
   let t = THRESH_DEFAULT;
@@ -560,12 +577,38 @@ function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/* ===== 达标提醒口径: day=当月日均(逐日算术平均) / month=本月累计(探域计数÷总事件数) ===== */
+const STD_CALIBER_KEY = "csa-std-caliber";
+function stdCaliber() {
+  try { const v = localStorage.getItem(STD_CALIBER_KEY); if (v === "month" || v === "day") return v; } catch (e) {}
+  return "day";
+}
+function saveStdCaliber(v) { try { localStorage.setItem(STD_CALIBER_KEY, v); } catch (e) {} }
+// 月度库字段名与日字段名不同(探域月度抓取脚本写入 __library__.monthly)
+const MONTHLY_FIELD = { adoptionRate: "adoptRate", generationRate: "genRate", riskRate: "riskRate", pureAgentRatio: "pureRatio" };
+function monthlyLib(monthPrefix) {
+  const m = (cloudDays && cloudDays.__library__ && cloudDays.__library__.monthly) || {};
+  return m[monthPrefix] || null;
+}
+function monthCumVal(monthPrefix, shopId, metric) {
+  const lib = monthlyLib(monthPrefix);
+  if (!lib) return null;
+  const rec = lib[shopId];
+  if (!rec) return null;
+  const v = rec[MONTHLY_FIELD[metric]];
+  const n = Number(v);
+  return (v === undefined || v === null || v === "" || isNaN(n)) ? null : n;
+}
+
 function renderStdNotice() {
   const bar = document.querySelector("#stdNoticeBar");
   if (!bar) return;
+  const wasOpen = bar.classList.contains("open");
   const t = thresholdSettings();
+  const caliber = stdCaliber();
   const latest = cloudLatestDate;
   const monthPrefix = latest ? latest.slice(0, 7) : null;
+  const hasMonthData = !!(monthPrefix && monthlyLib(monthPrefix));
   const items = [];
   if (latest) {
     cloudShops.forEach((shop) => {
@@ -573,7 +616,9 @@ function renderStdNotice() {
       THRESH_FIELDS.forEach((f) => {
         const std = t[f.key];
         if (std === undefined || std === null || std === "") return;
-        const v = monthAvgVal(cloudDays, monthPrefix, shop.id, f.key);
+        const v = caliber === "month"
+          ? monthCumVal(monthPrefix, shop.id, f.key)
+          : monthAvgVal(cloudDays, monthPrefix, shop.id, f.key);
         if (v !== null && v < std) lows.push({ label: f.label, value: v, std: std });
       });
       if (lows.length) items.push({ name: shop.name, lows: lows });
@@ -581,15 +626,23 @@ function renderStdNotice() {
   }
   const lm = latest ? parseInt(latest.slice(5, 7), 10) : null;
   const ok = !items.length;
+  const caliberName = caliber === "month" ? "累计" : "均值";
   bar.hidden = false;
   bar.className = "notice-bar std-notice-bar";
+  if (wasOpen) bar.classList.add("open");
   bar.innerHTML = `
-    <button class="notice-head" type="button" aria-expanded="false">
-      <span class="notice-title">${ok ? "✓" : "⚠"} 数据达标提醒${lm ? "（" + lm + "月均值）" : ""}</span>
+    <button class="notice-head" type="button" aria-expanded="${wasOpen}">
+      <span class="notice-title">${ok ? "✓" : "⚠"} 数据达标提醒${lm ? "（" + lm + "月" + caliberName + "）" : ""}</span>
       <span class="notice-count">${ok ? (latest ? "全部达标" : "暂无数据") : items.length + " 家未达标"}</span>
       <svg class="notice-chevron"><use href="#i-chevron"/></svg>
     </button>
     <div class="notice-body">
+      <div class="notice-caliber" role="group" aria-label="判断口径">
+        <button type="button" class="caliber-btn${caliber === "day" ? " active" : ""}" id="stdCaliberDay">当月日均</button>
+        <button type="button" class="caliber-btn${caliber === "month" ? " active" : ""}" id="stdCaliberMonth">本月累计</button>
+        <span class="caliber-hint">${caliber === "month" ? "探域计数÷总事件数" : "逐日算术平均"}</span>
+      </div>
+      ${caliber === "month" && !hasMonthData ? `<div class="notice-ok">⚠ 本月累计数据未同步 — 请在本机运行 tanyu-monthly-fetch.js 后重试</div>` : ""}
       ${ok
         ? `<div class="notice-ok">${latest ? "所有店铺数据均达到标准 ✓" : "暂无店铺数据，请先同步"}</div>`
         : items.map((it) => `<button class="notice-shop" type="button" data-shop="${esc(it.name)}"><span class="notice-shop-name">${esc(it.name)}</span><span class="notice-tags">${it.lows.map((l) => `<em class="notice-tag">${l.label} ${(+l.value).toFixed(1)}%（标准 ≥${l.std}%）</em>`).join("")}</span></button>`).join("")}
@@ -1779,6 +1832,8 @@ function bindEvents() {
     const bar = e.target.closest(".notice-bar");
     if (!bar) return;
     if (e.target.closest("#stdSetBtn")) { editStdThresholds(); return; }
+    if (e.target.closest("#stdCaliberDay")) { saveStdCaliber("day"); renderStdNotice(); return; }
+    if (e.target.closest("#stdCaliberMonth")) { saveStdCaliber("month"); renderStdNotice(); return; }
     if (e.target.closest("#gapSetBtn")) { editGapDays(); return; }
     if (e.target.closest("#downSetBtn")) { editDownThreshold(); return; }
     if (e.target.closest("#riskSetBtn")) { editRiskThreshold(); return; }
