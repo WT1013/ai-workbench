@@ -135,7 +135,7 @@
       shopLibrary = DEFAULT_SHOPS.map(function (name, index) {
         return { id: "s" + (index + 1), name: name, owner: "远山", adoptionRate: "", generationRate: "", conversionRate: "", pureAgentRatio: "", experienceScore: "", note: "" };
       });
-      state.days["__library__"] = { shops: shopLibrary };
+      state.days["__library__"] = Object.assign({}, state.days["__library__"] || {}, { shops: shopLibrary });
       if (persist) { wbSave(false); }
     }
   }
@@ -232,7 +232,10 @@
   var saveTimer = null;
   function wbSave(showTip) {
     try {
-      state.days["__library__"] = { shops: shopLibrary };
+      // 2026-10-02 修复: 原为 state.days["__library__"] = { shops: shopLibrary },
+      // 会把云端写入的 __library__.monthly(月度累计, 供达标提醒「本月累计」+ 钉钉汇总看板) 整块抹掉。
+      // 改为 Object.assign 保留 __library__ 其它键, 只更新 shops。
+      state.days["__library__"] = Object.assign({}, state.days["__library__"] || {}, { shops: shopLibrary });
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days: state.days, shifts: state.shifts }));
       if (IS_MIRROR) {
         // 镜像模式只读: 仅存本地, 不写云端(查看者无 Supabase 访问权限)
@@ -844,21 +847,35 @@
   }
 
   /* ---------- 数据总览视图 ---------- */
-  var sumMetric = "adoptionRate";
+  var sumMetric = "agenticMsgCount";
   var sumRange = "month"; // 7 | 30 | month
   var sumShopId = null;
   var sumDates = [];      // 当前图表日期序列（供 hover 使用）
   var sumShopCurrent = null; // 当前图表店铺（供 hover 使用）
 
+  // 2026-10-02 口径调整: 改为抓取/展示 4 个计数 + 纯智占比 + 3分钟人工回复率 + 消费者服务体验分
+  //   type: count=计数(整数,千分位) / pct=百分比 / score=分数
   var SUMMARY_METRICS = [
-    { key: "adoptionRate", label: "采纳率" },
-    { key: "generationRate", label: "生成率" },
-    { key: "conversionRate", label: "转化率" },
-    { key: "pureAgentRatio", label: "纯智能体" },
-    { key: "riskRate", label: "风控率" },
-    { key: "experienceScore", label: "体验分" },
-    { key: "threeMinReplyRate", label: "3分钟回复率" }
+    { key: "agenticMsgCount", label: "Agentic咨询消息数", type: "count" },
+    { key: "genCount", label: "话术生成数", type: "count" },
+    { key: "adoptCount", label: "话术采纳数", type: "count" },
+    { key: "riskCount", label: "风控数", type: "count" },
+    { key: "pureAgentRatio", label: "纯智能体占比", type: "pct" },
+    { key: "threeMinReplyRate", label: "3分钟人工回复率", type: "pct" },
+    { key: "experienceScore", label: "消费者服务体验分", type: "score" }
   ];
+
+  function sumMetricType(key) {
+    var m = SUMMARY_METRICS.filter(function (x) { return x.key === key; })[0];
+    return m ? (m.type || "pct") : "pct";
+  }
+  function sumFmt(v, key) {
+    if (v === null || v === undefined || isNaN(v)) { return "—"; }
+    var t = sumMetricType(key);
+    if (t === "count") { return Math.round(v).toLocaleString("en-US"); }
+    if (t === "score") { return String(Math.round(v * 100) / 100); }
+    return (Math.round(v * 100) / 100) + "%";
+  }
 
   function summaryRangeDates() {
     var today = todayKey();
@@ -920,8 +937,9 @@
     var span = max - min;
     var xf = function (i) { return dates.length === 1 ? padL + (W - padL - padR) / 2 : padL + ((W - padL - padR) * i) / (dates.length - 1); };
     var yf = function (v) { return padT + (H - padT - padB) * (1 - (v - min) / span); };
-    var isPct = metricKey !== "experienceScore";
-    var suffix = isPct ? "%" : "";
+    var mtype = sumMetricType(metricKey);
+    var suffix = mtype === "pct" ? "%" : "";
+    var axisFmt = function (v) { return mtype === "count" ? Math.round(v).toLocaleString("en-US") : String(Math.round(v * 10) / 10); };
     var points = [];
     dates.forEach(function (d, i) {
       var v = shopMetricVal(d, shop.id, metricKey);
@@ -944,7 +962,7 @@
       var gv = min + (span * gi) / 4;
       var gy = yf(gv).toFixed(1);
       grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/>';
-      labels += '<text x="' + (padL - 8) + '" y="' + (Number(gy) + 4) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + (Math.round(gv * 10) / 10) + suffix + '</text>';
+      labels += '<text x="' + (padL - 8) + '" y="' + (Number(gy) + 4) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + axisFmt(gv) + suffix + '</text>';
     }
     var step = Math.max(1, Math.ceil(dates.length / 8));
     dates.forEach(function (d, i) {
@@ -1010,22 +1028,22 @@
       if (first === null && v !== null) { first = v; }
       if (v !== null) { last = v; }
     });
-    var isPct2 = sumMetric !== "experienceScore";
-    var suff2 = isPct2 ? "%" : "";
     var deltaHtml = "";
     if (first !== null && last !== null) {
       var diff = Math.round((last - first) * 100) / 100;
+      var v0 = sumFmt(first, sumMetric), v1 = sumFmt(last, sumMetric);
+      var dt = sumMetricType(sumMetric) === "count" ? Math.round(Math.abs(diff)).toLocaleString("en-US") : String(Math.abs(diff));
       deltaHtml = diff > 0
-        ? '<span class="wb-delta-up">▲ ' + first + suff2 + " → " + last + suff2 + "（+" + diff + "）</span>"
+        ? '<span class="wb-delta-up">▲ ' + v0 + " → " + v1 + "（+" + dt + "）</span>"
         : diff < 0
-          ? '<span class="wb-delta-down">▼ ' + first + suff2 + " → " + last + suff2 + "（" + diff + "）</span>"
-          : '<span>' + first + suff2 + " → " + last + suff2 + "（持平）</span>";
+          ? '<span class="wb-delta-down">▼ ' + v0 + " → " + v1 + "（−" + dt + "）</span>"
+          : '<span>' + v0 + " → " + v1 + "（持平）</span>";
     } else {
       deltaHtml = '<span>所选范围无数据</span>';
     }
     var snap = SUMMARY_METRICS.map(function (m) {
       var v = shopMetricVal(dates[dates.length - 1] || todayKey(), shop.id, m.key);
-      return '<span class="shop-mini-metric">' + m.label + ' <b>' + (v === null ? "—" : (Math.round(v * 100) / 100) + (m.key === "experienceScore" ? "" : "%")) + '</b></span>';
+      return '<span class="shop-mini-metric">' + m.label + ' <b>' + sumFmt(v, m.key) + '</b></span>';
     }).join("");
     footer.innerHTML = '<div class="sum-delta">' + deltaHtml + '</div><div class="shop-card-metrics">' + snap + '</div>';
   }
@@ -1063,13 +1081,12 @@
       });
       var dateKey = sumDates[best];
       var v = shopMetricVal(dateKey, sumShopCurrent.id, sumMetric);
-      var isPct = sumMetric !== "experienceScore";
       var metric = SUMMARY_METRICS.filter(function (m) { return m.key === sumMetric; })[0] || SUMMARY_METRICS[0];
       tip.innerHTML =
         '<div class="sum-tip-date">' + dateKey + ' · ' + esc(sumShopCurrent.name) + '</div>' +
-        '<div class="sum-tip-val">' + esc(metric.label) + '：<b>' + (v === null ? "无数据" : (Math.round(v * 100) / 100) + (isPct ? "%" : "")) + '</b></div>';
+        '<div class="sum-tip-val">' + esc(metric.label) + '：<b>' + sumFmt(v, sumMetric) + '</b></div>';
       // 位置跟随鼠标，限定在 wrap 内
-      var tipW = 190;
+      var tipW = 222;
       var left = e.clientX - wrap.getBoundingClientRect().left - tipW / 2;
       left = Math.max(4, Math.min(left, wrap.clientWidth - tipW - 4));
       var top = e.clientY - wrap.getBoundingClientRect().top - 62;
