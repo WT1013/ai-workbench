@@ -663,3 +663,14 @@ html, body { overflow-x: hidden; }
 .m-risk { color: #ff6b72 !important; font-weight: 700; }
 .m-warn { color: #ff9f43 !important; font-weight: 700; }
 .monthly-hint { font-size: 11.5px; color: var(--muted); margin: 10px 0 0; }
+
+/* 数据录入 · 日期选择器 (2026-10-25) */
+.wb-date-input {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 9px;
+  padding: 5px 10px; font-size: 12px; font-family: inherit;
+  color-scheme: light dark; cursor: pointer;
+}
+.wb-date-input:focus { outline: 2px solid var(--accent, #4a7dff33); outline-offset: 1px; }
+.wb-date-input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .75; }
+.wb-date-input::-webkit-calendar-picker-indicator:hover { opacity: 1; }

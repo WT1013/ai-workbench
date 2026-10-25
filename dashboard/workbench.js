@@ -68,6 +68,7 @@
   var shopsTab = "roster";
   var selectedShopId = null;
   var shopsSearchQuery = "";
+  var shopsDailyDate = ""; // 数据录入所选日期(空=默认昨天)
   var wbReady = false;
 
   /* ---------- 工具 ---------- */
@@ -780,8 +781,9 @@
   function renderShopDaily() {
     var view = $id("shopDailyView");
     if (!view) { return; }
-    // 昨日数据：默认编辑昨天的数据（业务上同步/录入的是昨日数据）
-    var key = yesterdayKeyOf(todayKey());
+    // 数据录入：默认昨天，可通过日期选择器切换到任意一天
+    var defaultKey = yesterdayKeyOf(todayKey());
+    var key = /^\d{4}-\d{2}-\d{2}$/.test(shopsDailyDate) ? shopsDailyDate : defaultKey;
     var shop = null;
     if (selectedShopId) {
       shop = shopLibrary.filter(function (s) { return s.id === selectedShopId; })[0] || null;
@@ -789,22 +791,41 @@
     if (!shop) { shop = shopLibrary[0] || null; }
     if (!shop) { view.innerHTML = '<div class="wb-empty-hint">暂无店铺</div>'; return; }
     selectedShopId = shop.id;
-    var sd = dayData(key).shopData[shop.id] = dayData(key).shopData[shop.id] || {};
-    var sel = '<select class="pill-btn quiet" id="shopDailySelect" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:9px;font-size:12px;margin-bottom:14px">' +
+    // 只读访问, 不在打开时创建空天数记录(避免点一下历史日期就多出一条脏 day)
+    var curDay = state.days[key];
+    var sd = (curDay && curDay.shopData && curDay.shopData[shop.id]) || {};
+    var sel = '<select class="pill-btn quiet" id="shopDailySelect" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:9px;font-size:12px">' +
       shopLibrary.map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === shop.id ? " selected" : "") + '>' + esc(s.name) + '</option>'; }).join("") +
       '</select>';
+    var dateEl = '<input type="date" id="shopDailyDate" class="wb-date-input" value="' + key + '" max="' + todayKey() + '">';
     var rows = SHOP_METRICS.map(function (m) {
       var v = sd[m.key] !== undefined ? sd[m.key] : "";
       return '<div class="shop-input-row"><label>' + m.label + '</label><input type="number" step="0.01" data-metric="' + m.key + '" value="' + esc(v) + '"></div>';
     }).join("");
     view.innerHTML = '<div class="wb-card" style="max-width:640px">' +
-      '<h3>昨日数据录入 · ' + key + '</h3>' +
-      '<p class="wb-card-sub">' + esc(shop.name) + '（' + esc(shop.owner || "远山") + '）</p>' +
-      sel + rows +
+      '<h3>数据录入 · <span id="shopDailyDateLabel">' + key + '</span></h3>' +
+      '<p class="wb-card-sub">' + esc(shop.name) + '（' + esc(shop.owner || "远山") + '）' + (key === defaultKey ? '' : ' · 补录历史日期') + '</p>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">' + dateEl + sel +
+      '<button class="pill-btn quiet" id="shopDailyToday" type="button">回到昨天</button></div>' + rows +
       '<div class="shop-card-actions" style="margin-top:12px">' +
       '<button class="pill-btn primary" id="shopDailySave">保存数据</button>' +
       '<button class="pill-btn quiet" id="shopDailyClear">清空</button>' +
       '</div></div>';
+    var dateInput = $id("shopDailyDate");
+    if (dateInput) {
+      dateInput.onchange = function () {
+        var v = dateInput.value;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { return; }
+        if (v > todayKey()) { v = todayKey(); }
+        shopsDailyDate = v;
+        renderShopDaily();
+      };
+      dateInput.oninput = dateInput.onchange; // 部分浏览器拖动选择即触发
+    }
+    var backBtn = $id("shopDailyToday");
+    if (backBtn) {
+      backBtn.onclick = function () { shopsDailyDate = ""; renderShopDaily(); };
+    }
     var select = $id("shopDailySelect");
     if (select) {
       select.onchange = function () { selectedShopId = select.value; renderShopDaily(); };
@@ -812,12 +833,16 @@
     var saveBtn = $id("shopDailySave");
     if (saveBtn) {
       saveBtn.onclick = function () {
+        var metrics = {};
         Array.prototype.forEach.call(view.querySelectorAll("[data-metric]"), function (input) {
-          sd[input.dataset.metric] = input.value.trim() === "" ? "" : parseFloat(input.value);
+          metrics[input.dataset.metric] = input.value.trim() === "" ? "" : parseFloat(input.value);
         });
+        var d = dayData(key);
+        d.shopData[shop.id] = Object.assign({}, d.shopData[shop.id] || {}, metrics);
         wbSave(true);
         renderRoster();
-        toast("已保存 " + shop.name + " 的当日数据");
+        toast("已保存 " + shop.name + " " + key + " 的数据");
+        renderShopDaily();
       };
     }
     var clearBtn = $id("shopDailyClear");
@@ -826,7 +851,7 @@
         dayData(key).shopData[shop.id] = {};
         wbSave(true);
         renderShopDaily();
-        toast("已清空");
+        toast("已清空 " + key);
       };
     }
   }
