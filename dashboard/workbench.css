@@ -1127,3 +1127,125 @@ html[data-theme-resolved="light"] .timeline-dates button:hover { background: rgb
 /* 时间轴日期：列宽仅 ~15px，10px 等宽数字刚好不贴边（原 8px 太小，11px 会挤） */
 .timeline-dates button { font-size: 10px; letter-spacing: -.2px; }
 .timeline-dates button.active { font-weight: 600; }
+
+/* ============================================================
+   2026-10-26 月度汇总：左侧固定区（店铺 / 日均 / 环比 / 排名）
+   31 列日数据横向滚动时，这 4 列常驻，不用滚到底才能看汇总。
+   ============================================================ */
+.monthly-table { --mt-col1: 208px; --mt-col2: 86px; --mt-col3: 92px; --mt-col4: 58px; }
+
+.monthly-table th.mt-name, .monthly-table td.mt-name {
+  position: sticky; left: 0; z-index: 2;
+  width: var(--mt-col1); min-width: var(--mt-col1); max-width: var(--mt-col1);
+  text-align: left; overflow: hidden; text-overflow: ellipsis;
+}
+.monthly-table th:nth-child(2), .monthly-table td:nth-child(2) {
+  position: sticky; left: var(--mt-col1); z-index: 2;
+  width: var(--mt-col2); min-width: var(--mt-col2);
+}
+.monthly-table th:nth-child(3), .monthly-table td:nth-child(3) {
+  position: sticky; left: calc(var(--mt-col1) + var(--mt-col2)); z-index: 2;
+  width: var(--mt-col3); min-width: var(--mt-col3);
+}
+.monthly-table th:nth-child(4), .monthly-table td:nth-child(4) {
+  position: sticky; left: calc(var(--mt-col1) + var(--mt-col2) + var(--mt-col3)); z-index: 2;
+  width: var(--mt-col4); min-width: var(--mt-col4);
+}
+/* 固定区的底色，避免滚动内容从下方透出 */
+.monthly-table tbody td:nth-child(-n+4) { background: var(--panel-2); }
+.monthly-table thead th:nth-child(-n+4) { background: var(--panel); z-index: 6; }
+.monthly-table tbody tr.key-row td.mt-name { color: var(--accent-300); }
+.monthly-table tbody tr:hover td:nth-child(-n+4) { background: var(--panel-soft); }
+/* 固定区右边界的分隔线 */
+.monthly-table th:nth-child(4), .monthly-table td:nth-child(4) { border-right: 1px solid var(--line-bright); }
+
+/* 数字列：右对齐 + 等宽数字 */
+.monthly-table td.mt-sum, .monthly-table th.mt-sum { text-align: right; font-variant-numeric: tabular-nums; }
+.monthly-table td.mt-rank, .monthly-table th.mt-rank { text-align: center; }
+.monthly-table td.mt-avg { font-weight: 700; color: var(--text); }
+.monthly-table td.mt-day { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+.monthly-table td.mt-day.mt-null { color: var(--muted); opacity: .5; }
+
+/* 环比 */
+.mt-up { color: var(--green); font-weight: 600; }
+.mt-down { color: var(--danger); font-weight: 600; }
+.mt-flat { color: var(--muted); }
+.mt-na { color: var(--muted); opacity: .6; }
+
+/* ============================================================
+   2026-10-26 指标卡四段式：值 / 环比 / 目标线 / 状态
+   四张卡有三种材质（cyan/original/chrome 浅底、rain 深底），
+   语义色必须两套，否则浅底上看不见。
+   ============================================================ */
+.metric-card { --mc-good: var(--accent-300); --mc-bad: #ff8b8e; }
+.metric-card[data-material="cyan"],
+.metric-card[data-material="original"],
+.metric-card[data-material="chrome"] { --mc-good: #0a7a4e; --mc-bad: #b3202a; }
+
+/* 达标 / 未达标 徽标 */
+.metric-card .mc-badge {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid currentColor;
+  font: 700 9px/1.25 var(--font);
+  letter-spacing: .02em;
+  vertical-align: 1px;
+}
+.metric-card .mc-badge.is-ok { color: var(--mc-good); background: color-mix(in srgb, currentColor 13%, transparent); }
+.metric-card .mc-badge.is-bad { color: var(--mc-bad); background: color-mix(in srgb, currentColor 15%, transparent); }
+
+/* 环比 + 目标线 */
+.metric-card .mc-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.metric-card .mc-cmp { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+.metric-card .mc-up { color: var(--mc-good); }
+.metric-card .mc-down { color: var(--mc-bad); }
+.metric-card .mc-flat { opacity: .55; }
+.metric-card .mc-target {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 10px;
+  opacity: .42;
+}
+.metric-card .mc-target.mc-target-miss { color: var(--mc-bad); opacity: .72; }
+.metric-card .mc-target.mc-target-na { opacity: .3; }
+
+/* 短屏（1366x768 等）指标卡增高不足，四段式会溢出底部，整体收紧 */
+@media (max-height: 820px) {
+  .metric-card > span { font-size: 9px; }
+  .metric-card h3 { margin: 3px 0 3px; font-size: 13px; }
+  .metric-card strong { font-size: 29px; }
+  .metric-card .mc-line { margin-top: 4px; font-size: 10.5px; }
+  .metric-card .mc-target { padding: 0 6px; font-size: 9.5px; }
+  .metric-card p { margin-top: 3px; }
+}
+
+/* 目标线并入底部行，与「全店均值」两端对齐，避免和环比行挤在一起 */
+.metric-card p { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.metric-card p > em { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.metric-card p > .mc-target { flex: 0 0 auto; margin-left: auto; }
+.metric-card h3 .mc-badge { margin-left: 6px; }
+
+/* 环比 + 目标线同行，两端对齐（1366 下也放得开） */
+.metric-card .mc-line { justify-content: space-between; }
+.metric-card .mc-target { margin-left: auto; }
+.metric-card p { display: flex; align-items: center; justify-content: flex-start; }
+
+/* 徽标文字：9px 中文太糊，提到 10px（1366 下 h3 行仍有余量） */
+.metric-card .mc-badge { font: 700 10px/1.25 var(--font); padding: 2px 6px; }
+.metric-card .mc-target { font-size: 10.5px; }
+@media (max-height: 820px) {
+  .metric-card .mc-badge { font-size: 9.5px; padding: 1px 5px; }
+  .metric-card .mc-target { font-size: 10px; }
+}

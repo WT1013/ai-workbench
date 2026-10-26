@@ -67,6 +67,13 @@ function metricVal(sd, field) {
   return (v !== undefined && v !== null && String(v) !== "") ? parseFloat(v) : null;
 }
 
+/* 日期键 YYYY-MM-DD 偏移（2026-10-26 指标卡环比用） */
+function shiftDateKey(key, delta) {
+  const d = new Date(key + "T00:00:00");
+  d.setDate(d.getDate() + delta);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function monthAvgVal(days, monthPrefix, shopId, metric) {
   let sum = 0, n = 0;
   Object.keys(days || {}).forEach((k) => {
@@ -90,6 +97,13 @@ function buildDocuments(shops, days, date) {
     const exp = metricVal(sd, "experienceScore");
     const risk = metricVal(sd, "riskRate");
     const expAvg = (exp !== null && monthPrefix) ? monthAvgVal(days, monthPrefix, shop.id, "experienceScore") : null;
+    // 环比基准：前一天（2026-10-26 指标卡四段式）
+    const prevDateStr = date ? shiftDateKey(date, -1) : null;
+    const sdP = (prevDateStr && days[prevDateStr] && days[prevDateStr].shopData && days[prevDateStr].shopData[shop.id]) || {};
+    const pAdopt = metricVal(sdP, "adoptionRate");
+    const pGen = metricVal(sdP, "generationRate");
+    const pConv = metricVal(sdP, "conversionRate");
+    const pPure = metricVal(sdP, "pureAgentRatio");
     const isKey = shop.key === true;
     const fmt = (v) => (v === null ? "--" : String(v));
     const missCore = [adopt, gen, conv, pure, reply].some((v) => v === null);
@@ -118,7 +132,7 @@ function buildDocuments(shops, days, date) {
       ],
       accent: isKey ? "warm" : (adopt !== null && adopt >= 50 ? "green" : "mist"),
       completion: adopt === null ? 0 : Math.round(adopt),
-      metrics: { adopt, gen, conv, pure, reply, exp, expAvg, risk }
+      metrics: { adopt, gen, conv, pure, reply, exp, expAvg, risk, pAdopt, pGen, pConv, pPure }
     };
   });
 }
@@ -190,6 +204,15 @@ function buildGroups(docs) {
   return groups;
 }
 
+/* 2026-10-26 指标卡四段式：值 / 环比 / 目标线 / 状态
+   阈值取汇报口径：采纳率≥65、生成率≥95、纯智占比≥35；转化率暂无目标线。 */
+const MC_TARGETS = {
+  adopt: { target: 65, dir: "gte" },
+  gen: { target: 95, dir: "gte" },
+  conv: { target: null, dir: "gte" },
+  pure: { target: 35, dir: "gte" }
+};
+
 function updateMetricCards(docs, focusIdx) {
   const focus = (focusIdx !== undefined && docs[focusIdx]) ? docs[focusIdx] : null;
   const avg = (f) => {
@@ -202,6 +225,61 @@ function updateMetricCards(docs, focusIdx) {
     if (vEl) vEl.innerHTML = (val === null ? "--" : val) + "<small>" + unit + "</small>";
     if (sEl) sEl.textContent = focus ? "已选：" + focus.title : "全店均值 · " + docs.length + " 家";
   };
+  const pairs = [
+    ["Adopt", "adopt", "pAdopt"],
+    ["Gen", "gen", "pGen"],
+    ["Conv", "conv", "pConv"],
+    ["Pure", "pure", "pPure"]
+  ];
+  pairs.forEach(([key, cur, prev]) => {
+    const now = avg(cur);
+    const before = avg(prev);
+    const cfg = MC_TARGETS[cur];
+
+    // --- 环比 ---
+    const cmpEl = document.querySelector("#cmp" + key);
+    if (cmpEl) {
+      if (now === null || before === null) {
+        cmpEl.className = "mc-cmp mc-flat";
+        cmpEl.textContent = "—";
+        cmpEl.title = "前日无数据";
+      } else {
+        const d = Number(now) - Number(before);
+        const txt = (d > 0 ? "+" : "") + (Math.round(d * 100) / 100) + "pp";
+        const arrow = Math.abs(d) < 0.005 ? "·" : (d > 0 ? "▲" : "▼");
+        cmpEl.className = "mc-cmp " + (Math.abs(d) < 0.005 ? "mc-flat" : (d > 0 ? "mc-up" : "mc-down"));
+        cmpEl.textContent = arrow + " " + txt;
+        cmpEl.title = "较前日 " + txt + "（前日 " + (Math.round(Number(before) * 100) / 100) + "%）";
+      }
+    }
+
+    // --- 状态徽标 ---
+    const badge = document.querySelector("#badge" + key);
+    if (badge) {
+      if (now === null || cfg.target === null) {
+        badge.hidden = true;
+      } else {
+        const ok = cfg.dir === "gte" ? Number(now) >= cfg.target : Number(now) <= cfg.target;
+        badge.hidden = false;
+        badge.className = "mc-badge " + (ok ? "is-ok" : "is-bad");
+        badge.textContent = ok ? "达标" : "未达标";
+      }
+    }
+
+    // --- 目标线文案 ---
+    const tgt = document.querySelector("#tgt" + key);
+    if (tgt) {
+      if (cfg.target === null) {
+        tgt.textContent = "无目标线";
+        tgt.classList.add("mc-target-na");
+      } else {
+        const gap = now === null ? null : (Math.round((cfg.target - Number(now)) * 100) / 100);
+        const behind = gap !== null && gap > 0;
+        tgt.classList.toggle("mc-target-miss", behind);
+        tgt.textContent = "目标 " + (cfg.dir === "gte" ? "≥" : "≤") + cfg.target + "%";
+      }
+    }
+  });
   set("valAdopt", "subAdopt", avg("adopt"), "%");
   set("valGen", "subGen", avg("gen"), "%");
   set("valConv", "subConv", avg("conv"), "%");
@@ -218,8 +296,9 @@ const MONTHLY_METRICS = [
   { key: "threeMinReplyRate", label: "3分钟回复率" },
 ];
 let monthlyMetric = "adoptionRate";
-let monthlyYear = 2026;
-let monthlyMonth = 7; // 0-based, 8月
+// 2026-10-26：原来硬编码 2026/7（=8月），打开月度汇总永远看到 8 月，改为当前月
+let monthlyYear = new Date().getFullYear();
+let monthlyMonth = new Date().getMonth();
 
 /* 重点店铺(key===true)置顶，其余保持原顺序（与「店铺库」列表一致） */
 function shopsKeyFirst(list) {
@@ -295,35 +374,99 @@ function bindMonthPicker() {
   });
 }
 
+/* 某店某月的指标均值（口径：仅统计有值的日期，与「日均」列一致） */
+function shopMonthAvg(shopId, prefix, metric) {
+  const y = parseInt(prefix.slice(0, 4), 10);
+  const m = parseInt(prefix.slice(5, 7), 10);
+  const daysIn = new Date(y, m, 0).getDate();
+  let sum = 0, n = 0;
+  for (let i = 1; i <= daysIn; i++) {
+    const k = prefix + "-" + String(i).padStart(2, "0");
+    const day = cloudDays && cloudDays[k];
+    const v = (day && day.shopData && day.shopData[shopId]) ? day.shopData[shopId][metric] : null;
+    if (v !== undefined && v !== null && String(v).trim() !== "" && !isNaN(Number(v))) { sum += Number(v); n++; }
+  }
+  return n ? sum / n : null;
+}
+
+/* 月份偏移，返回 { y, m, prefix } */
+function monthShift(y, m, delta) {
+  const d = new Date(y, m + delta, 1);
+  return { y: d.getFullYear(), m: d.getMonth(), prefix: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` };
+}
+
+function fmt2(v, sfx) {
+  if (v === null || v === undefined || isNaN(v)) return "—";
+  return (Math.round(v * 100) / 100) + sfx;
+}
+
 function renderMonthlyTable() {
   document.querySelector("#monthlyDateTitle").textContent = monthlyYear + "年" + (monthlyMonth + 1) + "月";
   const daysInMonth = new Date(monthlyYear, monthlyMonth + 1, 0).getDate();
   const head = document.querySelector("#monthlyTableHead");
   const body = document.querySelector("#monthlyTableBody");
+  const prefix = `${monthlyYear}-${String(monthlyMonth + 1).padStart(2, "0")}`;
+  const prev = monthShift(monthlyYear, monthlyMonth, -1);
+  const sfx = pctSuffix(monthlyMetric);
+  const isScore = monthlyMetric === "experienceScore";
 
-  let headHtml = '<tr><th>店铺</th>';
-  for (let i = 1; i <= daysInMonth; i++) headHtml += `<th>${i}</th>`;
-  headHtml += '<th>月均</th></tr>';
+  // 表头：左侧固定区（店铺 / 日均 / 环比 / 排名）+ 右侧每日
+  let headHtml = '<tr><th class="mt-name">店铺</th><th class="mt-sum">日均</th><th class="mt-sum">环比</th><th class="mt-sum mt-rank">排名</th>';
+  for (let i = 1; i <= daysInMonth; i++) headHtml += `<th class="mt-day">${i}</th>`;
+  headHtml += "</tr>";
   head.innerHTML = headHtml;
 
-  const monthPrefix = `${monthlyYear}-${String(monthlyMonth + 1).padStart(2, "0")}`;
-  let bodyHtml = "";
-  shopsKeyFirst(cloudShops).forEach((shop) => {
-    const isKey = shop.key === true;
-    const values = [];
-    let cells = "";
+  // 第一遍：收集每日值与日均
+  const rows = shopsKeyFirst(cloudShops).map((shop) => {
+    const vals = [];
+    let sum = 0, n = 0;
     for (let i = 1; i <= daysInMonth; i++) {
-      const dateKey = monthPrefix + "-" + String(i).padStart(2, "0");
+      const dateKey = prefix + "-" + String(i).padStart(2, "0");
       const day = cloudDays && cloudDays[dateKey];
       const v = (day && day.shopData && day.shopData[shop.id]) ? day.shopData[shop.id][monthlyMetric] : null;
-      const rawVal = (v !== undefined && v !== null && String(v).trim() !== "") ? v : null;
-      cells += `<td>${rawVal === null ? "—" : String(rawVal) + pctSuffix(monthlyMetric)}</td>`;
-      if (rawVal !== null && !isNaN(Number(rawVal))) values.push(Number(rawVal));
+      const raw = (v !== undefined && v !== null && String(v).trim() !== "") ? Number(v) : null;
+      const num = (raw !== null && !isNaN(raw)) ? raw : null;
+      vals.push(num);
+      if (num !== null) { sum += num; n++; }
     }
-    const avg = values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100 : "";
-    bodyHtml += `<tr class="${isKey ? "key-row" : ""}"><td>${shop.name}</td>${cells}<td class="monthly-avg">${avg === "" ? "—" : avg + pctSuffix(monthlyMetric)}</td></tr>`;
+    const avg = n ? sum / n : null;
+    return { shop, vals, avg, prevAvg: shopMonthAvg(shop.id, prev.prefix, monthlyMetric), rank: 0 };
   });
-  body.innerHTML = bodyHtml;
+
+  // 排名：有数据的店按日均降序
+  rows.filter((r) => r.avg !== null).sort((a, b) => b.avg - a.avg).forEach((r, i) => { r.rank = i + 1; });
+
+  // 日均热力归一化（仅日均列，避免每日格子过度着色）
+  const avgList = rows.map((r) => r.avg).filter((v) => v !== null);
+  const lo = avgList.length ? Math.min(...avgList) : 0;
+  const hi = avgList.length ? Math.max(...avgList) : 1;
+  const heat = (v) => {
+    if (v === null || hi === lo) return "";
+    const t = (v - lo) / (hi - lo);           // 0..1
+    return `background: rgb(var(--accent-rgb) / ${(0.05 + t * 0.16).toFixed(3)});`;
+  };
+
+  body.innerHTML = rows.map((r) => {
+    const isKey = r.shop.key === true;
+    const cells = r.vals.map((v) => `<td class="mt-day${v === null ? " mt-null" : ""}">${v === null ? "—" : fmt2(v, sfx)}</td>`).join("");
+    // 环比：百分比指标用「百分点差」，体验分用普通差值
+    let cmp = '<span class="mt-na">—</span>';
+    if (r.avg !== null && r.prevAvg !== null) {
+      const d = r.avg - r.prevAvg;
+      const cls = Math.abs(d) < 0.005 ? "mt-flat" : (d > 0 ? "mt-up" : "mt-down");
+      const txt = (d > 0 ? "+" : "") + (Math.round(d * 100) / 100) + (isScore ? "" : "pp");
+      const arrow = Math.abs(d) < 0.005 ? "·" : (d > 0 ? "▲" : "▼");
+      cmp = `<span class="${cls}" title="上月日均 ${fmt2(r.prevAvg, sfx)}">${arrow}${txt}</span>`;
+    } else if (r.avg !== null) {
+      cmp = '<span class="mt-na" title="上月无数据">—</span>';
+    }
+    return `<tr class="${isKey ? "key-row" : ""}">` +
+      `<td class="mt-name" title="${r.shop.name}">${r.shop.name}</td>` +
+      `<td class="mt-sum mt-avg" style="${heat(r.avg)}">${fmt2(r.avg, sfx)}</td>` +
+      `<td class="mt-sum">${cmp}</td>` +
+      `<td class="mt-sum mt-rank">${r.rank ? r.rank : "—"}</td>` +
+      cells + "</tr>";
+  }).join("");
 }
 
 function setDashboardMode(mode) {
