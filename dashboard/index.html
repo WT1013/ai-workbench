@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822g" />
-    <link rel="stylesheet" href="workbench.css?v=20260822g" />
+    <link rel="stylesheet" href="styles.css?v=20260822i" />
+    <link rel="stylesheet" href="workbench.css?v=20260822i" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -75,7 +75,7 @@
 
       <section class="core">
         <header class="topbar">
-          <div class="page-title"><h1>远山数据驾驶舱</h1><p>23 店核心指标 · 采纳/生成/转化/纯智 · 异常提醒</p></div>
+          <div class="page-title"><h1>远山数据驾驶舱</h1><p>23 店核心指标 · 异常提醒</p></div>
           <label class="search-box"><svg><use href="#i-search"/></svg><input id="searchInput" aria-label="搜索店铺" placeholder="搜索店铺名称、日期或指标…"/><kbd>⌘ K</kbd></label>
           <div class="top-actions">
             <span id="cloudStatus" class="cloud-status"></span>
@@ -92,10 +92,10 @@
         </header>
 
         <section class="metric-grid" aria-label="核心指标概览">
-          <article class="metric-card aurora light selected" data-material="cyan" data-fluid-variant="today" data-opacity="100" data-blur="20" data-flow="150" data-color-a="#27e8df" data-color-b="#11a9c8" data-color-c="#17346f"><span>ADOPT / 采纳率</span><h3>采纳率</h3><strong id="valAdopt">--<small>%</small></strong><p>全店均值 <em id="subAdopt">加载中</em></p></article>
-          <article class="metric-card aurora blue" data-material="original" data-fluid-variant="inbox" data-opacity="92" data-blur="22" data-flow="175" data-color-a="#ff4aa9" data-color-b="#ff8849" data-color-c="#aa49ff"><span>GENERATE / 生成率</span><h3>生成率</h3><strong id="valGen">--<small>%</small></strong><p>全店均值 <em id="subGen">加载中</em></p></article>
-          <article class="metric-card aurora ember" data-material="rain" data-fluid-variant="archive" data-opacity="70" data-blur="28" data-flow="130" data-color-a="#2e66ff" data-color-b="#ff693f" data-color-c="#4721ac"><span>CONVERT / 转化率</span><h3>转化率</h3><strong id="valConv">--<small>%</small></strong><p>全店均值 <em id="subConv">加载中</em></p></article>
-          <article class="metric-card aurora cobalt" data-material="chrome" data-fluid-variant="backlog" data-opacity="94" data-blur="21" data-flow="190" data-color-a="#f4f8f6" data-color-b="#8d9996" data-color-c="#11172b"><span>PURE AI / 纯智能体占比</span><h3>纯智能体占比</h3><strong id="valPure">--<small>%</small></strong><p>全店均值 <em id="subPure">加载中</em></p></article>
+          <article class="metric-card aurora light selected" data-material="cyan" data-fluid-variant="today" data-opacity="100" data-blur="20" data-flow="150" data-color-a="#27e8df" data-color-b="#11a9c8" data-color-c="#17346f"><span>ADOPT / 采纳率</span><h3>采纳率</h3><strong id="valAdopt">--<small>%</small></strong><p><em id="subAdopt">加载中</em></p></article>
+          <article class="metric-card aurora blue" data-material="original" data-fluid-variant="inbox" data-opacity="92" data-blur="22" data-flow="175" data-color-a="#ff4aa9" data-color-b="#ff8849" data-color-c="#aa49ff"><span>GENERATE / 生成率</span><h3>生成率</h3><strong id="valGen">--<small>%</small></strong><p><em id="subGen">加载中</em></p></article>
+          <article class="metric-card aurora ember" data-material="rain" data-fluid-variant="archive" data-opacity="70" data-blur="28" data-flow="130" data-color-a="#2e66ff" data-color-b="#ff693f" data-color-c="#4721ac"><span>CONVERT / 转化率</span><h3>转化率</h3><strong id="valConv">--<small>%</small></strong><p><em id="subConv">加载中</em></p></article>
+          <article class="metric-card aurora cobalt" data-material="chrome" data-fluid-variant="backlog" data-opacity="94" data-blur="21" data-flow="190" data-color-a="#f4f8f6" data-color-b="#8d9996" data-color-c="#11172b"><span>PURE AI / 纯智能体占比</span><h3>纯智能体占比</h3><strong id="valPure">--<small>%</small></strong><p><em id="subPure">加载中</em></p></article>
         </section>
 
         <div class="workspace-grid">
@@ -275,31 +275,69 @@
 
         <section id="groupsView" class="workbench-view panel" hidden>
           <header class="workbench-head">
-            <div class="section-heading"><h2>待绑商品</h2><span id="groupsMeta">在售未绑分组 · 每日巡检清单（只读）</span></div>
+            <div class="section-heading"><h2>商品分组</h2><span id="groupsMeta">待绑商品 · 分组浏览 · 一键绑定</span></div>
             <div class="workbench-toolbar">
-              <button id="groupsRefreshBtn" class="pill-btn quiet" aria-label="刷新清单">↻ 刷新</button>
+              <button id="groupsRefreshBtn" class="pill-btn quiet" aria-label="刷新分组">↻ 刷新</button>
               <button class="pill-btn ai-page-btn" data-ai-page="groups" title="复核建议归属，找出该改组的商品">✦ AI 复核归属</button>
-              <input id="groupsSearchInput" class="wb-search-input" placeholder="搜索标题/店铺/商品名">
             </div>
           </header>
-          <div class="shop-tabs" id="groupsTabs">
-            <button class="gtab-btn active" data-gtab="bindable">🟢 可直绑</button>
-            <button class="gtab-btn" data-gtab="pending">🟡 待拍板</button>
-            <button class="gtab-btn" data-gtab="dirty">🔴 脏组</button>
-            <button class="gtab-btn" data-gtab="newgroup">⚪ 需建新组</button>
+
+          <div class="tg-wrap">
+            <aside class="tg-side">
+              <div class="tg-side-top">
+                <input id="tgGroupSearch" class="wb-search-input tg-side-input" placeholder="搜索分组名称 / ID">
+                <button id="tgNewGroupBtn" class="tg-new-btn" title="到探域后台新建分组">+ 新建分组</button>
+              </div>
+              <div id="tgGroupList" class="tg-group-list">
+                <div class="tg-group-hint">分组加载中…</div>
+              </div>
+            </aside>
+
+            <div class="tg-main">
+              <div class="tg-toolbar">
+                <input id="tgProductSearch" class="wb-search-input tg-prod-input" placeholder="搜索商品名称 / 商品ID">
+                <select id="tgStatus" class="tg-sel">
+                  <option value="all">全部状态</option>
+                  <option value="on">仅在售</option>
+                  <option value="off">仅下架</option>
+                </select>
+                <span id="tgSelInfo" class="tg-selinfo">未选择商品</span>
+                <button id="tgBindBtn" class="pill-btn tg-act" disabled>绑定到分组…</button>
+                <button id="tgUnbindBtn" class="pill-btn quiet tg-act" disabled>移出当前组</button>
+              </div>
+              <div class="tg-crumb" id="tgCrumb">选择左侧分组，或查看「待绑商品」清单</div>
+              <div id="groupsTableWrap" class="groups-table-wrap tg-table-wrap">
+                <div id="groupsEmpty" class="groups-empty">暂无数据 · 点击右上角「刷新」加载</div>
+                <table id="groupsTable" class="groups-table" hidden>
+                  <thead>
+                    <tr>
+                      <th class="tg-chk"><input type="checkbox" id="tgCheckAll"></th>
+                      <th>商品</th>
+                      <th>商品ID</th>
+                      <th>店铺</th>
+                      <th>状态</th>
+                      <th>7天 / 30天热度</th>
+                      <th id="tgColGroup">所属分组 / 建议</th>
+                    </tr>
+                  </thead>
+                  <tbody id="groupsBody"></tbody>
+                </table>
+              </div>
+              <footer class="groups-foot">
+                <span id="groupsCount"></span>
+                <span id="tgPager" class="tg-pager"></span>
+              </footer>
+            </div>
           </div>
-          <div id="groupsTableWrap" class="groups-table-wrap">
-            <div id="groupsEmpty" class="groups-empty">暂无数据 · 点击右上角「刷新」加载每日巡检清单</div>
-            <table id="groupsTable" class="groups-table" hidden>
-              <thead>
-                <tr>
-                  <th>店铺</th><th>探域ID</th><th>标题</th><th>7天热度</th><th>30天热度</th><th>真实商品名</th><th>建议归属</th>
-                </tr>
-              </thead>
-              <tbody id="groupsBody"></tbody>
-            </table>
+
+          <div id="tgMask" class="tg-mask" hidden></div>
+          <div id="tgPicker" class="tg-picker" hidden>
+            <div class="tg-picker-head">
+              <input id="tgPickerSearch" class="wb-search-input" placeholder="搜索目标分组…">
+              <button id="tgPickerClose" class="tg-picker-x">×</button>
+            </div>
+            <div id="tgPickerList" class="tg-picker-list"></div>
           </div>
-          <footer class="groups-foot"><span id="groupsCount"></span></footer>
         </section>
 
         <section id="aiView" class="workbench-view panel" hidden>
@@ -516,7 +554,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822g"></script>
-    <script type="module" src="app.js?v=20260822g"></script>
+    <script src="workbench.js?v=20260822i"></script>
+    <script type="module" src="app.js?v=20260822i"></script>
   </body>
 </html>

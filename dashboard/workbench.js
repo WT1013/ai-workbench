@@ -1434,35 +1434,91 @@
   window.wbRenderShops = wbRenderShops;
   window.wbRenderSummary = wbRenderSummary;
 
-  /* ---------- 待绑商品视图(形态A只读) ---------- */
-  var GROUPS_HOST = "http://10.10.12.157:8080";
-  var groupsCache = null;        // { meta, list }
-  var groupsTab = "bindable";
+  /* ============================================================
+   * 商品分组（2026-10-26 升级：左分组 / 右商品 / 一键绑定）
+   * 经本机服务 /tg/* 代理直连探域 REST（纯 cookie，不起浏览器）
+   * 页面在本机 8080 打开时用同源；其它来源回落到 127.0.0.1:8080
+   * ============================================================ */
+  var TG_HOST = (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:")
+    ? "" : "http://127.0.0.1:8080";
+
+  var groupsCache = null;        // 待绑清单 { meta, list }
   var groupsQuery = "";
   var groupsBound = false;
   var groupsLoading = false;
 
+  var tgGroups = [];             // [{id,name,productNum}]
+  var tgGroupsLoading = false;
+  var tgGroupQ = "";
+  var tgMode = "pending";        // pending | group
+  var tgGid = "";
+  var tgGname = "";
+  var tgPage = 1;
+  var tgSize = 20;
+  var tgProdQ = "";
+  var tgStatus = "all";
+  var tgRows = [];
+  var tgTotal = 0;
+  var tgSel = {};
+  var tgBusy = false;
+
+  function tgJson(url, opt) {
+    var o = { cache: "no-store" };
+    if (opt) { for (var k in opt) { o[k] = opt[k]; } }
+    return fetch(TG_HOST + url, o).then(function (r) { return r.json(); });
+  }
+
+  function tgNote(msg) {
+    var el = $id("groupsMeta");
+    if (el) { el.textContent = msg; }
+  }
+
   function groupsLoad() {
     if (groupsLoading) { return Promise.resolve(); }
     groupsLoading = true;
-    var el = $id("groupsMeta");
-    if (el) { el.textContent = "加载中…"; }
-    return fetch(GROUPS_HOST + "/tanyu-groups?t=" + Date.now(), { cache: "no-store" })
+    return fetch(TG_HOST + "/tanyu-groups?t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { return r.json(); })
       .then(function (res) {
         groupsCache = res || { meta: {}, list: [] };
         groupsLoading = false;
-        if (el) {
-          var m = groupsCache.meta || {};
-          el.textContent = (m.generatedAt ? ("生成 " + m.generatedAt + " · ") : "") + (m.total != null ? ("共 " + m.total + " 条") : "每日巡检清单（只读）");
-        }
-        renderGroupsTable();
+        renderTgGroupList();
+        updateTgMeta();
       })
       .catch(function () {
         groupsLoading = false;
-        groupsCache = null;
-        if (el) { el.textContent = "加载失败 · 请确认同步服务(10.10.12.157:8080)已启动"; }
-        showGroupsEmpty("加载失败 · 同步服务未启动或无清单数据");
+        groupsCache = { meta: {}, list: [] };
+        renderTgGroupList();
+        updateTgMeta();
+      });
+  }
+
+  function updateTgMeta() {
+    var n = ((groupsCache && groupsCache.list) || []).length;
+    tgNote("分组 " + tgGroups.length + " 个 · 待绑清单 " + n + " 条 · 直连探域");
+  }
+
+  function tgLoadGroups(force) {
+    if (tgGroupsLoading) { return; }
+    tgGroupsLoading = true;
+    tgNote("分组加载中…");
+    tgJson("/tg/groups" + (force ? "?refresh=1" : ""))
+      .then(function (res) {
+        tgGroupsLoading = false;
+        if (!res || !res.ok) {
+          tgGroups = [];
+          tgNote("分组加载失败：" + ((res && res.error) || "未知错误"));
+        } else {
+          tgGroups = res.groups || [];
+          updateTgMeta();
+        }
+        renderTgGroupList();
+        renderTgPickerList("");
+      })
+      .catch(function () {
+        tgGroupsLoading = false;
+        tgGroups = [];
+        tgNote("分组加载失败 · 本机服务(8080)未启动");
+        renderTgGroupList();
       });
   }
 
@@ -1486,20 +1542,129 @@
   function bindGroupsEvents() {
     if (groupsBound) { return; }
     groupsBound = true;
-    var tabs = document.querySelectorAll("#groupsTabs .gtab-btn");
-    Array.prototype.forEach.call(tabs, function (t) {
-      t.addEventListener("click", function () {
-        groupsTab = t.dataset.gtab;
-        Array.prototype.forEach.call(tabs, function (x) { x.classList.toggle("active", x === t); });
-        renderGroupsTable();
-      });
-    });
-    var si = $id("groupsSearchInput");
-    if (si) {
-      si.addEventListener("input", function () { groupsQuery = si.value.trim().toLowerCase(); renderGroupsTable(); });
-    }
+
     var rb = $id("groupsRefreshBtn");
-    if (rb) { rb.addEventListener("click", function () { groupsLoad(); }); }
+    if (rb) {
+      rb.addEventListener("click", function () {
+        tgPage = 1; tgSel = {};
+        groupsLoad(); tgLoadGroups(true); tgLoadProducts();
+      });
+    }
+
+    var gq = $id("tgGroupSearch");
+    if (gq) {
+      gq.addEventListener("input", function () {
+        tgGroupQ = gq.value.trim().toLowerCase();
+        renderTgGroupList();
+      });
+    }
+
+    var list = $id("tgGroupList");
+    if (list) {
+      list.addEventListener("click", function (e) {
+        var b = e.target.closest ? e.target.closest(".tg-gitem") : null;
+        if (!b) { return; }
+        tgPage = 1; tgSel = {}; tgProdQ = "";
+        var ps = $id("tgProductSearch");
+        if (ps) { ps.value = ""; }
+        if (b.getAttribute("data-mode") === "pending") {
+          tgMode = "pending"; tgGid = ""; tgGname = "待绑商品";
+        } else {
+          tgMode = "group"; tgGid = b.getAttribute("data-gid"); tgGname = b.getAttribute("data-gname");
+        }
+        var ca = $id("tgCheckAll");
+        if (ca) { ca.checked = false; }
+        renderTgGroupList();
+        tgLoadProducts();
+      });
+    }
+
+    var ps = $id("tgProductSearch");
+    if (ps) {
+      ps.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { tgProdQ = ps.value.trim(); tgPage = 1; tgSel = {}; tgLoadProducts(); }
+      });
+    }
+
+    var st = $id("tgStatus");
+    if (st) {
+      st.addEventListener("change", function () { tgStatus = st.value; tgPage = 1; tgRenderRows(); });
+    }
+
+    var ca = $id("tgCheckAll");
+    if (ca) { ca.addEventListener("change", function () { tgToggleAll(ca.checked); }); }
+
+    var body = $id("groupsBody");
+    if (body) {
+      body.addEventListener("change", function (e) {
+        var cb = e.target;
+        if (!cb || cb.type !== "checkbox") { return; }
+        var spu = cb.getAttribute("data-spu");
+        if (cb.checked) {
+          for (var i = 0; i < tgRows.length; i++) {
+            if (tgRows[i].spuId === spu) { tgSel[spu] = tgRows[i]; break; }
+          }
+        } else {
+          delete tgSel[spu];
+        }
+        var tr = cb.parentNode && cb.parentNode.parentNode;
+        if (tr && tr.classList) { tr.classList.toggle("tg-row-sel", !!cb.checked); }
+        updateTgSelBar();
+      });
+    }
+
+    var bb = $id("tgBindBtn");
+    if (bb) { bb.addEventListener("click", openTgPicker); }
+
+    var ub = $id("tgUnbindBtn");
+    if (ub) { ub.addEventListener("click", tgUnbind); }
+
+    var pc = $id("tgPickerClose");
+    if (pc) { pc.addEventListener("click", closeTgPicker); }
+
+    var mk = $id("tgMask");
+    if (mk) {
+      // 放到 body 下，避免被视图容器的层叠/裁剪影响
+      if (mk.parentNode !== document.body) { document.body.appendChild(mk); }
+      mk.addEventListener("click", closeTgPicker);
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        var p = $id("tgPicker");
+        if (p && !p.hidden) { closeTgPicker(); }
+      }
+    });
+
+    var psr = $id("tgPickerSearch");
+    if (psr) { psr.addEventListener("input", function () { renderTgPickerList(psr.value.trim().toLowerCase()); }); }
+
+    var pl = $id("tgPickerList");
+    if (pl) {
+      pl.addEventListener("click", function (e) {
+        var b = e.target.closest ? e.target.closest(".tg-pitem") : null;
+        if (!b) { return; }
+        tgDoBind(b.getAttribute("data-gid"), b.getAttribute("data-gname"));
+      });
+    }
+
+    var pager = $id("tgPager");
+    if (pager) {
+      pager.addEventListener("click", function (e) {
+        var b = e.target.closest ? e.target.closest(".tg-pbtn") : null;
+        if (!b || b.disabled) { return; }
+        var p = parseInt(b.getAttribute("data-p"), 10);
+        if (!p || p === tgPage) { return; }
+        tgPage = p; tgSel = {}; tgLoadProducts();
+      });
+    }
+
+    var ng = $id("tgNewGroupBtn");
+    if (ng) {
+      ng.addEventListener("click", function () {
+        window.open("https://agent.tanyuai.com/v2/groupAndStore/product-management/group", "_blank");
+      });
+    }
   }
 
   function showGroupsEmpty(msg) {
@@ -1511,54 +1676,325 @@
     if (fc) { fc.textContent = ""; }
   }
 
-  function renderGroupsTable() {
-    bindGroupsEvents();
+  /* ---------- 左栏：分组列表 ---------- */
+  function renderTgGroupList() {
+    var el = $id("tgGroupList");
+    if (!el) { return; }
+    var q = tgGroupQ;
+    var pendN = ((groupsCache && groupsCache.list) || []).length;
+    var html = '<button class="tg-gitem tg-gitem-pend' + (tgMode === "pending" ? " active" : "") + '" data-mode="pending">' +
+      '<span class="tg-gname">📋 待绑商品</span><span class="tg-gnum">' + pendN + "</span></button>";
+
+    var gs = tgGroups.filter(function (g) {
+      if (!q) { return true; }
+      return (g.name || "").toLowerCase().indexOf(q) >= 0 || String(g.id).indexOf(q) >= 0;
+    });
+    if (!gs.length) {
+      html += '<div class="tg-group-hint">' + (tgGroupsLoading ? "加载中…" : (q ? "无匹配分组" : "暂无分组 · 请确认本机服务已启动")) + "</div>";
+    } else {
+      html += gs.map(function (g) {
+        var act = (tgMode === "group" && tgGid === g.id) ? " active" : "";
+        return '<button class="tg-gitem' + act + '" data-gid="' + esc(g.id) + '" data-gname="' + esc(g.name) + '">' +
+          '<span class="tg-gname" title="' + esc(g.name) + '">' + esc(g.name) + "</span>" +
+          '<span class="tg-gnum">' + g.productNum + "</span></button>";
+      }).join("");
+    }
+    el.innerHTML = html;
+  }
+
+  /* ---------- 右栏：商品加载 ---------- */
+  function tgLoadProducts() {
+    var empty = $id("groupsEmpty");
+    var table = $id("groupsTable");
+    var ca = $id("tgCheckAll");
+    if (ca) { ca.checked = false; }
+    if (empty) { empty.hidden = false; empty.textContent = "加载中…"; }
+    if (table) { table.hidden = true; }
+    updateTgSelBar();
+
+    if (tgMode === "pending") {
+      var list = ((groupsCache && groupsCache.list) || []).map(function (r, i) {
+        return {
+          spuId: String(r.spuId || r.id || r.spu || ("p" + i)),
+          title: r.title || "",
+          image: r.image || "",
+          shopName: r.shop || r.shopName || "",
+          thirdShopId: r.thirdShopId || "",
+          onSale: true,
+          heat7: r.heat7 != null ? r.heat7 : r.heat7d,
+          heat30: r.heat30 != null ? r.heat30 : r.heat30d,
+          groups: [],
+          suggest: r.suggestedGroup || r.targetGroup || "",
+          realName: r.name || r.realName || ""
+        };
+      });
+      var q = tgProdQ.toLowerCase();
+      var f = list.filter(function (r) {
+        if (!q) { return true; }
+        return ((r.title || "") + " " + (r.shopName || "") + " " + (r.realName || "") + " " + (r.suggest || "")).toLowerCase().indexOf(q) >= 0;
+      });
+      f = f.filter(function (r) {
+        if (tgStatus === "on") { return r.onSale; }
+        if (tgStatus === "off") { return !r.onSale; }
+        return true;
+      });
+      tgTotal = f.length;
+      var start = (tgPage - 1) * tgSize;
+      tgRows = f.slice(start, start + tgSize);
+      tgRenderRows();
+      return;
+    }
+
+    var url = "/tg/products?gid=" + encodeURIComponent(tgGid) + "&page=" + tgPage + "&size=" + tgSize +
+      "&q=" + encodeURIComponent(tgProdQ);
+    tgJson(url).then(function (res) {
+      if (!res || !res.ok) {
+        tgRows = []; tgTotal = 0;
+        showGroupsEmpty("加载失败：" + ((res && res.error) || "未知错误"));
+        updateTgSelBar(); renderTgPager();
+        return;
+      }
+      tgTotal = res.total || 0;
+      tgRows = (res.rows || []).map(function (r) {
+        return {
+          spuId: String(r.spuId),
+          title: r.title || "",
+          image: r.image || "",
+          shopName: r.shopName || "",
+          thirdShopId: r.thirdShopId || "",
+          onSale: r.onSale === true,
+          price: r.price || "",
+          heat7: null, heat30: null,
+          groups: [], suggest: "", realName: ""
+        };
+      });
+      tgRenderRows();
+    }).catch(function () {
+      tgRows = []; tgTotal = 0;
+      showGroupsEmpty("加载失败 · 本机服务(8080)未启动");
+      updateTgSelBar(); renderTgPager();
+    });
+  }
+
+  /* ---------- 右栏：表格渲染 ---------- */
+  function tgRenderRows() {
     var empty = $id("groupsEmpty");
     var table = $id("groupsTable");
     var body = $id("groupsBody");
     var count = $id("groupsCount");
-    var list = (groupsCache && groupsCache.list) || [];
-    if (!list.length) {
-      showGroupsEmpty("暂无数据 · 点击右上角「刷新」加载每日巡检清单");
+    var crumb = $id("tgCrumb");
+    var colG = $id("tgColGroup");
+
+    if (crumb) {
+      crumb.innerHTML = tgMode === "pending"
+        ? '<b>待绑商品</b> · 在售未绑分组巡检清单'
+        : '<b>' + esc(tgGname) + '</b> <span class="tg-crumb-id">' + esc(tgGid) + "</span>";
+    }
+    if (colG) { colG.textContent = tgMode === "pending" ? "建议归属" : "所属分组"; }
+
+    var shown = tgRows.filter(function (r) {
+      if (tgStatus === "on") { return r.onSale; }
+      if (tgStatus === "off") { return !r.onSale; }
+      return true;
+    });
+
+    if (!body) { return; }
+    if (!shown.length) {
+      body.innerHTML = "";
+      showGroupsEmpty(tgProdQ ? "无匹配商品" : "当前分组暂无商品");
+      renderTgPager();
       return;
     }
-    var q = groupsQuery;
-    var filtered = list.filter(function (r) {
-      if (groupsSectionOf(r) !== groupsTab) { return false; }
-      if (!q) { return true; }
-      return ((r.title || "") + " " + (r.shop || "") + " " + (r.name || "") + " " + (r.suggestedGroup || "")).toLowerCase().indexOf(q) >= 0;
-    });
-    var counts = groupsCounts();
     if (empty) { empty.hidden = true; }
     if (table) { table.hidden = false; }
-    if (count) {
-      count.textContent = "当前区 " + filtered.length + " 条 ｜ 可直绑 " + counts.bindable + " · 待拍板 " + counts.pending + " · 脏组 " + counts.dirty + " · 需建新组 " + counts.newgroup;
-    }
-    if (!body) { return; }
-    if (!filtered.length) {
-      body.innerHTML = "";
-      showGroupsEmpty(q ? "无匹配结果" : "当前区暂无商品");
-      return;
-    }
-    body.innerHTML = filtered.map(function (r) {
-      var h7 = r.heat7 != null ? r.heat7 : (r.heat7d != null ? r.heat7d : "");
-      var h30 = r.heat30 != null ? r.heat30 : (r.heat30d != null ? r.heat30d : "");
-      return "<tr>" +
-        "<td>" + esc(r.shop || "") + "</td>" +
-        '<td class="g-id">' + esc(r.id || r.spuId || "") + "</td>" +
-        '<td title="' + esc(r.title || "") + '">' + esc(r.title || "") + "</td>" +
-        "<td>" + esc(h7) + "</td>" +
-        "<td>" + esc(h30) + "</td>" +
-        "<td>" + esc(r.name || r.realName || "") + "</td>" +
-        "<td>" + esc(r.suggestedGroup || r.targetGroup || "") + "</td>" +
+
+    body.innerHTML = shown.map(function (r) {
+      var img = r.image
+        ? '<img class="tg-thumb" src="' + esc(r.image) + '" loading="lazy" alt="">'
+        : '<span class="tg-thumb tg-thumb-ph"></span>';
+      var st = r.onSale ? '<span class="tg-on">在售</span>' : '<span class="tg-off">下架</span>';
+      var heat = (r.heat7 == null && r.heat30 == null)
+        ? '<span class="tg-dim">—</span>'
+        : esc(String(r.heat7 == null ? "-" : r.heat7)) + ' <span class="tg-dim">/</span> ' + esc(String(r.heat30 == null ? "-" : r.heat30));
+      var grp;
+      if (r.groups && r.groups.length) {
+        grp = r.groups.map(function (g) { return '<span class="tg-tag">' + esc(g.name) + "</span>"; }).join("");
+      } else if (tgMode === "group") {
+        grp = '<span class="tg-tag tg-tag-cur">' + esc(tgGname) + "</span>";
+      } else if (r.suggest) {
+        grp = '<span class="tg-tag tg-tag-sug">建议 ' + esc(r.suggest) + "</span>";
+      } else if (r.realName) {
+        grp = '<span class="tg-dim">' + esc(r.realName) + "</span>";
+      } else {
+        grp = '<span class="tg-dim">未分组</span>';
+      }
+      var checked = tgSel[r.spuId] ? " checked" : "";
+      return '<tr class="' + (tgSel[r.spuId] ? "tg-row-sel" : "") + '">' +
+        '<td class="tg-chk"><input type="checkbox" data-spu="' + esc(r.spuId) + '"' + checked + "></td>" +
+        '<td class="tg-cell-prod">' + img +
+        '<div class="tg-prod-text"><div class="tg-prod-title" title="' + esc(r.title) + '">' + esc(r.title) + "</div>" +
+        (r.price ? '<div class="tg-prod-sub">¥' + esc(r.price) + "</div>" : "") + "</div></td>" +
+        '<td class="g-id">' + esc(r.spuId) + "</td>" +
+        "<td>" + esc(r.shopName) + "</td>" +
+        "<td>" + st + "</td>" +
+        "<td>" + heat + "</td>" +
+        "<td>" + grp + "</td>" +
         "</tr>";
     }).join("");
+
+    if (count) { count.textContent = "共 " + tgTotal + " 条 ｜ 本页 " + shown.length + " 条"; }
+    updateTgSelBar();
+    renderTgPager();
+  }
+
+  function renderTgPager() {
+    var el = $id("tgPager");
+    if (!el) { return; }
+    var pages = Math.max(1, Math.ceil(tgTotal / tgSize));
+    if (pages <= 1) { el.innerHTML = ""; return; }
+    var html = '<button class="tg-pbtn" data-p="' + Math.max(1, tgPage - 1) + '"' + (tgPage <= 1 ? " disabled" : "") + ">‹</button>";
+    var from = Math.max(1, tgPage - 2);
+    var to = Math.min(pages, from + 4);
+    from = Math.max(1, to - 4);
+    for (var i = from; i <= to; i++) {
+      html += '<button class="tg-pbtn' + (i === tgPage ? " active" : "") + '" data-p="' + i + '">' + i + "</button>";
+    }
+    html += '<button class="tg-pbtn" data-p="' + Math.min(pages, tgPage + 1) + '"' + (tgPage >= pages ? " disabled" : "") + ">›</button>";
+    html += '<span class="tg-ptotal">共 ' + pages + " 页</span>";
+    el.innerHTML = html;
+  }
+
+  function updateTgSelBar() {
+    var n = Object.keys(tgSel).length;
+    var si = $id("tgSelInfo");
+    if (si) { si.textContent = n ? ("已选 " + n + " 个") : "未选择商品"; }
+    var bb = $id("tgBindBtn");
+    if (bb) { bb.disabled = (n === 0 || tgBusy); }
+    var ub = $id("tgUnbindBtn");
+    if (ub) { ub.disabled = (n === 0 || tgBusy || tgMode !== "group"); }
+  }
+
+  function tgToggleAll(checked) {
+    for (var i = 0; i < tgRows.length; i++) {
+      if (checked) { tgSel[tgRows[i].spuId] = tgRows[i]; } else { delete tgSel[tgRows[i].spuId]; }
+    }
+    tgRenderRows();
+  }
+
+  /* ---------- 目标分组选择器 ---------- */
+  function renderTgPickerList(q) {
+    var el = $id("tgPickerList");
+    if (!el) { return; }
+    q = q || "";
+    var gs = tgGroups.filter(function (g) {
+      if (!q) { return true; }
+      return (g.name || "").toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 300);
+    if (!gs.length) {
+      el.innerHTML = '<div class="tg-group-hint">' + (tgGroups.length ? "无匹配分组" : "分组未加载") + "</div>";
+      return;
+    }
+    el.innerHTML = gs.map(function (g) {
+      return '<button class="tg-pitem" data-gid="' + esc(g.id) + '" data-gname="' + esc(g.name) + '">' +
+        '<span class="tg-pname">' + esc(g.name) + '</span><span class="tg-pnum">' + g.productNum + "</span></button>";
+    }).join("");
+  }
+
+  function openTgPicker() {
+    if (!Object.keys(tgSel).length) { return; }
+    var p = $id("tgPicker");
+    if (!p) { return; }
+    var m = $id("tgMask");
+    if (m) { m.hidden = false; }
+    p.hidden = false;
+    var s = $id("tgPickerSearch");
+    if (s) { s.value = ""; s.focus(); }
+    renderTgPickerList("");
+  }
+
+  function closeTgPicker() {
+    var p = $id("tgPicker");
+    if (p) { p.hidden = true; }
+    var m = $id("tgMask");
+    if (m) { m.hidden = true; }
+  }
+
+  /* ---------- 执行绑定 / 解绑 ---------- */
+  function tgSelItems() {
+    return Object.keys(tgSel).map(function (k) {
+      var r = tgSel[k];
+      return { spuId: r.spuId, thirdShopId: r.thirdShopId || "", shopName: r.shopName || "" };
+    });
+  }
+
+  function tgDoBind(gid, gname) {
+    var items = tgSelItems();
+    if (!items.length) { return; }
+    closeTgPicker();
+    if (!confirm("把已选 " + items.length + " 个商品绑定到分组「" + gname + "」？\n\n（会保留商品原有其它分组）")) { return; }
+    tgRunBind("/tg/bind", { groupId: gid, items: items }, "绑定", gname);
+  }
+
+  function tgUnbind() {
+    var items = tgSelItems();
+    if (!items.length || tgMode !== "group") { return; }
+    if (!confirm("把已选 " + items.length + " 个商品移出分组「" + tgGname + "」？\n\n（其它分组会保留）")) { return; }
+    tgRunBind("/tg/unbind", { groupId: tgGid, items: items }, "移出", tgGname);
+  }
+
+  function tgRunBind(path, payload, verb, gname) {
+    if (tgBusy) { return; }
+    tgBusy = true;
+    updateTgSelBar();
+    var n = payload.items.length;
+    tgNote(verb + "中… 每条约 0.5 秒，共 " + n + " 条");
+    var tick = 0;
+    var timer = setInterval(function () {
+      tick = Math.min(n, tick + 1);
+      tgNote(verb + "中… 约 " + tick + "/" + n);
+    }, 600);
+
+    tgJson(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      clearInterval(timer);
+      tgBusy = false;
+      if (!res || !res.ok) {
+        tgNote(verb + "失败：" + ((res && res.error) || "未知错误"));
+        alert(verb + "失败：" + ((res && res.error) || "未知错误"));
+        updateTgSelBar();
+        return;
+      }
+      var fail = (res.results || []).filter(function (x) { return !x.ok; });
+      tgNote(verb + "完成 · 成功 " + res.okCount + " / 失败 " + res.failCount + " · 分组「" + gname + "」");
+      tgSel = {};
+      tgLoadGroups(true);
+      tgLoadProducts();
+      if (fail.length) {
+        alert(verb + "结果：成功 " + res.okCount + " 个，失败 " + res.failCount + " 个\n\n失败明细（前 10 条）：\n" +
+          fail.slice(0, 10).map(function (x) {
+            return x.spuId + " " + String(x.title || "").slice(0, 18) + " — " + x.msg;
+          }).join("\n"));
+      }
+    }).catch(function (e) {
+      clearInterval(timer);
+      tgBusy = false;
+      tgNote(verb + "异常：" + (e.message || e));
+      updateTgSelBar();
+    });
   }
 
   function wbRenderGroups() {
     bindGroupsEvents();
-    if (!groupsCache) { groupsLoad(); return; }
-    renderGroupsTable();
+    if (!groupsCache) {
+      groupsLoad().then(function () { if (!tgGroups.length) { tgLoadGroups(false); } tgLoadProducts(); });
+      return;
+    }
+    if (!tgGroups.length) { tgLoadGroups(false); }
+    renderTgGroupList();
+    tgLoadProducts();
   }
 
   window.wbRenderGroups = wbRenderGroups;

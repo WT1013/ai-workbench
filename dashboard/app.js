@@ -1107,6 +1107,7 @@ function renderTimeline() {
     });
   }
   const latestDay = cloudLatestDate ? parseInt(cloudLatestDate.slice(8), 10) : 0;
+  timelineDates.style.setProperty("--tl-cols", daysInMonth);
   timelineDates.innerHTML = days.map((day) => {
     const n = parseInt(day, 10);
     const cls = hasData.has(n) ? "active" : "";
