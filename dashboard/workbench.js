@@ -1565,10 +1565,10 @@
 
   /* ============================================================
    * AI 助手（DeepSeek / OpenAI 兼容） 2026-10-26
-   * 请求经本机 serve.js 代理，API Key 只存在本机 ai-config.json
+   * 浏览器直连 API（DeepSeek 回显 Origin，支持跨域）
+   * API Key 只存本机 localStorage，不上传云端、不进代码
    * ============================================================ */
-  var AI_LOCAL = (typeof location !== "undefined" && location.protocol === "http:");
-  var AI_HOST = AI_LOCAL ? "" : "http://localhost:8080";  // 本地 http 访问走同源；线上 https 只能打 localhost
+  var AI_CFG_KEY = "csa-ai-cfg-v1";
   var AI_MSG_KEY = "csa-ai-chat-v1";
   var aiCfg = { configured: false, loaded: false };
   var aiMsgs = [];
@@ -1639,23 +1639,53 @@
     return out.join("\n");
   }
 
-  function aiReq(path, body) {
-    var opt = {
-      method: body === undefined ? "GET" : "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store"
-    };
-    if (body !== undefined) { opt.body = JSON.stringify(body); }
-    return fetch(AI_HOST + path, opt).then(function (r) {
+  function aiReadCfg() {
+    try {
+      var c = JSON.parse(localStorage.getItem(AI_CFG_KEY) || "null");
+      if (c && c.apiKey) { return c; }
+    } catch (e) { /* 忽略 */ }
+    return null;
+  }
+
+  function aiMask(k) {
+    var s = String(k || "");
+    if (!s) { return ""; }
+    if (s.length <= 10) { return "****"; }
+    return s.slice(0, 4) + "****" + s.slice(-4);
+  }
+
+  // 直连 OpenAI 兼容接口（DeepSeek 已实测支持浏览器跨域）
+  function aiRaw(messages, maxTokens, temperature) {
+    var c = aiReadCfg();
+    if (!c) { return Promise.reject(new Error("尚未配置 API Key")); }
+    var url = String(c.baseUrl || "https://api.deepseek.com").replace(/\/+$/, "") + "/chat/completions";
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + c.apiKey
+      },
+      body: JSON.stringify({
+        model: c.model || "deepseek-chat",
+        messages: messages,
+        temperature: temperature === undefined ? 0.3 : temperature,
+        max_tokens: maxTokens || 4096,
+        stream: false
+      })
+    }).then(function (r) {
       return r.text().then(function (t) {
         var j = null;
-        try { j = JSON.parse(t); } catch (e) {
-          throw new Error("服务返回非 JSON（" + r.status + "）：" + String(t).slice(0, 120));
+        try { j = JSON.parse(t); } catch (e) { throw new Error("接口返回非 JSON（HTTP " + r.status + "）"); }
+        if (!r.ok) {
+          var msg = (j && j.error && (j.error.message || j.error)) || ("HTTP " + r.status);
+          throw new Error(msg);
         }
-        return j;
+        var content = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+        if (!content) { throw new Error("接口返回内容为空"); }
+        return { content: content, model: (j && j.model) || c.model };
       });
     }, function (e) {
-      throw new Error("连不上本地服务 " + (AI_HOST || location.origin) + "。请确认工作台的同步服务已启动（ai-config.json 所在目录的 serve.js）。原始错误：" + (e && e.message));
+      throw new Error("网络请求失败：" + ((e && e.message) || e) + "（检查网络或接口地址）");
     });
   }
 
@@ -1786,18 +1816,12 @@
     aiSetBusy(true);
     var t0 = Date.now();
 
-    aiReq("/ai/chat", {
-      messages: [{ role: "system", content: AI_SYS + aiContextText() }].concat(history)
-    }).then(function (j) {
-      if (!j || !j.ok) {
-        aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: "调用失败：" + ((j && j.error) || "未知错误"), error: true };
-      } else {
-        aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: j.content, ms: Date.now() - t0, model: j.model || "" };
-      }
+    aiRaw([{ role: "system", content: AI_SYS + aiContextText() }].concat(history), 4096, 0.3).then(function (r) {
+      aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: r.content, ms: Date.now() - t0, model: r.model || "" };
       aiSaveMsgs();
       renderAiMessages();
     }).catch(function (e) {
-      aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: String(e && e.message || e), error: true };
+      aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: "调用失败：" + String((e && e.message) || e), error: true };
       renderAiMessages();
     }).then(function () {
       aiSetBusy(false);
@@ -1821,7 +1845,7 @@
     if (hint) {
       hint.textContent = aiCfg.configured
         ? "已配置：" + (aiCfg.name || "AI") + " · " + (aiCfg.model || "") + " · " + (aiCfg.keyMask || "")
-        : "尚未配置。Key 只保存在本机 ai-config.json，不会上传云端。";
+        : "尚未配置。Key 只保存在本机浏览器（localStorage），不上传云端、不写入代码。";
     }
     var st = $id("aiStatusText");
     if (st) {
@@ -1832,18 +1856,12 @@
   }
 
   function loadAiConfig() {
-    if (aiCfg.loaded) { return; }
-    aiReq("/ai/config").then(function (j) {
-      aiCfg = Object.assign({ loaded: true }, j || {});
-      aiCfgOpen = !aiCfg.configured;
-      renderAiConfigForm();
-    }).catch(function (e) {
-      aiCfg.loaded = true;
-      aiCfgOpen = true;
-      renderAiConfigForm();
-      var hint = $id("aiCfgHint");
-      if (hint) { hint.textContent = e.message; }
-    });
+    var c = aiReadCfg();
+    aiCfg = c
+      ? { loaded: true, configured: true, name: c.name, baseUrl: c.baseUrl, model: c.model, keyMask: aiMask(c.apiKey) }
+      : { loaded: true, configured: false };
+    aiCfgOpen = !aiCfg.configured;
+    renderAiConfigForm();
   }
 
   function saveAiConfig() {
@@ -1851,31 +1869,35 @@
     var baseUrl = ($id("aiCfgBase").value || "").trim() || "https://api.deepseek.com";
     var model = ($id("aiCfgModel").value || "").trim() || "deepseek-chat";
     var apiKey = ($id("aiCfgKey").value || "").trim();
+    var old = aiReadCfg();
+    if (!apiKey && old) { apiKey = old.apiKey; }   // 留空 = 沿用原 Key
+    if (!apiKey) { toast("请填写 API Key"); return; }
+    if (!/^https?:\/\//i.test(baseUrl)) { toast("接口地址需以 http(s):// 开头"); return; }
+
+    try {
+      localStorage.setItem(AI_CFG_KEY, JSON.stringify({
+        name: name, baseUrl: baseUrl.replace(/\/+$/, ""), model: model, apiKey: apiKey
+      }));
+    } catch (e) {
+      toast("浏览器禁止本地存储，无法保存 Key");
+      return;
+    }
+    aiCfg = { loaded: true, configured: true, name: name, baseUrl: baseUrl, model: model, keyMask: aiMask(apiKey) };
+    var kEl = $id("aiCfgKey");
+    if (kEl) { kEl.value = ""; }
+    renderAiConfigForm();
+
     var btn = $id("aiCfgSave");
-    var old = btn ? btn.textContent : "";
-    if (btn) { btn.disabled = true; btn.textContent = "保存中…"; }
-    aiReq("/ai/config", { name: name, baseUrl: baseUrl, model: model, apiKey: apiKey })
-      .then(function (j) {
-        if (!j || !j.ok) { throw new Error((j && j.error) || "保存失败"); }
-        aiCfg = Object.assign({ loaded: true }, j);
-        var kEl = $id("aiCfgKey");
-        if (kEl) { kEl.value = ""; }
-        renderAiConfigForm();
-        if (btn) { btn.textContent = "测试中…"; }
-        return aiReq("/ai/test", {}).then(function (t) {
-          if (t && t.ok) {
-            aiCfgOpen = false;
-            renderAiConfigForm();
-            toast("已保存，连接正常（" + (t.reply || "可用") + "）");
-          } else {
-            toast("已保存，但测试失败：" + ((t && t.error) || "未知"));
-          }
-        });
-      })
-      .catch(function (e) { toast(String(e && e.message || e)); })
-      .then(function () {
-        if (btn) { btn.disabled = false; btn.textContent = old || "保存并测试"; }
-      });
+    if (btn) { btn.disabled = true; btn.textContent = "测试中…"; }
+    aiRaw([{ role: "user", content: "回复两个字：可用" }], 16, 0).then(function (r) {
+      aiCfgOpen = false;
+      renderAiConfigForm();
+      toast("已保存，连接正常（" + String(r.content).trim().slice(0, 20) + "）");
+    }).catch(function (e) {
+      toast("已保存，但连接失败：" + String((e && e.message) || e));
+    }).then(function () {
+      if (btn) { btn.disabled = false; btn.textContent = "保存并测试"; }
+    });
   }
 
   function bindAiEvents() {
