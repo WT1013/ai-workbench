@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822d" />
-    <link rel="stylesheet" href="workbench.css?v=20260822d" />
+    <link rel="stylesheet" href="styles.css?v=20260822e" />
+    <link rel="stylesheet" href="workbench.css?v=20260822e" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -58,6 +58,7 @@
           <button class="nav-item" data-view="shops" title="店铺库/每日数据/月度汇总"><svg><use href="#i-columns"/></svg><span>店铺库</span></button>
           <button class="nav-item" data-view="summary" title="单店历史趋势/多店指标对比"><svg><use href="#i-link"/></svg><span>数据总览</span></button>
           <button class="nav-item" data-view="groups" title="在售未绑商品 · 每日巡检待绑清单"><svg><use href="#i-columns"/></svg><span>待绑商品</span></button>
+          <button class="nav-item" data-view="ai" title="AI 助手 · 结合工作台数据回答"><svg><use href="#i-spark"/></svg><span>AI 助手</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync"><svg><use href="#i-spark"/></svg><span>同步昨日数据</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/fill-dingtalk"><svg><use href="#i-list"/></svg><span>同步钉钉表格</span></button>
           <button class="nav-item" data-href="http://10.10.12.157:8080/sync-workshop"><svg><use href="#i-spark"/></svg><span>同步打标数据</span></button>
@@ -294,6 +295,39 @@
           </div>
           <footer class="groups-foot"><span id="groupsCount"></span></footer>
         </section>
+
+        <section id="aiView" class="workbench-view panel" hidden>
+          <header class="workbench-head">
+            <div class="section-heading"><h2>AI 助手</h2><span id="aiStatusText">读取工作台数据 · 接口由本地服务代理</span></div>
+            <div class="workbench-toolbar">
+              <button id="aiConfigToggle" class="pill-btn quiet">⚙ 接口设置</button>
+              <button id="aiClearBtn" class="pill-btn quiet">清空对话</button>
+            </div>
+          </header>
+
+          <div id="aiConfigCard" class="wb-card ai-config-card" hidden>
+            <div class="ai-config-grid">
+              <label>服务名称<input id="aiCfgName" placeholder="DeepSeek"></label>
+              <label>接口地址<input id="aiCfgBase" placeholder="https://api.deepseek.com"></label>
+              <label>模型名称<input id="aiCfgModel" placeholder="deepseek-chat"></label>
+              <label>API Key<input id="aiCfgKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+            </div>
+            <div class="ai-config-foot">
+              <span id="aiCfgHint" class="ai-cfg-hint"></span>
+              <button id="aiCfgSave" class="pill-btn primary">保存并测试</button>
+            </div>
+          </div>
+
+          <div class="ai-chat-wrap">
+            <div id="aiMessages" class="ai-messages"></div>
+            <div id="aiQuick" class="ai-quick"></div>
+            <div class="ai-composer">
+              <textarea id="aiInput" rows="2" placeholder="问点什么，例如：这周哪些重点店没达标，差多少"></textarea>
+              <button id="aiSend" class="pill-btn primary">发送</button>
+            </div>
+            <div id="aiFoot" class="ai-foot"></div>
+          </div>
+        </section>
       </section>
 
       <aside class="details-panel panel">
@@ -471,7 +505,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822d"></script>
-    <script type="module" src="app.js?v=20260822d"></script>
+    <script src="workbench.js?v=20260822e"></script>
+    <script type="module" src="app.js?v=20260822e"></script>
   </body>
 </html>

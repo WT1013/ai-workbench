@@ -1563,6 +1563,366 @@
 
   window.wbRenderGroups = wbRenderGroups;
 
+  /* ============================================================
+   * AI 助手（DeepSeek / OpenAI 兼容） 2026-10-26
+   * 请求经本机 serve.js 代理，API Key 只存在本机 ai-config.json
+   * ============================================================ */
+  var AI_LOCAL = (typeof location !== "undefined" && location.protocol === "http:");
+  var AI_HOST = AI_LOCAL ? "" : "http://localhost:8080";  // 本地 http 访问走同源；线上 https 只能打 localhost
+  var AI_MSG_KEY = "csa-ai-chat-v1";
+  var aiCfg = { configured: false, loaded: false };
+  var aiMsgs = [];
+  var aiBusy = false;
+  var aiCfgOpen = false;
+  var aiTimer = null;
+
+  var AI_SYS = "你是拼多多多店铺客服 AI 运营助手，服务对象是客服运营负责人。\n" +
+    "回答要求：\n" +
+    "1. 先给结论，再给依据；数据不足就直接说不确定，禁止编造数字。\n" +
+    "2. 判断达标必须严格用给定达标线，并算出差额（例：采纳率 62.10%，距 65% 差 2.90 个点）。\n" +
+    "3. 少用形容词，多给可执行动作，建议最多 3 条。\n" +
+    "4. 用中文回答，表格优先于长段落。\n\n" +
+    "工作台当前数据快照：\n";
+
+  function aiNum(v) {
+    if (v === undefined || v === null || v === "") { return null; }
+    var n = Number(v);
+    return isNaN(n) ? null : n;
+  }
+
+  function aiFmt(v, d) {
+    if (v === null || v === undefined) { return "—"; }
+    return Number(v).toFixed(d === undefined ? 2 : d);
+  }
+
+  function aiAvg(arr) {
+    if (!arr.length) { return null; }
+    var s = 0;
+    for (var i = 0; i < arr.length; i++) { s += arr[i]; }
+    return s / arr.length;
+  }
+
+  // 把工作台数据压成紧凑文本快照，作为 system 上下文
+  function aiContextText() {
+    var shops = shopLibrary || [];
+    var allD = state.days || {};
+    var keys = Object.keys(allD).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort();
+    var recent = keys.slice(-7);
+    var out = [];
+    out.push("今天：" + todayKey() + "；店铺库：" + shops.length + " 家（★=重点店，由用户手工标记）。");
+    out.push("口径：生成率/采纳率/风控率共用分母 = Agentic咨询消息数；纯智能体占比 = auto/(auto+assisted+manual)。");
+    out.push("达标线：生成率≥95%、采纳率≥65%、纯智能体占比≥35%、风控率≤15%。");
+    out.push("");
+    out.push("【各店近 " + recent.length + " 天均值（" + (recent[0] || "-") + " ~ " + (recent[recent.length - 1] || "-") + "）】");
+    out.push("店铺|采纳率%|生成率%|纯智%|风控%|3分钟%|体验分(最近值)");
+    shops.forEach(function (s) {
+      var acc = { adoptionRate: [], generationRate: [], pureAgentRatio: [], riskRate: [], threeMinReplyRate: [] };
+      var lastExp = null;
+      recent.forEach(function (k) {
+        var d = allD[k] && allD[k].shopData && allD[k].shopData[s.id];
+        if (!d) { return; }
+        Object.keys(acc).forEach(function (f) { var v = aiNum(d[f]); if (v !== null) { acc[f].push(v); } });
+        var e = aiNum(d.experienceScore);
+        if (e !== null) { lastExp = e; }
+      });
+      out.push([String(s.name || s.id) + (s.key ? "★" : ""),
+        aiFmt(aiAvg(acc.adoptionRate)), aiFmt(aiAvg(acc.generationRate)),
+        aiFmt(aiAvg(acc.pureAgentRatio)), aiFmt(aiAvg(acc.riskRate)),
+        aiFmt(aiAvg(acc.threeMinReplyRate)), aiFmt(lastExp)].join("|"));
+    });
+    var tk = todayKey();
+    var mk = allD[tk] && allD[tk].shopMarked;
+    if (mk && Object.keys(mk).length) {
+      out.push("");
+      out.push("【今日调优工坊 · 已标记待审核数】" + Object.keys(mk).map(function (k) { return k + " " + mk[k]; }).join("，"));
+    }
+    return out.join("\n");
+  }
+
+  function aiReq(path, body) {
+    var opt = {
+      method: body === undefined ? "GET" : "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store"
+    };
+    if (body !== undefined) { opt.body = JSON.stringify(body); }
+    return fetch(AI_HOST + path, opt).then(function (r) {
+      return r.text().then(function (t) {
+        var j = null;
+        try { j = JSON.parse(t); } catch (e) {
+          throw new Error("服务返回非 JSON（" + r.status + "）：" + String(t).slice(0, 120));
+        }
+        return j;
+      });
+    }, function (e) {
+      throw new Error("连不上本地服务 " + (AI_HOST || location.origin) + "。请确认工作台的同步服务已启动（ai-config.json 所在目录的 serve.js）。原始错误：" + (e && e.message));
+    });
+  }
+
+  function aiMd(src) {
+    function inline(s) {
+      return s.replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    }
+    var blocks = esc(String(src || "")).split(/\n{2,}/);
+    return blocks.map(function (b) {
+      var lines = b.split("\n");
+      if (/^```/.test(lines[0])) {
+        return '<pre class="ai-pre">' + b.replace(/^```[a-zA-Z]*\n?/, "").replace(/```\s*$/, "") + "</pre>";
+      }
+      if (lines.length >= 2 && /^\s*\|/.test(lines[0]) && /^\s*\|[\s:|\-]+\|?\s*$/.test(lines[1])) {
+        function cells(l) {
+          return l.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map(function (c) { return inline(c.trim()); });
+        }
+        var head = cells(lines[0]);
+        var body = lines.slice(2).filter(function (l) { return /\S/.test(l); }).map(cells);
+        return '<table class="ai-table"><thead><tr>' +
+          head.map(function (c) { return "<th>" + c + "</th>"; }).join("") + "</tr></thead><tbody>" +
+          body.map(function (r) { return "<tr>" + r.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>"; }).join("") +
+          "</tbody></table>";
+      }
+      if (lines.every(function (l) { return /^\s*[-*]\s+/.test(l); })) {
+        return "<ul>" + lines.map(function (l) { return "<li>" + inline(l.replace(/^\s*[-*]\s+/, "")) + "</li>"; }).join("") + "</ul>";
+      }
+      if (/^#{1,4}\s+/.test(lines[0])) {
+        return "<h4>" + inline(lines[0].replace(/^#{1,4}\s+/, "")) + "</h4>" +
+          (lines.length > 1 ? "<p>" + inline(lines.slice(1).join("<br>")) + "</p>" : "");
+      }
+      return "<p>" + inline(lines.join("<br>")) + "</p>";
+    }).join("");
+  }
+
+  function aiSaveMsgs() {
+    try {
+      sessionStorage.setItem(AI_MSG_KEY, JSON.stringify(aiMsgs.filter(function (m) { return !m.pending; }).slice(-40)));
+    } catch (e) { /* 忽略 */ }
+  }
+
+  function aiLoadMsgs() {
+    try {
+      var raw = sessionStorage.getItem(AI_MSG_KEY);
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr)) { aiMsgs = arr; }
+      }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  function renderAiMessages() {
+    var box = $id("aiMessages");
+    if (!box) { return; }
+    if (!aiMsgs.length) {
+      box.innerHTML = '<div class="ai-empty">' +
+        "<p>已接入工作台数据（" + (shopLibrary || []).length + " 家店 · 近 7 天指标 · 达标线）。</p>" +
+        "<p>可以直接问：某店为什么掉、哪几家没达标、这周该先处理什么。</p>" +
+        "</div>";
+      return;
+    }
+    box.innerHTML = aiMsgs.map(function (m) {
+      if (m.role === "user") {
+        return '<div class="ai-msg ai-msg-user"><div class="ai-bubble">' + esc(m.content).replace(/\n/g, "<br>") + "</div></div>";
+      }
+      if (m.pending) {
+        return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble ai-waiting" id="aiWaiting">正在生成… 0s</div></div>';
+      }
+      if (m.error) {
+        return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble ai-err">' + esc(m.content) + "</div></div>";
+      }
+      return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble">' + aiMd(m.content) +
+        (m.ms ? '<div class="ai-meta">' + esc(m.model || "") + " · " + (m.ms / 1000).toFixed(1) + "s</div>" : "") +
+        "</div></div>";
+    }).join("");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  var AI_QUICK = [
+    { t: "重点店差距", q: "把重点店（★）按达标线逐项对比，列出没达标的店和差额，最后给 3 条最该先做的动作。" },
+    { t: "异常排查", q: "近 7 天里，哪些店出现了指标为 0、缺失、或比前一日骤降 20% 以上的情况？按可能性从高到低说明原因。" },
+    { t: "最弱店铺", q: "按采纳率和生成率综合排序，指出最弱的 3 家店，并说明它们各自最拖后腿的是哪个指标。" },
+    { t: "今日待办", q: "基于当前数据，今天最值得我优先处理的三件事是什么？每件写清：做什么、为什么、涉及哪几家店。" }
+  ];
+
+  function renderAiQuick() {
+    var box = $id("aiQuick");
+    if (!box) { return; }
+    box.innerHTML = AI_QUICK.map(function (q, i) {
+      return '<button class="ai-chip" data-ai-q="' + i + '">' + esc(q.t) + "</button>";
+    }).join("");
+  }
+
+  function aiSetBusy(on) {
+    aiBusy = on;
+    var btn = $id("aiSend");
+    var input = $id("aiInput");
+    if (btn) { btn.disabled = on; btn.textContent = on ? "生成中" : "发送"; }
+    if (input) { input.disabled = on; }
+    if (aiTimer) { clearInterval(aiTimer); aiTimer = null; }
+    if (on) {
+      var t0 = Date.now();
+      aiTimer = setInterval(function () {
+        var el = $id("aiWaiting");
+        if (el) { el.textContent = "正在生成… " + Math.round((Date.now() - t0) / 1000) + "s"; }
+      }, 500);
+    }
+  }
+
+  function aiAsk(text) {
+    if (aiBusy) { return; }
+    text = String(text || "").trim();
+    if (!text) { return; }
+    if (!aiCfg.configured) {
+      aiCfgOpen = true;
+      renderAiConfigForm();
+      toast("请先填写 API Key");
+      return;
+    }
+    var history = aiMsgs.filter(function (m) { return !m.pending && !m.error; })
+      .slice(-8).map(function (m) { return { role: m.role, content: m.content }; });
+    history.push({ role: "user", content: text });
+
+    aiMsgs.push({ role: "user", content: text });
+    aiMsgs.push({ role: "assistant", content: "", pending: true });
+    renderAiMessages();
+    aiSetBusy(true);
+    var t0 = Date.now();
+
+    aiReq("/ai/chat", {
+      messages: [{ role: "system", content: AI_SYS + aiContextText() }].concat(history)
+    }).then(function (j) {
+      if (!j || !j.ok) {
+        aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: "调用失败：" + ((j && j.error) || "未知错误"), error: true };
+      } else {
+        aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: j.content, ms: Date.now() - t0, model: j.model || "" };
+      }
+      aiSaveMsgs();
+      renderAiMessages();
+    }).catch(function (e) {
+      aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: String(e && e.message || e), error: true };
+      renderAiMessages();
+    }).then(function () {
+      aiSetBusy(false);
+    });
+  }
+
+  function renderAiConfigForm() {
+    var card = $id("aiConfigCard");
+    if (!card) { return; }
+    card.hidden = !aiCfgOpen;
+    var btn = $id("aiConfigToggle");
+    if (btn) { btn.textContent = aiCfgOpen ? "收起设置" : "⚙ 接口设置"; }
+    if (aiCfg.loaded) {
+      if (aiCfg.name) { $id("aiCfgName").value = aiCfg.name; }
+      if (aiCfg.baseUrl) { $id("aiCfgBase").value = aiCfg.baseUrl; }
+      if (aiCfg.model) { $id("aiCfgModel").value = aiCfg.model; }
+      var kEl = $id("aiCfgKey");
+      if (kEl && aiCfg.keyMask) { kEl.placeholder = "已保存 " + aiCfg.keyMask + "（留空则沿用）"; }
+    }
+    var hint = $id("aiCfgHint");
+    if (hint) {
+      hint.textContent = aiCfg.configured
+        ? "已配置：" + (aiCfg.name || "AI") + " · " + (aiCfg.model || "") + " · " + (aiCfg.keyMask || "")
+        : "尚未配置。Key 只保存在本机 ai-config.json，不会上传云端。";
+    }
+    var st = $id("aiStatusText");
+    if (st) {
+      st.textContent = aiCfg.configured
+        ? (aiCfg.name || "AI") + " · " + (aiCfg.model || "") + " · 已读取工作台数据"
+        : "未配置接口 · 点右上角「接口设置」填写 Key";
+    }
+  }
+
+  function loadAiConfig() {
+    if (aiCfg.loaded) { return; }
+    aiReq("/ai/config").then(function (j) {
+      aiCfg = Object.assign({ loaded: true }, j || {});
+      aiCfgOpen = !aiCfg.configured;
+      renderAiConfigForm();
+    }).catch(function (e) {
+      aiCfg.loaded = true;
+      aiCfgOpen = true;
+      renderAiConfigForm();
+      var hint = $id("aiCfgHint");
+      if (hint) { hint.textContent = e.message; }
+    });
+  }
+
+  function saveAiConfig() {
+    var name = ($id("aiCfgName").value || "").trim() || "DeepSeek";
+    var baseUrl = ($id("aiCfgBase").value || "").trim() || "https://api.deepseek.com";
+    var model = ($id("aiCfgModel").value || "").trim() || "deepseek-chat";
+    var apiKey = ($id("aiCfgKey").value || "").trim();
+    var btn = $id("aiCfgSave");
+    var old = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "保存中…"; }
+    aiReq("/ai/config", { name: name, baseUrl: baseUrl, model: model, apiKey: apiKey })
+      .then(function (j) {
+        if (!j || !j.ok) { throw new Error((j && j.error) || "保存失败"); }
+        aiCfg = Object.assign({ loaded: true }, j);
+        var kEl = $id("aiCfgKey");
+        if (kEl) { kEl.value = ""; }
+        renderAiConfigForm();
+        if (btn) { btn.textContent = "测试中…"; }
+        return aiReq("/ai/test", {}).then(function (t) {
+          if (t && t.ok) {
+            aiCfgOpen = false;
+            renderAiConfigForm();
+            toast("已保存，连接正常（" + (t.reply || "可用") + "）");
+          } else {
+            toast("已保存，但测试失败：" + ((t && t.error) || "未知"));
+          }
+        });
+      })
+      .catch(function (e) { toast(String(e && e.message || e)); })
+      .then(function () {
+        if (btn) { btn.disabled = false; btn.textContent = old || "保存并测试"; }
+      });
+  }
+
+  function bindAiEvents() {
+    var view = $id("aiView");
+    if (!view || view.dataset.aiBound === "1") { return; }
+    view.dataset.aiBound = "1";
+    $id("aiConfigToggle").onclick = function () { aiCfgOpen = !aiCfgOpen; renderAiConfigForm(); };
+    $id("aiCfgSave").onclick = saveAiConfig;
+    $id("aiClearBtn").onclick = function () {
+      aiMsgs = [];
+      aiSaveMsgs();
+      renderAiMessages();
+      toast("对话已清空");
+    };
+    $id("aiSend").onclick = function () {
+      var input = $id("aiInput");
+      aiAsk(input.value);
+      input.value = "";
+    };
+    $id("aiInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        var input = $id("aiInput");
+        aiAsk(input.value);
+        input.value = "";
+      }
+    });
+    $id("aiQuick").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ai-q]");
+      if (!b) { return; }
+      var q = AI_QUICK[Number(b.dataset.aiQ)];
+      if (q) { aiAsk(q.q); }
+    });
+  }
+
+  function wbRenderAi() {
+    bindAiEvents();
+    aiLoadMsgs();
+    renderAiMessages();
+    renderAiQuick();
+    loadAiConfig();
+    renderAiConfigForm();
+  }
+
+  window.wbRenderAi = wbRenderAi;
+  window.wbAiAsk = aiAsk;
+
   window.wbRefresh = function () { wbReady = false; wbInit(); };
   window.addEventListener("DOMContentLoaded", wbInit);
   if (document.readyState !== "loading") { wbInit(); }
