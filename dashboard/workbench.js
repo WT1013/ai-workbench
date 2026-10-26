@@ -1581,7 +1581,8 @@
     "1. 先给结论，再给依据；数据不足就直接说不确定，禁止编造数字。\n" +
     "2. 判断达标必须严格用给定达标线，并算出差额（例：采纳率 62.10%，距 65% 差 2.90 个点）。\n" +
     "3. 少用形容词，多给可执行动作，建议最多 3 条。\n" +
-    "4. 用中文回答，表格优先于长段落。\n\n" +
+    "4. 用中文回答，表格优先于长段落。\n" +
+    "5. 若下文带有【当前页面】数据，优先围绕该页面回答；没有的部分才用全局快照补充。\n\n" +
     "工作台当前数据快照：\n";
 
   function aiNum(v) {
@@ -1636,8 +1637,245 @@
       out.push("");
       out.push("【今日调优工坊 · 已标记待审核数】" + Object.keys(mk).map(function (k) { return k + " " + mk[k]; }).join("，"));
     }
+    var pc = aiPageCtxText();
+    if (pc) { out.push(""); out.push(pc); }
     return out.join("\n");
   }
+
+  /* ============================================================
+   * 页面级 AI 上下文（2026-10-26）
+   * 每个视图带自己的数据快照，点「✦ AI」直接把本页数据一起发过去
+   * ============================================================ */
+  var aiPage = null;
+
+  function ctxDashboard() {
+    var ids = ["stdNoticeBar", "gapNoticeBar", "downNoticeBar", "riskNoticeBar"];
+    var lines = [];
+    ids.forEach(function (id) {
+      var el = $id(id);
+      if (!el || el.hidden) { return; }
+      var t = String(el.textContent || "").replace(/\s+/g, " ").trim();
+      if (t) { lines.push("- " + t.slice(0, 260)); }
+    });
+    return "【当前页面：数据驾驶舱 · 数据体检】\n" +
+      (lines.length ? "页面当前告警：\n" + lines.join("\n") : "页面当前没有告警条。") +
+      "\n注意：告警只是现象，需要判断是「探域当日未出数」「采集失败」还是「真实下跌」。";
+  }
+
+  function ctxMonthly() {
+    var tk = todayKey(), ym = tk.slice(0, 7);
+    var days = Object.keys(state.days || {}).filter(function (k) { return k.indexOf(ym) === 0; }).sort();
+    var out = ["【当前页面：月度汇总 · " + ym + "（已同步 " + days.length + " 天）】",
+      "店铺|消息数|生成数|采纳数|风控数|采纳率%|生成率%|风控率%|纯智日均%|3分钟日均%"];
+    (shopLibrary || []).forEach(function (s) {
+      var a = 0, g = 0, ad = 0, rk = 0, pure = [], tm = [];
+      days.forEach(function (k) {
+        var d = (state.days[k] && state.days[k].shopData && state.days[k].shopData[s.id]) || {};
+        a += aiNum(d.agenticMsgCount) || 0;
+        g += aiNum(d.genCount) || 0;
+        ad += aiNum(d.adoptCount) || 0;
+        rk += aiNum(d.riskCount) || 0;
+        var p = aiNum(d.pureAgentRatio); if (p !== null) { pure.push(p); }
+        var t = aiNum(d.threeMinReplyRate); if (t !== null) { tm.push(t); }
+      });
+      if (!a && !g && !ad && !rk && !pure.length && !tm.length) { return; }
+      out.push([String(s.name || s.id) + (s.key ? "★" : ""), a, g, ad, rk,
+        a ? (ad / a * 100).toFixed(2) : "—",
+        a ? (g / a * 100).toFixed(2) : "—",
+        a ? (rk / a * 100).toFixed(2) : "—",
+        aiFmt(aiAvg(pure)), aiFmt(aiAvg(tm))].join("|"));
+    });
+    out.push("说明：三个比率按整月累计计数计算（分母=Agentic消息数）；纯智与3分钟为有效日均值。");
+    return out.join("\n");
+  }
+
+  function ctxToday() {
+    var k = currentDateKey || yesterdayKeyOf(todayKey());
+    var sd = (state.days[k] && state.days[k].shopData) || {};
+    var out = ["【当前页面：今日工作台 · " + k + "】",
+      "店铺|消息数|生成数|采纳数|风控数|采纳率%|生成率%|纯智%|3分钟%|体验分"];
+    var miss = [];
+    (shopLibrary || []).forEach(function (s) {
+      var d = sd[s.id];
+      if (!d || (d.agenticMsgCount === undefined && d.adoptionRate === undefined)) { miss.push(String(s.name || s.id)); return; }
+      out.push([String(s.name || s.id) + (s.key ? "★" : ""),
+        d.agenticMsgCount, d.genCount, d.adoptCount, d.riskCount,
+        aiFmt(aiNum(d.adoptionRate)), aiFmt(aiNum(d.generationRate)),
+        aiFmt(aiNum(d.pureAgentRatio)), aiFmt(aiNum(d.threeMinReplyRate)),
+        aiFmt(aiNum(d.experienceScore))].join("|"));
+    });
+    if (miss.length) { out.push("该日无数据的店（" + miss.length + " 家）：" + miss.join("、")); }
+    var mk = state.days[k] && state.days[k].shopMarked;
+    if (mk && Object.keys(mk).length) {
+      out.push("打标待审核：" + Object.keys(mk).map(function (n) { return n + " " + mk[n]; }).join("，"));
+    }
+    return out.join("\n");
+  }
+
+  function ctxShops() {
+    var tk = todayKey(), ym = tk.slice(0, 7), todayD = Number(tk.slice(8, 10)) || 1;
+    var out = ["【当前页面：店铺库 · " + ym + " 数据完整度（1~" + todayD + " 号）】",
+      "店铺|负责|重点|有数据天数|缺席日期（前3个）"];
+    (shopLibrary || []).forEach(function (s) {
+      var have = 0, gaps = [];
+      for (var d = 1; d <= todayD; d++) {
+        var k = ym + "-" + (d < 10 ? "0" : "") + d;
+        var v = (state.days[k] && state.days[k].shopData && state.days[k].shopData[s.id]) || null;
+        if (v && (v.adoptionRate !== undefined || v.agenticMsgCount !== undefined)) { have++; }
+        else { gaps.push(d); }
+      }
+      out.push([String(s.name || s.id), s.owner || "—", s.key ? "是" : "",
+        have + "/" + todayD,
+        gaps.length ? gaps.slice(0, 3).join("、") + (gaps.length > 3 ? "…" : "") : "无"].join("|"));
+    });
+    out.push("说明：只统计探域侧指标是否写入；体验分为手工录入，不计入完整度。");
+    return out.join("\n");
+  }
+
+  function ctxSummary() {
+    var shop = sumShopCurrent || (shopLibrary || []).filter(function (s) { return s.id === sumShopId; })[0] || null;
+    var m = SUMMARY_METRICS.filter(function (x) { return x.key === sumMetric; })[0];
+    var dates = sumDates || [];
+    if (!shop) { return "【当前页面：数据总览】尚未选择店铺。"; }
+    var series = dates.map(function (k) {
+      var d = (state.days[k] && state.days[k].shopData && state.days[k].shopData[shop.id]) || {};
+      return k.slice(5) + ":" + (d[sumMetric] === undefined ? "—" : d[sumMetric]);
+    });
+    return "【当前页面：数据总览 · " + String(shop.name || shop.id) + " · " + (m ? m.label : sumMetric) +
+      " · " + (sumRange === "7" ? "近7天" : sumRange === "30" ? "近30天" : "本月") + "】\n" +
+      "逐日数值：" + (series.length ? series.join("  ") : "无数据");
+  }
+
+  function ctxReport() {
+    var el = $id("reportContent");
+    var txt = el ? String(el.innerText || el.textContent || "").replace(/\n{3,}/g, "\n\n").trim() : "";
+    var dk = ($id("reportDateLabel") || {}).textContent || "";
+    return "【当前页面：日报表格 · " + String(dk).trim() + "】\n" +
+      (txt ? "当前日报原文（节选）：\n" + txt.slice(0, 1800) : "当前还没有生成日报内容。");
+  }
+
+  function ctxGroups() {
+    var list = (groupsCache && groupsCache.list) || [];
+    if (!list.length) {
+      return "【当前页面：待绑商品】清单未加载（可能同步服务未启动），没有商品数据。";
+    }
+    var c = groupsCounts();
+    var out = ["【当前页面：待绑商品 · 共 " + list.length + " 条（可直绑 " + c.bindable +
+      " / 待拍板 " + c.pending + " / 脏组 " + c.dirty + " / 需建新组 " + c.newgroup + "）】",
+      "店铺|真实商品名|当前建议归属|7天热度"];
+    list.slice(0, 60).forEach(function (r) {
+      out.push([String(r.shop || "").slice(0, 10),
+        String(r.name || r.realName || r.title || "").slice(0, 40),
+        String(r.suggestedGroup || r.targetGroup || "（无）").slice(0, 30),
+        r.heat7 != null ? r.heat7 : (r.heat7d != null ? r.heat7d : "")].join("|"));
+    });
+    if (list.length > 60) { out.push("（仅列出前 60 条，共 " + list.length + " 条）"); }
+    return out.join("\n");
+  }
+
+  var AI_PAGE = {
+    dashboard: {
+      name: "数据驾驶舱",
+      ctx: ctxDashboard,
+      qs: [
+        { t: "异常归因", q: "页面这些告警里，哪些是探域未出数、哪些是采集失败、哪些是真实下跌？逐条判断并给出验证方法。" },
+        { t: "最该先看哪家", q: "按影响程度排序，今天最该先处理的三家店是哪三家？各自先做什么？" }
+      ]
+    },
+    monthly: {
+      name: "月度汇总",
+      ctx: ctxMonthly,
+      qs: [
+        { t: "本月达标盘点", q: "按达标线（生成率≥95%、采纳率≥65%、纯智≥35%、风控≤15%）逐店判断本月累计是否达标，列出未达标项和差额。" },
+        { t: "本月最差三家", q: "本月累计看，哪三家最需要干预？分别说明卡在哪个指标、可能的原因。" },
+        { t: "费用/效率判断", q: "从消息量和纯智占比看，哪些店对人工依赖最重？哪些店的AI已经基本接管？" }
+      ]
+    },
+    today: {
+      name: "今日工作台",
+      ctx: ctxToday,
+      qs: [
+        { t: "当天异常店", q: "看这一天各店数据，哪些店的指标明显异常（为0、缺失、比例不合理）？逐个说明是数据问题还是经营问题。" },
+        { t: "今天先做什么", q: "基于这一天的数据，今天最该处理的三件事是什么？写清做什么、涉及哪几家店。" }
+      ]
+    },
+    report: {
+      name: "日报",
+      ctx: ctxReport,
+      qs: [
+        { t: "精简成三句话", q: "把这份日报压缩成三句话，保留最关键的数字和异常，去掉过程描述。" },
+        { t: "找出没说清的地方", q: "这份日报哪里写得含糊、缺依据、或者老板会追问？指出并给出改法。" }
+      ]
+    },
+    shops: {
+      name: "店铺库",
+      ctx: ctxShops,
+      qs: [
+        { t: "谁缺数据", q: "按数据完整度排序，哪些店缺得最多？缺口集中在哪些日期？建议怎么补。" },
+        { t: "数据质量体检", q: "从完整度看，哪些店的数据不足以支撑月度汇报？需要提醒我什么。" }
+      ]
+    },
+    summary: {
+      name: "数据总览",
+      ctx: ctxSummary,
+      qs: [
+        { t: "解读趋势", q: "这家店这个指标的趋势怎么读？有没有拐点、异常段或明显下滑？给出判断依据。" },
+        { t: "下一步查什么", q: "按当前走势，接下来最该盯的是什么？如果继续这样会有什么后果。" }
+      ]
+    },
+    groups: {
+      name: "待绑商品",
+      ctx: ctxGroups,
+      qs: [
+        { t: "复核建议归属", q: "逐条看这些商品的建议归属，哪些明显归错了？说明理由并给出应归的组。" },
+        { t: "挑出可直绑的", q: "这些商品里，哪些可以确定直接绑、哪些必须我拍板？给出两份清单和判断依据。" }
+      ]
+    }
+  };
+
+  function aiPageCtxText() {
+    var p = aiPage && AI_PAGE[aiPage];
+    if (!p) { return ""; }
+    try { return p.ctx(); } catch (e) { return "【当前页面：" + p.name + "】上下文读取失败"; }
+  }
+
+  function renderAiCtxBar() {
+    var bar = $id("aiCtxBar");
+    var txt = $id("aiCtxText");
+    if (!bar || !txt) { return; }
+    var p = aiPage && AI_PAGE[aiPage];
+    if (!p) { bar.hidden = true; return; }
+    bar.hidden = false;
+    txt.innerHTML = "当前上下文：<b>" + esc(p.name) + "</b> · 本页数据会随提问一起发送";
+  }
+
+  function aiClearPage() {
+    aiPage = null;
+    renderAiCtxBar();
+    renderAiQuick();
+    renderAiMessages();
+    toast("已退出页面上下文，改回全局数据");
+  }
+
+  function aiOpenPage(key) {
+    var p = AI_PAGE[key];
+    if (!p) { return; }
+    aiPage = key;
+    var nav = document.querySelector('.primary-nav .nav-item[data-view="ai"]');
+    if (nav) { nav.click(); }
+    renderAiCtxBar();
+    renderAiQuick();
+    renderAiMessages();
+    var q = p.qs[0];
+    if (q) { setTimeout(function () { aiAsk(q.q); }, 300); }
+  }
+
+  document.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest("[data-ai-page]") : null;
+    if (!b) { return; }
+    e.preventDefault();
+    aiOpenPage(b.dataset.aiPage);
+  });
 
   function aiReadCfg() {
     try {
@@ -1742,9 +1980,11 @@
     var box = $id("aiMessages");
     if (!box) { return; }
     if (!aiMsgs.length) {
+      var pn = aiPage && AI_PAGE[aiPage] ? AI_PAGE[aiPage].name : "";
       box.innerHTML = '<div class="ai-empty">' +
         "<p>已接入工作台数据（" + (shopLibrary || []).length + " 家店 · 近 7 天指标 · 达标线）。</p>" +
-        "<p>可以直接问：某店为什么掉、哪几家没达标、这周该先处理什么。</p>" +
+        (pn ? "<p>当前带上「" + esc(pn) + "」这一页的数据。</p>" : "") +
+        "<p>也可以在各页面点右上角 <b>✦ AI</b>，自动带上那一页的数据提问。</p>" +
         "</div>";
       return;
     }
@@ -1772,11 +2012,21 @@
     { t: "今日待办", q: "基于当前数据，今天最值得我优先处理的三件事是什么？每件写清：做什么、为什么、涉及哪几家店。" }
   ];
 
+  var aiChipList = [];
+
   function renderAiQuick() {
     var box = $id("aiQuick");
     if (!box) { return; }
-    box.innerHTML = AI_QUICK.map(function (q, i) {
-      return '<button class="ai-chip" data-ai-q="' + i + '">' + esc(q.t) + "</button>";
+    var chips = [];
+    var p = aiPage && AI_PAGE[aiPage];
+    if (p) {
+      p.qs.forEach(function (q) { chips.push({ t: q.t, q: q.q, page: true }); });
+    }
+    AI_QUICK.forEach(function (q) { chips.push({ t: q.t, q: q.q, page: false }); });
+    aiChipList = chips;
+    box.innerHTML = chips.map(function (c, i) {
+      return '<button class="ai-chip' + (c.page ? " ai-chip-page" : "") + '" data-ai-q="' + i + '">' +
+        (c.page ? "· " : "") + esc(c.t) + "</button>";
     }).join("");
   }
 
@@ -1928,15 +2178,18 @@
     $id("aiQuick").addEventListener("click", function (e) {
       var b = e.target.closest("[data-ai-q]");
       if (!b) { return; }
-      var q = AI_QUICK[Number(b.dataset.aiQ)];
+      var q = aiChipList[Number(b.dataset.aiQ)];
       if (q) { aiAsk(q.q); }
     });
+    var cc = $id("aiCtxClear");
+    if (cc) { cc.onclick = aiClearPage; }
   }
 
   function wbRenderAi() {
     bindAiEvents();
     aiLoadMsgs();
     renderAiMessages();
+    renderAiCtxBar();
     renderAiQuick();
     loadAiConfig();
     renderAiConfigForm();

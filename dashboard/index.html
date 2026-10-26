@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822f" />
-    <link rel="stylesheet" href="workbench.css?v=20260822f" />
+    <link rel="stylesheet" href="styles.css?v=20260822g" />
+    <link rel="stylesheet" href="workbench.css?v=20260822g" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -100,7 +100,7 @@
 
         <div class="workspace-grid">
           <section class="queue-pane">
-            <div class="section-heading"><h2>数据体检</h2><span>异常提醒</span></div>
+            <div class="section-heading"><h2>数据体检</h2><span>异常提醒</span><button class="pill-btn ai-page-btn" data-ai-page="dashboard" title="让 AI 判断这些异常是探域未出数还是真实下跌">✦ AI 归因</button></div>
             <div id="stdNoticeBar" class="std-notice-bar" hidden></div>
             <div id="gapNoticeBar" class="gap-notice-bar" hidden></div>
             <div id="downNoticeBar" class="down-notice-bar" hidden></div>
@@ -159,6 +159,7 @@
               <button id="monthPrev" class="pill-btn quiet">‹ 上月</button>
               <div class="monthly-metric-seg" id="monthlyMetricSeg"></div>
               <button id="monthNext" class="pill-btn quiet">下月 ›</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="monthly" title="按本月累计数据分析">✦ AI 分析</button>
             </div>
           </header>
           <div class="monthly-table-wrap">
@@ -177,6 +178,7 @@
               <button id="wbTodayBtn" class="pill-btn">今天</button>
               <button id="wbNextDay" class="pill-btn quiet">后一天 ›</button>
               <button id="wbCopyReportBtn" class="pill-btn primary">复制当天日报表格</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="today" title="分析当天数据与待办">✦ AI 分析</button>
             </div>
           </header>
           <div class="wb-grid">
@@ -222,6 +224,7 @@
               <button id="reportCopyImgBtn" class="pill-btn">复制图片</button>
               <button id="reportDownloadImgBtn" class="pill-btn">下载图片</button>
               <button id="reportExportCsvBtn" class="pill-btn quiet">导出CSV</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="report" title="用 AI 润色/精简当前日报">✦ AI 润色</button>
             </div>
           </header>
           <div id="reportContent" class="report-content"></div>
@@ -235,6 +238,7 @@
             <div class="workbench-toolbar">
               <input id="shopSearchInput" class="wb-search-input" placeholder="搜索店铺名称">
               <button id="addShopBtn" class="pill-btn primary">＋ 添加店铺</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="shops" title="检查哪家店缺数据、哪些指标没填">✦ AI 查缺</button>
             </div>
           </header>
           <div class="shop-tabs">
@@ -253,6 +257,7 @@
               <button class="pill-btn quiet sum-range" data-range="7">近7天</button>
               <button class="pill-btn quiet sum-range active" data-range="month">本月</button>
               <button class="pill-btn quiet sum-range" data-range="30">近30天</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="summary" title="分析当前店铺该指标的趋势与拐点">✦ AI 看趋势</button>
             </div>
           </header>
           <div class="summary-grid">
@@ -273,6 +278,7 @@
             <div class="section-heading"><h2>待绑商品</h2><span id="groupsMeta">在售未绑分组 · 每日巡检清单（只读）</span></div>
             <div class="workbench-toolbar">
               <button id="groupsRefreshBtn" class="pill-btn quiet" aria-label="刷新清单">↻ 刷新</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="groups" title="复核建议归属，找出该改组的商品">✦ AI 复核归属</button>
               <input id="groupsSearchInput" class="wb-search-input" placeholder="搜索标题/店铺/商品名">
             </div>
           </header>
@@ -316,6 +322,11 @@
               <span id="aiCfgHint" class="ai-cfg-hint"></span>
               <button id="aiCfgSave" class="pill-btn primary">保存并测试</button>
             </div>
+          </div>
+
+          <div id="aiCtxBar" class="ai-ctx-bar" hidden>
+            <span id="aiCtxText"></span>
+            <button id="aiCtxClear" class="ai-ctx-clear" aria-label="退出页面上下文">×</button>
           </div>
 
           <div class="ai-chat-wrap">
@@ -505,7 +516,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822f"></script>
-    <script type="module" src="app.js?v=20260822f"></script>
+    <script src="workbench.js?v=20260822g"></script>
+    <script type="module" src="app.js?v=20260822g"></script>
   </body>
 </html>
