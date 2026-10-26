@@ -546,6 +546,9 @@ const playToggle = document.querySelector("#playToggle");
 const playLabel = playToggle.querySelector(".play-label");
 const orbitModeBtn = document.querySelector("#orbitModeBtn");
 const fanModeBtn = document.querySelector("#fanModeBtn");
+const rankModeBtn = document.querySelector("#rankModeBtn");
+const rankViewEl = document.querySelector("#rankView");
+const carouselPanelEl = document.querySelector(".carousel-panel");
 const timelineDates = document.querySelector("#timelineDates");
 const progress = document.querySelector("#timelineProgress");
 const detailsContent = document.querySelector(".details-content");
@@ -1193,6 +1196,7 @@ function renderCards() {
     </button>`;
   }).join("");
   scene.querySelectorAll(".doc-card").forEach((card) => card.addEventListener("click", () => selectCard(Number(card.dataset.index), true)));
+  if (rankMode) renderRankTable();
 }
 
 function viewOnDate(dateKey) {
@@ -1339,6 +1343,95 @@ function setViewMode(mode) {
   document.querySelector(".scroll-tip p").textContent = fanView ? "连续滚动浏览侧向层叠；点击卡片查看详情" : "连续滚动切换店铺卡片；点击卡片查看详情";
   updateCardPositions(visualPosition);
   window.setTimeout(() => viewport.classList.remove("view-switching"), 760);
+}
+
+/* ============================================================
+   全店排行（2026-10-26）
+   3D 卡片一次只能看 1 家店；补一张「一眼看完 20 家」的排行表，
+   沿用顶部 4 张指标卡当前选中的指标，点击行 = 选中该店（右侧详情同步）。
+   ============================================================ */
+let rankMode = false;
+const RANK_STORE = "csa-rank-mode";
+const COLS_META = { adopt: "采纳率", gen: "生成率", conv: "转化率", pure: "纯智" };
+
+function setRankMode(on, opts) {
+  const persist = !opts || opts.persist !== false;
+  rankMode = !!on;
+  if (carouselPanelEl) carouselPanelEl.classList.toggle("rank-mode", rankMode);
+  if (rankViewEl) rankViewEl.hidden = !rankMode;
+  if (rankModeBtn) {
+    rankModeBtn.classList.toggle("active", rankMode);
+    rankModeBtn.classList.toggle("quiet", !rankMode);
+    rankModeBtn.setAttribute("aria-pressed", String(rankMode));
+  }
+  if (rankMode) {
+    if (isPlaying) setPlaying(false);
+    renderRankTable();
+  } else if (typeof updateCardPositions === "function") {
+    updateCardPositions(visualPosition);
+  }
+  if (persist) { try { localStorage.setItem(RANK_STORE, rankMode ? "1" : "0"); } catch (e) { } }
+}
+
+function renderRankTable() {
+  if (!rankMode || !rankViewEl) return;
+  const COLS = ["adopt", "gen", "conv", "pure"];
+  const m = currentMetric();
+  const num = (v) => (v === null || v === undefined || v === "" || isNaN(Number(v))) ? null : Number(v);
+  const fmt = (v) => v === null ? "--" : (Math.round(v * 100) / 100).toFixed(2);
+  const rows = documents.map((doc, i) => ({ doc: doc, i: i })).sort((a, b) => {
+    const av = num(a.doc.metrics[m.doc]), bv = num(b.doc.metrics[m.doc]);
+    if (av === null && bv === null) return a.i - b.i;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return bv - av;
+  });
+  const vals = rows.map((r) => num(r.doc.metrics[m.doc])).filter((v) => v !== null);
+  const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const cfg = MC_TARGETS[m.doc] || {};
+  const okOf = (v) => {
+    if (v === null || cfg.target === null || cfg.target === undefined) return null;
+    return cfg.dir === "lte" ? v <= cfg.target : v >= cfg.target;
+  };
+  const okCount = vals.filter((v) => okOf(v) === true).length;
+
+  const head = `<div class="rk-sum">
+      <b>${m.label}排行</b>
+      <span>${documents.length} 家 · 达标 <i class="${okCount ? "is-ok" : "is-bad"}">${okCount}</i> 家 · 均值 <em>${fmt(avg)}%</em>${cfg.target !== null && cfg.target !== undefined ? " · 目标 " + (cfg.dir === "lte" ? "≤" : "≥") + cfg.target + "%" : ""}</span>
+    </div>
+    <div class="rk-head">
+      <span class="rk-idx">#</span>
+      <span class="rk-name">店铺</span>
+      ${COLS.map((k) => `<span class="rk-num${k === m.doc ? " is-active" : ""}">${COLS_META[k]}</span>`).join("")}
+    </div>`;
+
+  const body = rows.length ? rows.map((r, pos) => {
+    const dv = num(r.doc.metrics[m.doc]);
+    const ok = okOf(dv);
+    const fill = dv === null ? 0 : Math.max(0, Math.min(100, dv));
+    return `<button type="button" class="rk-row${r.i === selectedIndex ? " is-selected" : ""}${ok === false ? " is-miss" : ""}" data-idx="${r.i}">
+      <span class="rk-idx">${pos + 1}</span>
+      <span class="rk-name" title="${r.doc.title}">${r.doc.folder === "重点店" ? '<b class="rk-key">重点</b>' : ""}<i class="rk-txt">${r.doc.title}</i></span>
+      ${COLS.map((k) => {
+        const v = num(r.doc.metrics[k]);
+        const kc = MC_TARGETS[k] || {};
+        const st = (v !== null && kc.target !== null && kc.target !== undefined)
+          ? (kc.dir === "lte" ? (v <= kc.target ? " is-ok" : " is-bad") : (v >= kc.target ? " is-ok" : " is-bad")) : "";
+        const isCur = k === m.doc;
+        return `<span class="rk-num${st}${isCur ? " is-active" : ""}"${isCur ? ' style="--fill:' + fill + '%"' : ""}>${fmt(v)}</span>`;
+      }).join("")}
+    </button>`;
+  }).join("") : `<div class="rk-empty">当日无店铺数据</div>`;
+
+  rankViewEl.innerHTML = head + `<div class="rk-body">${body}</div>`;
+  rankViewEl.querySelectorAll(".rk-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const i = Number(row.dataset.idx);
+      if (!documents[i]) return;
+      selectCard(i, true);
+      renderRankTable();
+    });
+  });
 }
 
 function startCarouselAnimation() {
@@ -1721,8 +1814,9 @@ function bindEvents() {
       if (documents[selectedIndex]) updateDetails(documents[selectedIndex]);
     });
   });
-  orbitModeBtn.addEventListener("click", () => setViewMode("orbit"));
-  fanModeBtn.addEventListener("click", () => setViewMode("fan"));
+  orbitModeBtn.addEventListener("click", () => { if (rankMode) setRankMode(false); setViewMode("orbit"); });
+  fanModeBtn.addEventListener("click", () => { if (rankMode) setRankMode(false); setViewMode("fan"); });
+  if (rankModeBtn) rankModeBtn.addEventListener("click", () => setRankMode(!rankMode));
   playToggle.addEventListener("click", () => setPlaying(!isPlaying));
   document.querySelector("#prevBtn").addEventListener("click", () => nextCard(-1));
   document.querySelector("#nextBtn").addEventListener("click", () => nextCard(1));
@@ -2073,6 +2167,17 @@ async function initDashboard() {
   try {
     const data = await fetchCloud();
     setCloudStatus("已同步 · " + (data.latestDate ? data.latestDate.slice(5) : "暂无"), "ok");
+    // 顶栏副标题 + 侧栏店铺规模：家数按云端库实时统计（原来硬编码「23 家」，与真实 20 家不符）
+    const n = (data.shops || []).length;
+    const subEl = document.querySelector("#pageSubtitle");
+    if (subEl) {
+      subEl.textContent = (n || "—") + " 店核心指标 · 异常提醒";
+      subEl.title = n ? "云端店铺库共 " + n + " 家（含已停更店铺）" : "店铺库为空";
+    }
+    const vaultText = document.querySelector("#vaultText");
+    if (vaultText) vaultText.textContent = (n || "—") + " 家店铺 / 客服AI / 远山";
+    const vaultRow = document.querySelector("#vaultRow");
+    if (vaultRow) vaultRow.title = (n || "—") + " 家拼多多店铺 · 客服AI";
     renderTimeline(); // 先渲染时间轴按钮
     viewOnDate(data.latestDate); // 加载最新数据日并联动仪表盘所有视图
     if (!documents.length) {
@@ -2082,6 +2187,8 @@ async function initDashboard() {
       return;
     }
     setPlaying(false);
+    // 恢复上次的主区模式（3D 卡片 / 全店排行）
+    try { if (localStorage.getItem(RANK_STORE) === "1") setRankMode(true, { persist: false }); } catch (e) { }
     // 月度汇总：初始化指标切换 + 定位到最新数据月份
     if (data.latestDate) {
       const m = data.latestDate.match(/^(\d{4})-(\d{2})/);

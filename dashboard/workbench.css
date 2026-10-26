@@ -1249,3 +1249,138 @@ html[data-theme-resolved="light"] .timeline-dates button:hover { background: rgb
   .metric-card .mc-badge { font-size: 9.5px; padding: 1px 5px; }
   .metric-card .mc-target { font-size: 10px; }
 }
+
+/* ============================================================
+   2026-10-26 全店排行（主区第二模式）
+   3D 卡片一次只看一家店；排行表把全部店铺 × 4 指标压进一屏。
+   表头/首列常驻，当前指标列用横向进度条做「一眼看差距」。
+   ============================================================ */
+.carousel-panel.rank-mode { grid-template-rows: 58px minmax(0, 1fr) 132px; }
+.carousel-panel.rank-mode .carousel-viewport { display: none; }
+
+.rank-view {
+  display: none;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 6px 10px;
+  scrollbar-width: thin;
+}
+.carousel-panel.rank-mode .rank-view { display: block; }
+
+.rk-sum {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 0 8px 8px; font-size: 12px; color: var(--muted);
+}
+.rk-sum b { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: .01em; }
+.rk-sum i { font-style: normal; font-weight: 600; }
+.rk-sum i.is-ok { color: var(--accent-300); }
+.rk-sum i.is-bad { color: #ff8b8e; }
+.rk-sum em { font-style: normal; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.rk-head, .rk-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) repeat(4, 58px);
+  align-items: center;
+  gap: 6px;
+}
+.rk-head {
+  position: sticky; top: 0; z-index: 2;
+  padding: 6px 8px; margin-bottom: 2px;
+  font-size: 11px; font-weight: 500; color: var(--muted);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel) 88%, transparent));
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  border-radius: 8px 8px 0 0;
+}
+.rk-head .rk-num.is-active { color: var(--text); font-weight: 600; }
+
+.rk-body { display: flex; flex-direction: column; gap: 1px; }
+
+.rk-row {
+  width: 100%; text-align: left; border: 0; cursor: pointer;
+  padding: 0 8px; height: 27px; border-radius: 7px;
+  background: transparent; color: var(--text);
+  font: 400 12px/1 var(--font);
+  transition: background .13s;
+}
+.rk-row:hover { background: rgb(var(--accent-rgb) / .09); }
+.rk-row.is-selected { background: rgb(var(--accent-rgb) / .15); }
+.rk-row.is-miss .rk-name { color: var(--muted); }
+
+.rk-idx { font-size: 11px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.rk-row:nth-child(1) .rk-idx,
+.rk-row:nth-child(2) .rk-idx,
+.rk-row:nth-child(3) .rk-idx { color: var(--accent-300); font-weight: 600; }
+
+.rk-name {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px;
+}
+.rk-key {
+  flex: 0 0 auto; font-size: 10px; font-weight: 500; padding: 1px 5px; border-radius: 5px;
+  background: var(--accent-400); color: var(--accent-foreground);
+}
+
+.rk-num {
+  text-align: right; font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  padding: 3px 5px; border-radius: 5px;
+}
+.rk-num.is-ok { color: var(--accent-300); }
+.rk-num.is-bad { color: #ff8b8e; }
+.rk-num.is-active {
+  color: var(--text); font-weight: 600;
+  background: linear-gradient(90deg, rgb(var(--accent-rgb) / .17) var(--fill, 0%), transparent var(--fill, 0%));
+}
+
+.rk-empty { padding: 46px 0; text-align: center; font-size: 12px; color: var(--muted); }
+
+/* 浅色主题：进度条与选中底色降饱和 */
+html[data-theme-resolved="light"] .rk-num.is-active {
+  background: linear-gradient(90deg, rgb(var(--accent-rgb) / .2) var(--fill, 0%), transparent var(--fill, 0%));
+}
+html[data-theme-resolved="light"] .rk-num.is-bad { color: #c0303a; }
+html[data-theme-resolved="light"] .rk-sum i.is-bad { color: #c0303a; }
+
+/* ---- 排行表细节修正（2026-10-26 二版）---- */
+.rk-name { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.2; }
+.rk-name .rk-key { display: inline-block; vertical-align: 1px; margin-right: 6px; }
+.rk-name .rk-txt { font-style: normal; }
+
+/* 当前指标列：进度条用绝对百分比（0~100），并保留达标/未达标的颜色语义 */
+.rk-num.is-active { color: var(--text); font-weight: 600; border-radius: 5px; }
+.rk-num.is-active.is-ok { color: var(--accent-300); }
+.rk-num.is-active.is-bad { color: #ff8b8e; }
+
+/* 工具条：按钮不换行、不被压缩挤扁（多了一个「全店排行」） */
+.carousel-toolbar > div { min-width: 0; }
+.carousel-toolbar .pill-btn { white-space: nowrap; flex: 0 0 auto; padding: 0 9px; }
+.carousel-toolbar .icon-btn { flex: 0 0 auto; }
+
+/* 排行模式下，卡片专属控件（播放/速度/前后项）与「实时交互」角标都不适用 */
+.carousel-panel.rank-mode #playToggle,
+.carousel-panel.rank-mode #speedBtn,
+.carousel-panel.rank-mode #prevBtn,
+.carousel-panel.rank-mode #nextBtn,
+.carousel-panel.rank-mode .live-badge { display: none; }
+
+/* 窄屏（≤1500）省掉模式按钮前的装饰字形，保证一行放得下 */
+@media (max-width: 1500px) {
+  .carousel-toolbar .pill-btn > span:not(.play-label) { display: none; }
+  .carousel-toolbar .pill-btn { padding: 0 8px; }
+  .carousel-toolbar > div { gap: 6px; }
+}
+
+/* ---- 排行表三版：店名左对齐（重点徽标占固定槽位）+ 滚动渐隐 ---- */
+.rk-head, .rk-row { grid-template-columns: 22px minmax(0, 1fr) repeat(4, 54px); }
+.rk-name { position: relative; padding-left: 44px; }
+.rk-name .rk-key { position: absolute; left: 0; top: 50%; transform: translateY(-50%); margin-right: 0; }
+
+/* 底部渐隐：提示下方还有店铺可滚动 */
+.rk-fade { display: none; }
+.carousel-panel.rank-mode .rk-fade {
+  display: block; position: absolute; z-index: 3;
+  left: 0; right: 0; bottom: 132px; height: 30px; pointer-events: none;
+  background: linear-gradient(to top, var(--panel), transparent);
+}

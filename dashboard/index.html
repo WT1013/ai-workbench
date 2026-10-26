@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822k" />
-    <link rel="stylesheet" href="workbench.css?v=20260822k" />
+    <link rel="stylesheet" href="styles.css?v=20260822l" />
+    <link rel="stylesheet" href="workbench.css?v=20260822l" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -68,14 +68,14 @@
         </nav>
         <div class="sidebar-bottom">
           <div class="path-heading"><span>店铺规模</span><button aria-label="刷新">＋</button></div>
-          <button class="vault-row" title="23 家拼多多店铺 · 客服AI"><span class="diamond">◆</span><span>23 家店铺 / 客服AI / 远山</span><svg><use href="#i-chevron"/></svg></button>
+          <button class="vault-row" id="vaultRow" title="— 家拼多多店铺 · 客服AI"><span class="diamond">◆</span><span id="vaultText">— 家店铺 / 客服AI / 远山</span><svg><use href="#i-chevron"/></svg></button>
           <div class="profile-row"><span class="avatar">YS<i></i></span><span><b>远山</b><small>客服AI · 数据运营</small></span><button>⋮</button></div>
         </div>
       </aside>
 
       <section class="core">
         <header class="topbar">
-          <div class="page-title"><h1>远山数据驾驶舱</h1><p>23 店核心指标 · 异常提醒</p></div>
+          <div class="page-title"><h1>远山数据驾驶舱</h1><p id="pageSubtitle">— 店核心指标 · 异常提醒</p></div>
           <label class="search-box"><svg><use href="#i-search"/></svg><input id="searchInput" aria-label="搜索店铺" placeholder="搜索店铺名称、日期或指标…"/><kbd>⌘ K</kbd></label>
           <div class="top-actions">
             <span id="cloudStatus" class="cloud-status"></span>
@@ -115,6 +115,7 @@
                 <button id="orbitModeBtn" class="pill-btn active" aria-pressed="true"><span>✦</span>3D 环绕</button>
                 <button id="playToggle" class="pill-btn"><svg><use href="#i-play"/></svg><span class="play-label">自动播放</span></button>
                 <button id="fanModeBtn" class="pill-btn quiet" aria-pressed="false"><span>▥</span>侧向层叠</button>
+                <button id="rankModeBtn" class="pill-btn quiet" aria-pressed="false"><span>▤</span>全店排行</button>
               </div>
               <div>
                 <button id="speedBtn" class="pill-btn active">速度 2×</button>
@@ -130,6 +131,8 @@
               <div id="cardScene" class="card-scene"></div>
               <div class="scroll-tip"><span class="mouse-icon"><i></i></span><p>连续滚动切换店铺卡片；点击卡片查看详情</p><strong id="tipTitle">远山 · 数据驾驶舱</strong></div>
             </div>
+            <div id="rankView" class="rank-view" hidden aria-label="全店指标排行"></div>
+            <div class="rk-fade" aria-hidden="true"></div>
             <div class="timeline-panel">
               <div class="timeline-head"><b>数据同步时间轴</b><span id="timelineMonth"><svg><use href="#i-calendar"/></svg> 2026年8月</span><div><button>周⌄</button><button>今天</button></div></div>
               <div id="timelineDates" class="timeline-dates"></div>
@@ -554,7 +557,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822k"></script>
-    <script type="module" src="app.js?v=20260822k"></script>
+    <script src="workbench.js?v=20260822l"></script>
+    <script type="module" src="app.js?v=20260822l"></script>
   </body>
 </html>
