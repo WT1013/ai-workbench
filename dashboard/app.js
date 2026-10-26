@@ -1112,14 +1112,31 @@ function renderTimeline() {
     const n = parseInt(day, 10);
     const cls = hasData.has(n) ? "active" : "";
     const mark = n === latestDay ? `<i>${n}</i>` : "";
-    return `<button data-day-index="${n}" class="${cls}">${mark}${day}</button>`;
+    // 2026-10-26：偶数日数字单独标注，窄屏下弱化 → 形成主次刻度，避免 31 个数字挤成一片
+    return `<button data-day-index="${n}" class="${cls}" title="${prefix}-${day}">${mark}<span class="tl-d${n % 2 === 0 ? " tl-d-alt" : ""}">${day}</span></button>`;
   }).join("");
+  applyTimelineDensity();
   timelineDates.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
     const day = String(button.dataset.dayIndex).padStart(2, "0");
     const ym = (currentViewDate || cloudLatestDate || todayKeyStr()).slice(0, 7);
     viewOnDate(`${ym}-${day}`);
   }));
 }
+
+/* 时间轴密度：单列可用宽度 < 25px 时启用「主次刻度」（偶数日数字弱化） */
+function applyTimelineDensity() {
+  if (!timelineDates) return;
+  const btns = timelineDates.querySelectorAll("button");
+  if (!btns.length) return;
+  const per = timelineDates.clientWidth / btns.length;
+  timelineDates.classList.toggle("tl-dense", per > 0 && per < 14);
+}
+
+let tlResizeTimer = 0;
+window.addEventListener("resize", () => {
+  clearTimeout(tlResizeTimer);
+  tlResizeTimer = setTimeout(applyTimelineDensity, 120);
+});
 
 function modulo(value, length = documents.length) {
   return ((value % length) + length) % length;
@@ -1661,8 +1678,15 @@ function bindEvents() {
     renderMonthlyTable();
   });
   bindMonthPicker();
-  // 同步服务地址（本地局域网服务，线上不可达时给出提示）
-  const LOCAL_BASE = "http://10.10.12.157:8080";
+  // 同步服务地址：页面由本地 serve.js(:8080) 提供时用同源，其它来源回落到 127.0.0.1:8080
+  // （2026-10-26：旧实现硬编码 10.10.12.157:8080，线上点同步按钮必然失败）
+  const LOCAL_BASE = (typeof window.__LOCAL_HOST === "string")
+    ? window.__LOCAL_HOST
+    : ((location.port === "8080" || location.protocol === "file:") ? "" : "http://127.0.0.1:8080");
+  // 导航项 data-href 在 HTML 里写的是服务内路径（/sync 等），这里补上基址
+  document.querySelectorAll('.primary-nav .nav-item[data-href^="/"]').forEach((b) => {
+    b.dataset.href = LOCAL_BASE + b.dataset.href;
+  });
   const SYNC_URLS = {
     sync: `${LOCAL_BASE}/sync`,
     fillDingtalk: `${LOCAL_BASE}/fill-dingtalk`,

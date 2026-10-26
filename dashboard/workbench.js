@@ -11,6 +11,16 @@
   // 镜像模式: CloudStudio 国内镜像(无法访问 Supabase 海外域名)时改读同源 state.json 快照
   var IS_MIRROR = (typeof location !== "undefined" && (location.hostname.indexOf("app.workbuddy.link") >= 0 || /[?&]mirror=1/.test(location.search)));
 
+  /* ------------------------------------------------------------------
+   * 本机同步服务基址（2026-10-26）
+   * 页面本身由 serve.js 提供（:8080）时用同源，这样本机 / 局域网 IP 访问都对；
+   * 页面来自 GitHub Pages 等其它来源时，回落到 127.0.0.1:8080。
+   * 旧实现硬编码 10.10.12.157:8080 → 线上点同步按钮必然失败。
+   * ------------------------------------------------------------------ */
+  var LOCAL_HOST = (typeof location !== "undefined" && (location.port === "8080" || location.protocol === "file:"))
+    ? "" : "http://127.0.0.1:8080";
+  if (typeof window !== "undefined") { window.__LOCAL_HOST = LOCAL_HOST; }
+
   var TASKS = [
     { id: "data-update", name: "数据更新" },
     { id: "pre-reception", name: "前置接待监控" },
@@ -1206,7 +1216,7 @@
       t.addEventListener("click", function () { shopsTab = t.dataset.shopTab; renderShopsInternal(); });
     });
     // ---- 新增店铺弹窗（店铺信息 + 拼多多账号密码） ----
-    var SHOP_LOCAL_BASE = "http://10.10.12.157:8080";
+    var SHOP_LOCAL_BASE = LOCAL_HOST;
     var pddAccountCache = []; // 本地同步服务账号列表缓存(GET /pdd-account)
     var shopModal = $id("shopModal");
     function shopModalOpen() {
@@ -1336,7 +1346,7 @@
         } else if (action === "sync-shop" && shop) {
           // 单店同步: 打开本地服务 /sync-shop?idx=店名
           toast("正在同步「" + shop.name + "」…");
-          var base = "http://10.10.12.157:8080";
+          var base = LOCAL_HOST;
           try { window.open(base + "/sync-shop?idx=" + encodeURIComponent(shop.name), "_blank"); }
           catch (err) { toast("无法打开同步页(本地服务可能未启动)"); }
         }
@@ -1364,7 +1374,7 @@
     var syncBtns = document.querySelectorAll("[data-wb-sync]");
     Array.prototype.forEach.call(syncBtns, function (b) {
       b.addEventListener("click", function () {
-        window.open("http://10.10.12.157:8080/sync", "_blank");
+        window.open(LOCAL_HOST + "/sync", "_blank");
       });
     });
   }
@@ -1390,7 +1400,7 @@
     var bar = $id("syncStatusBar");
     if (!bar || window.__syncPollStarted) { return; }
     window.__syncPollStarted = true;
-    var SYNC_HOST = "http://10.10.12.157:8080";
+    var SYNC_HOST = LOCAL_HOST;
     var taskEl = $id("syncStatusTask");
     var cancelBtn = $id("syncCancelBtn");
     function poll() {
@@ -1439,8 +1449,7 @@
    * 经本机服务 /tg/* 代理直连探域 REST（纯 cookie，不起浏览器）
    * 页面在本机 8080 打开时用同源；其它来源回落到 127.0.0.1:8080
    * ============================================================ */
-  var TG_HOST = (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:")
-    ? "" : "http://127.0.0.1:8080";
+  var TG_HOST = LOCAL_HOST;
 
   var groupsCache = null;        // 待绑清单 { meta, list }
   var groupsQuery = "";

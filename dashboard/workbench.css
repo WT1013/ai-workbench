@@ -1110,3 +1110,20 @@ html, body { overflow-x: hidden; }
 /* 2026-10-26 补：卡片微缩文字与排班标记 */
 .doc-kicker, .doc-copy small { font-size: 10px; }
 .wb-shift-chip { font-size: 11px; }
+
+/* ============================================================
+   2026-10-26 时间轴：主次刻度
+   31 天挤在同一行时，偶数日数字弱化，形成可扫读的节奏；
+   悬停时恢复，仍能精确定位每一天。
+   ============================================================ */
+.timeline-dates .tl-d { display: inline-block; font-variant-numeric: tabular-nums; }
+.timeline-dates.tl-dense .tl-d-alt { opacity: .3; }
+.timeline-dates.tl-dense button:hover .tl-d-alt,
+.timeline-dates.tl-dense button:focus-visible .tl-d-alt { opacity: 1; }
+.timeline-dates button { border-radius: 5px; transition: background .15s, color .15s; }
+.timeline-dates button:hover { background: rgb(var(--accent-rgb) / .12); color: var(--accent-300); }
+html[data-theme-resolved="light"] .timeline-dates button:hover { background: rgb(var(--accent-rgb) / .1); }
+
+/* 时间轴日期：列宽仅 ~15px，10px 等宽数字刚好不贴边（原 8px 太小，11px 会挤） */
+.timeline-dates button { font-size: 10px; letter-spacing: -.2px; }
+.timeline-dates button.active { font-weight: 600; }

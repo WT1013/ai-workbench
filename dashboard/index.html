@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822i" />
-    <link rel="stylesheet" href="workbench.css?v=20260822i" />
+    <link rel="stylesheet" href="styles.css?v=20260822j" />
+    <link rel="stylesheet" href="workbench.css?v=20260822j" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -59,11 +59,11 @@
           <button class="nav-item" data-view="summary" title="单店历史趋势/多店指标对比"><svg><use href="#i-link"/></svg><span>数据总览</span></button>
           <button class="nav-item" data-view="groups" title="在售未绑商品 · 每日巡检待绑清单"><svg><use href="#i-columns"/></svg><span>待绑商品</span></button>
           <button class="nav-item" data-view="ai" title="AI 助手 · 结合工作台数据回答"><svg><use href="#i-spark"/></svg><span>AI 助手</span></button>
-          <button class="nav-item" data-href="http://10.10.12.157:8080/sync"><svg><use href="#i-spark"/></svg><span>同步昨日数据</span></button>
-          <button class="nav-item" data-href="http://10.10.12.157:8080/fill-dingtalk"><svg><use href="#i-list"/></svg><span>同步钉钉表格</span></button>
-          <button class="nav-item" data-href="http://10.10.12.157:8080/sync-workshop"><svg><use href="#i-spark"/></svg><span>同步打标数据</span></button>
-          <button class="nav-item" data-href="http://10.10.12.157:8080/sync-gaps"><svg><use href="#i-spark"/></svg><span>同步补缺</span></button>
-          <button class="nav-item" data-href="http://10.10.12.157:8080/fix-shop-data"><svg><use href="#i-grid"/></svg><span>修复店铺数据</span></button>
+          <button class="nav-item" data-href="/sync"><svg><use href="#i-spark"/></svg><span>同步昨日数据</span></button>
+          <button class="nav-item" data-href="/fill-dingtalk"><svg><use href="#i-list"/></svg><span>同步钉钉表格</span></button>
+          <button class="nav-item" data-href="/sync-workshop"><svg><use href="#i-spark"/></svg><span>同步打标数据</span></button>
+          <button class="nav-item" data-href="/sync-gaps"><svg><use href="#i-spark"/></svg><span>同步补缺</span></button>
+          <button class="nav-item" data-href="/fix-shop-data"><svg><use href="#i-grid"/></svg><span>修复店铺数据</span></button>
           <button id="sidebarSettingsBtn" class="nav-item" data-open-material aria-controls="materialOverlay"><svg><use href="#i-settings"/></svg><span>设置中心</span></button>
         </nav>
         <div class="sidebar-bottom">
@@ -520,7 +520,7 @@
             </span>
           </label>
         </div>
-        <p class="shop-modal-hint">需要本地同步服务已启动（10.10.12.157:8080），同步过程中请勿关闭页面</p>
+        <p class="shop-modal-hint">需要本地同步服务已启动（127.0.0.1:8080），同步过程中请勿关闭页面</p>
         <footer class="shop-modal-actions">
           <button type="button" class="pill-btn quiet" data-sync-modal-close>取消</button>
           <button type="button" class="pill-btn primary" id="syncModalConfirm">开始同步</button>
@@ -554,7 +554,7 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822i"></script>
-    <script type="module" src="app.js?v=20260822i"></script>
+    <script src="workbench.js?v=20260822j"></script>
+    <script type="module" src="app.js?v=20260822j"></script>
   </body>
 </html>
