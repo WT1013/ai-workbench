@@ -4,14 +4,47 @@ let currentMetricIdx = 0;
 
 let groups = [];
 
-/* 卡片展示的指标切换：与 metricCards[0..3] 一一对应 */
-const METRIC_KEYS = [
-  { doc: "adopt", label: "采纳率", unit: "%" },
-  { doc: "gen", label: "生成率", unit: "%" },
-  { doc: "conv", label: "转化率", unit: "%" },
-  { doc: "pure", label: "纯智能体", unit: "%" }
-];
-function currentMetric() { return METRIC_KEYS[currentMetricIdx] || METRIC_KEYS[0]; }
+/* 顶部四张指标卡可自由更换展示指标（2026-10-27）
+   卡位固定 4 个（配色/材质跟随位置，不随指标变），指标任选、不重复，localStorage 记住。
+   阈值沿用汇报口径：采纳≥65 / 生成≥95 / 纯智≥35 / 3分钟回复≥95 / 风控≤15；转化率与体验分暂无目标线。 */
+const METRIC_DEFS = {
+  adopt: { doc: "adopt", label: "采纳率",      en: "ADOPT",      unit: "%", target: 65,   dir: "gte", prev: "pAdopt" },
+  gen:   { doc: "gen",   label: "生成率",      en: "GENERATE",   unit: "%", target: 95,   dir: "gte", prev: "pGen" },
+  conv:  { doc: "conv",  label: "转化率",      en: "CONVERT",    unit: "%", target: null, dir: "gte", prev: "pConv" },
+  pure:  { doc: "pure",  label: "纯智能体占比", en: "PURE AI",    unit: "%", target: 35,   dir: "gte", prev: "pPure" },
+  reply: { doc: "reply", label: "3分钟回复率",  en: "REPLY 3MIN", unit: "%", target: 95,   dir: "gte", prev: "pReply" },
+  exp:   { doc: "exp",   label: "体验分",      en: "SCORE",      unit: "",  target: null, dir: "gte", prev: "pExp" },
+  risk:  { doc: "risk",  label: "风控率",      en: "RISK",       unit: "%", target: 15,   dir: "lte", prev: "pRisk" }
+};
+const METRIC_ORDER = ["adopt", "gen", "conv", "pure", "reply", "exp", "risk"];
+const SLOT_STORE = "csa-mc-slots-v1";
+const DEFAULT_SLOTS = ["adopt", "gen", "conv", "pure"];
+
+function loadMetricSlots() {
+  let arr = DEFAULT_SLOTS.slice();
+  try {
+    const raw = JSON.parse(localStorage.getItem(SLOT_STORE) || "null");
+    if (Array.isArray(raw) && raw.length === DEFAULT_SLOTS.length) {
+      const seen = new Set();
+      arr = raw.map((k, i) => {
+        if (METRIC_DEFS[k] && !seen.has(k)) { seen.add(k); return k; }
+        const alt = DEFAULT_SLOTS.find((d) => !seen.has(d)) || METRIC_ORDER.find((d) => !seen.has(d));
+        seen.add(alt);
+        return alt;
+      });
+    }
+  } catch (e) {}
+  return arr;
+}
+let metricSlots = loadMetricSlots();
+
+function saveMetricSlots() {
+  try { localStorage.setItem(SLOT_STORE, JSON.stringify(metricSlots)); } catch (e) {}
+}
+/* 第 i 张卡当前展示的指标定义 */
+function slotMetric(i) { return METRIC_DEFS[metricSlots[i]] || METRIC_DEFS.adopt; }
+function slotMetrics() { return metricSlots.map((k) => METRIC_DEFS[k] || METRIC_DEFS.adopt); }
+function currentMetric() { return slotMetric(currentMetricIdx); }
 
 /* ===== 数据层：从云端拉取远山店铺数据 ===== */
 const CLOUD_URL = "https://kocuowtqklojxkhzlwpe.supabase.co";
@@ -74,6 +107,19 @@ function shiftDateKey(key, delta) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/* 回溯取「最近一次有值」：给体验分这类非每日更新的指标用（2026-10-27） */
+function nearestMetricVal(days, dateKey, shopId, metric, maxBack) {
+  if (!dateKey) return null;
+  const back = (maxBack === undefined || maxBack === null) ? 14 : maxBack;
+  for (let i = 0; i <= back; i++) {
+    const k = shiftDateKey(dateKey, -i);
+    const sd = days && days[k] && days[k].shopData && days[k].shopData[shopId];
+    const v = metricVal(sd, metric);
+    if (v !== null) return v;
+  }
+  return null;
+}
+
 function monthAvgVal(days, monthPrefix, shopId, metric) {
   let sum = 0, n = 0;
   Object.keys(days || {}).forEach((k) => {
@@ -94,7 +140,10 @@ function buildDocuments(shops, days, date) {
     const conv = metricVal(sd, "conversionRate");
     const pure = metricVal(sd, "pureAgentRatio");
     const reply = metricVal(sd, "threeMinReplyRate");
-    const exp = metricVal(sd, "experienceScore");
+    /* 体验分不是每日出数（拼多多侧周期更新，2026-10-25 起停更）：
+       当日无值时回溯最近 14 天，避免卡片与详情在空窗期整片显示 -- */
+    const expRaw = metricVal(sd, "experienceScore");
+    const exp = expRaw !== null ? expRaw : (date ? nearestMetricVal(days, date, shop.id, "experienceScore", 14) : null);
     const risk = metricVal(sd, "riskRate");
     const expAvg = (exp !== null && monthPrefix) ? monthAvgVal(days, monthPrefix, shop.id, "experienceScore") : null;
     // 环比基准：前一天（2026-10-26 指标卡四段式）
@@ -104,6 +153,9 @@ function buildDocuments(shops, days, date) {
     const pGen = metricVal(sdP, "generationRate");
     const pConv = metricVal(sdP, "conversionRate");
     const pPure = metricVal(sdP, "pureAgentRatio");
+    const pReply = metricVal(sdP, "threeMinReplyRate");
+    const pExp = prevDateStr ? nearestMetricVal(days, prevDateStr, shop.id, "experienceScore", 14) : null;
+    const pRisk = metricVal(sdP, "riskRate");
     const isKey = shop.key === true;
     const fmt = (v) => (v === null ? "--" : String(v));
     const missCore = [adopt, gen, conv, pure, reply].some((v) => v === null);
@@ -132,7 +184,7 @@ function buildDocuments(shops, days, date) {
       ],
       accent: isKey ? "warm" : (adopt !== null && adopt >= 50 ? "green" : "mist"),
       completion: adopt === null ? 0 : Math.round(adopt),
-      metrics: { adopt, gen, conv, pure, reply, exp, expAvg, risk, pAdopt, pGen, pConv, pPure }
+      metrics: { adopt, gen, conv, pure, reply, exp, expAvg, risk, pAdopt, pGen, pConv, pPure, pReply, pExp, pRisk }
     };
   });
 }
@@ -206,38 +258,52 @@ function buildGroups(docs) {
 
 /* 2026-10-26 指标卡四段式：值 / 环比 / 目标线 / 状态
    阈值取汇报口径：采纳率≥65、生成率≥95、纯智占比≥35；转化率暂无目标线。 */
-const MC_TARGETS = {
-  adopt: { target: 65, dir: "gte" },
-  gen: { target: 95, dir: "gte" },
-  conv: { target: null, dir: "gte" },
-  pure: { target: 35, dir: "gte" }
-};
+/* 排行表 / 徽标沿用同一套阈值 */
+const MC_TARGETS = METRIC_ORDER.reduce(function (acc, k) {
+  acc[k] = { target: METRIC_DEFS[k].target, dir: METRIC_DEFS[k].dir };
+  return acc;
+}, {});
+
+/* 四张卡的「静态部分」：英文标号 + 中文名（换指标后立即生效） */
+function renderMetricCardMeta() {
+  metricCards.forEach(function (card, i) {
+    const def = slotMetric(i);
+    const enEl = card.querySelector(":scope > span");
+    if (enEl) enEl.textContent = def.en;
+    const nameEl = card.querySelector("h3 .mc-name");
+    if (nameEl) nameEl.textContent = def.label;
+  });
+}
+
+let lastCardFocusIdx;
 
 function updateMetricCards(docs, focusIdx) {
+  lastCardFocusIdx = focusIdx;
   const focus = (focusIdx !== undefined && docs[focusIdx]) ? docs[focusIdx] : null;
-  const avg = (f) => {
-    if (focus) return focus.metrics[f] === null ? null : focus.metrics[f];
-    const vals = docs.map((d) => d.metrics[f]).filter((v) => v !== null);
-    return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : null;
+  const avg = function (f) {
+    if (focus) { const v = focus.metrics[f]; return (v === null || v === undefined) ? null : v; }
+    const vals = docs.map(function (d) { return d.metrics[f]; }).filter(function (v) { return v !== null && v !== undefined; });
+    return vals.length ? (vals.reduce(function (a, b) { return a + b; }, 0) / vals.length).toFixed(2) : null;
   };
-  const set = (vid, sid, val, unit) => {
-    const vEl = document.querySelector("#" + vid), sEl = document.querySelector("#" + sid);
-    if (vEl) vEl.innerHTML = (val === null ? "--" : val) + "<small>" + unit + "</small>";
-    if (sEl) sEl.textContent = focus ? "已选：" + focus.title : "全店均值 · " + docs.length + " 家";
-  };
-  const pairs = [
-    ["Adopt", "adopt", "pAdopt"],
-    ["Gen", "gen", "pGen"],
-    ["Conv", "conv", "pConv"],
-    ["Pure", "pure", "pPure"]
-  ];
-  pairs.forEach(([key, cur, prev]) => {
-    const now = avg(cur);
-    const before = avg(prev);
-    const cfg = MC_TARGETS[cur];
+  renderMetricCardMeta();
 
-    // --- 环比 ---
-    const cmpEl = document.querySelector("#cmp" + key);
+  metricCards.forEach(function (card, i) {
+    const def = slotMetric(i);
+    const now = avg(def.doc);
+    const before = avg(def.prev);
+    const isPct = def.unit === "%";
+    const target = def.target;
+
+    /* 大数字 + 单位 */
+    const vEl = card.querySelector("strong");
+    if (vEl) vEl.innerHTML = (now === null ? "--" : now) + (def.unit ? "<small>" + def.unit + "</small>" : "");
+
+    /* 副标题：全店均值 / 已选店铺 */
+    const sEl = card.querySelector("p > em");
+    if (sEl) sEl.textContent = focus ? "已选：" + focus.title : "全店均值 · " + docs.length + " 家";
+
+    /* 环比：百分比用 pp，体验分用绝对差 */
+    const cmpEl = card.querySelector(".mc-cmp");
     if (cmpEl) {
       if (now === null || before === null) {
         cmpEl.className = "mc-cmp mc-flat";
@@ -245,45 +311,43 @@ function updateMetricCards(docs, focusIdx) {
         cmpEl.title = "前日无数据";
       } else {
         const d = Number(now) - Number(before);
-        const txt = (d > 0 ? "+" : "") + (Math.round(d * 100) / 100) + "pp";
+        const txt = (d > 0 ? "+" : "") + (Math.round(d * 100) / 100) + (isPct ? "pp" : "");
         const arrow = Math.abs(d) < 0.005 ? "·" : (d > 0 ? "▲" : "▼");
         cmpEl.className = "mc-cmp " + (Math.abs(d) < 0.005 ? "mc-flat" : (d > 0 ? "mc-up" : "mc-down"));
         cmpEl.textContent = arrow + " " + txt;
-        cmpEl.title = "较前日 " + txt + "（前日 " + (Math.round(Number(before) * 100) / 100) + "%）";
+        cmpEl.title = "较前日 " + txt + "（前日 " + (Math.round(Number(before) * 100) / 100) + def.unit + "）";
       }
     }
 
-    // --- 状态徽标 ---
-    const badge = document.querySelector("#badge" + key);
+    /* 状态徽标 */
+    const badge = card.querySelector(".mc-badge");
     if (badge) {
-      if (now === null || cfg.target === null) {
+      if (now === null || target === null || target === undefined) {
         badge.hidden = true;
       } else {
-        const ok = cfg.dir === "gte" ? Number(now) >= cfg.target : Number(now) <= cfg.target;
+        const ok = def.dir === "gte" ? Number(now) >= target : Number(now) <= target;
         badge.hidden = false;
         badge.className = "mc-badge " + (ok ? "is-ok" : "is-bad");
         badge.textContent = ok ? "达标" : "未达标";
       }
     }
 
-    // --- 目标线文案 ---
-    const tgt = document.querySelector("#tgt" + key);
+    /* 目标线 */
+    const tgt = card.querySelector(".mc-target");
     if (tgt) {
-      if (cfg.target === null) {
+      if (target === null || target === undefined) {
         tgt.textContent = "无目标线";
         tgt.classList.add("mc-target-na");
+        tgt.classList.remove("mc-target-miss");
       } else {
-        const gap = now === null ? null : (Math.round((cfg.target - Number(now)) * 100) / 100);
-        const behind = gap !== null && gap > 0;
+        tgt.classList.remove("mc-target-na");
+        const gap = now === null ? null : Math.round((target - Number(now)) * 100) / 100;
+        const behind = gap !== null && (def.dir === "gte" ? gap > 0 : gap < 0);
         tgt.classList.toggle("mc-target-miss", behind);
-        tgt.textContent = "目标 " + (cfg.dir === "gte" ? "≥" : "≤") + cfg.target + "%";
+        tgt.textContent = "目标 " + (def.dir === "gte" ? "≥" : "≤") + target + def.unit;
       }
     }
   });
-  set("valAdopt", "subAdopt", avg("adopt"), "%");
-  set("valGen", "subGen", avg("gen"), "%");
-  set("valConv", "subConv", avg("conv"), "%");
-  set("valPure", "subPure", avg("pure"), "%");
 }
 
 /* ===== 月度汇总视图 ===== */
@@ -623,6 +687,96 @@ metricCards.forEach((card) => {
   marker.textContent = "✓ 已选择";
   card.appendChild(marker);
 });
+
+/* ===== 指标卡更换展示指标（2026-10-27） =====
+   点击卡片上的指标名 → 弹出 7 个指标；已被别张卡占用则两张互换，不出现重复。 */
+let mcPickerEl = null;
+let mcPickerSlot = -1;
+
+function onPickerOutside(e) {
+  if (mcPickerEl && !mcPickerEl.contains(e.target)) closeMetricPicker();
+}
+function closeMetricPicker() {
+  if (mcPickerEl && mcPickerEl.parentNode) mcPickerEl.parentNode.removeChild(mcPickerEl);
+  mcPickerEl = null;
+  mcPickerSlot = -1;
+  document.removeEventListener("click", onPickerOutside, true);
+}
+
+function openMetricPicker(slotIdx, anchorEl) {
+  closeMetricPicker();
+  mcPickerSlot = slotIdx;
+  const el = document.createElement("div");
+  el.className = "mc-picker";
+  el.setAttribute("role", "menu");
+  el.innerHTML = '<div class="mc-picker-head">第 ' + (slotIdx + 1) + ' 张卡展示</div>' +
+    METRIC_ORDER.map(function (k) {
+      const d = METRIC_DEFS[k];
+      const at = metricSlots.indexOf(k);
+      const cur = at === slotIdx;
+      const hint = cur ? "当前" : (at >= 0 ? "与第 " + (at + 1) + " 张互换" : "");
+      return '<button type="button" role="menuitem" data-metric="' + k + '" class="' + (cur ? "is-cur" : "") + '">' +
+        '<span class="mc-pick-name">' + d.label + '</span>' +
+        '<span class="mc-pick-en">' + d.en + '</span>' +
+        (hint ? '<span class="mc-pick-hint">' + hint + '</span>' : "") +
+        "</button>";
+    }).join("");
+  document.body.appendChild(el);
+
+  const r = anchorEl.getBoundingClientRect();
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const left = Math.min(Math.max(8, r.left - 10), Math.max(8, window.innerWidth - w - 8));
+  let top = r.bottom + 8;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+
+  el.querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      applySlotMetric(mcPickerSlot, b.dataset.metric);
+      closeMetricPicker();
+    });
+  });
+  window.setTimeout(function () { document.addEventListener("click", onPickerOutside, true); }, 0);
+  mcPickerEl = el;
+}
+
+function applySlotMetric(slotIdx, key) {
+  if (!METRIC_DEFS[key] || slotIdx < 0 || slotIdx >= metricSlots.length) return;
+  if (metricSlots[slotIdx] === key) return;
+  const at = metricSlots.indexOf(key);
+  if (at >= 0) metricSlots[at] = metricSlots[slotIdx];   // 已被别张卡占用 → 两张互换
+  metricSlots[slotIdx] = key;
+  saveMetricSlots();
+  renderMetricCardMeta();
+  if (documents.length) updateMetricCards(documents, lastCardFocusIdx);
+  if (typeof rankMode !== "undefined" && rankMode) renderRankTable();
+  if (documents[selectedIndex]) updateDetails(documents[selectedIndex]);
+  showToast("第 " + (slotIdx + 1) + " 张卡已切换为「" + METRIC_DEFS[key].label + "」");
+}
+
+metricCards.forEach(function (card, i) {
+  const nameEl = card.querySelector("h3 .mc-name");
+  if (!nameEl) return;
+  nameEl.classList.add("is-switchable");
+  nameEl.setAttribute("tabindex", "0");
+  nameEl.setAttribute("role", "button");
+  nameEl.setAttribute("aria-label", "更换指标");
+  nameEl.addEventListener("click", function (e) {
+    e.stopPropagation();
+    e.preventDefault();
+    openMetricPicker(i, nameEl);
+  });
+  nameEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault(); e.stopPropagation();
+      openMetricPicker(i, nameEl);
+    }
+  });
+});
+renderMetricCardMeta();
+
 const initialMetricStates = metricCards.map((card) => ({
   material: card.dataset.material || "original",
   opacity: card.dataset.opacity || "100",
@@ -1399,7 +1553,7 @@ function setViewMode(mode) {
    ============================================================ */
 let rankMode = false;
 const RANK_STORE = "csa-rank-mode";
-const COLS_META = { adopt: "采纳率", gen: "生成率", conv: "转化率", pure: "纯智" };
+const COLS_META = { adopt: "采纳率", gen: "生成率", conv: "转化率", pure: "纯智", reply: "3分钟", exp: "体验分", risk: "风控率" };
 
 function setRankMode(on, opts) {
   const persist = !opts || opts.persist !== false;
@@ -1422,7 +1576,7 @@ function setRankMode(on, opts) {
 
 function renderRankTable() {
   if (!rankMode || !rankViewEl) return;
-  const COLS = ["adopt", "gen", "conv", "pure"];
+  const COLS = metricSlots.slice();
   const m = currentMetric();
   const num = (v) => (v === null || v === undefined || v === "" || isNaN(Number(v))) ? null : Number(v);
   const fmt = (v) => v === null ? "--" : (Math.round(v * 100) / 100).toFixed(2);
@@ -1549,7 +1703,7 @@ function updateDetails(doc) {
   document.querySelector("#detailPriority").textContent = fmt(m.exp);
   document.querySelector("#detailTags").innerHTML = doc.tags.map((tag) => `<span>${tag}</span>`).join("");
   // 指标明细：当前指标置顶+高亮（sort 把 isCur=true 排前面）；风控率固定追加在末尾
-  const ordered = METRIC_KEYS.map((k) => {
+  const ordered = slotMetrics().map((k) => {
     const v = m[k.doc];
     return { k, v, line: `${k.label} ${fmt(v, k.unit)}`, isCur: k === cur };
   }).sort((a, b) => (a.isCur ? -1 : 0) - (b.isCur ? -1 : 0));
@@ -1850,7 +2004,7 @@ function bindEvents() {
       selectMetricCard(index, { announce: false, syncDrawer: false });
       renderCards();
       if (documents[selectedIndex]) updateDetails(documents[selectedIndex]);
-      showToast(`已切换到「${METRIC_KEYS[index].label}」视图`);
+      showToast(`已切换到「${slotMetric(index).label}」视图`);
     });
     card.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
