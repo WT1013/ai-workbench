@@ -374,19 +374,60 @@ function bindMonthPicker() {
   });
 }
 
-/* 某店某月的指标均值（口径：仅统计有值的日期，与「日均」列一致） */
-function shopMonthAvg(shopId, prefix, metric) {
+/* 比率型指标的加权口径：月均 = Σ分子 ÷ Σ分母（与探域月报 natural_month 一致）
+   注意分母：采纳率/生成率/风控率三者共用卡片事件数 ai_agent_card_event_cnt，
+   采纳率不是「采纳数÷生成数」（那样松迅 10 月会算成 69.68%，实际 65.32%） */
+const MONTHLY_RATIO = {
+  adoptionRate:   { num: "adoptCount", den: "agenticMsgCount" },
+  generationRate: { num: "genCount",   den: "agenticMsgCount" },
+  riskRate:       { num: "riskCount",  den: "agenticMsgCount" }
+};
+
+function toNumOrNull(v) {
+  if (v === undefined || v === null || String(v).trim() === "") return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+/* 某店某月的「月均」（2026-10-27 由「日均」改为「月均」）
+   日均 = 各日比率简单平均：一个只有 5 条对话的淡日与 2000 条的大日等权，
+   会被低量日严重拉偏，也和探域后台月报口径不一致，故改为月均：
+     · 采纳率 / 生成率 / 风控率 → Σ分子 ÷ Σ分母（计数加权，与探域 natural_month 相同）
+     · 转化率 / 3分钟回复率 / 纯智 → 以当日卡片事件数加权（无原始分子分母可用）
+     · 体验分 → 有值日期的简单平均（分数型，不适用加权）
+   未过完的月份 = 累计至今。分母全缺时回退简单平均（早期月份只有比率、没存计数）。 */
+function shopMonthStat(shopId, prefix, metric) {
   const y = parseInt(prefix.slice(0, 4), 10);
   const m = parseInt(prefix.slice(5, 7), 10);
   const daysIn = new Date(y, m, 0).getDate();
-  let sum = 0, n = 0;
+  const spec = MONTHLY_RATIO[metric];
+  let sum = 0, n = 0;        // 简单平均（兜底）
+  let num = 0, den = 0;      // 计数加权
+  let wsum = 0, wden = 0;    // 事件加权
   for (let i = 1; i <= daysIn; i++) {
     const k = prefix + "-" + String(i).padStart(2, "0");
     const day = cloudDays && cloudDays[k];
-    const v = (day && day.shopData && day.shopData[shopId]) ? day.shopData[shopId][metric] : null;
-    if (v !== undefined && v !== null && String(v).trim() !== "" && !isNaN(Number(v))) { sum += Number(v); n++; }
+    const sd = day && day.shopData && day.shopData[shopId];
+    if (!sd) continue;
+    const val = toNumOrNull(sd[metric]);
+    if (val !== null) { sum += val; n++; }
+    if (spec) {
+      const a = toNumOrNull(sd[spec.num]);
+      const b = toNumOrNull(sd[spec.den]);
+      if (a !== null && b !== null && b > 0) { num += a; den += b; }
+    } else if (val !== null) {
+      const w = toNumOrNull(sd.agenticMsgCount);
+      if (w !== null && w > 0) { wsum += val * w; wden += w; }
+    }
   }
-  return n ? sum / n : null;
+  if (spec && den > 0) return { avg: (num / den) * 100, mode: "weighted" };
+  if (!spec && wden > 0) return { avg: wsum / wden, mode: "weighted" };
+  if (n) return { avg: sum / n, mode: "simple" };
+  return { avg: null, mode: "none" };
+}
+
+function shopMonthAvg(shopId, prefix, metric) {
+  return shopMonthStat(shopId, prefix, metric).avg;
 }
 
 /* 月份偏移，返回 { y, m, prefix } */
@@ -410,33 +451,33 @@ function renderMonthlyTable() {
   const sfx = pctSuffix(monthlyMetric);
   const isScore = monthlyMetric === "experienceScore";
 
-  // 表头：左侧固定区（店铺 / 日均 / 环比 / 排名）+ 右侧每日
-  let headHtml = '<tr><th class="mt-name">店铺</th><th class="mt-sum">日均</th><th class="mt-sum">环比</th><th class="mt-sum mt-rank">排名</th>';
+  // 表头：左侧固定区（店铺 / 月均 / 环比 / 排名）+ 右侧每日
+  const avgTip = isScore
+    ? "月均＝本月有值日期的平均分"
+    : "月均＝本月累计口径（采纳数÷生成数 等），不是各日比率的简单平均；未过完的月份为累计至今";
+  let headHtml = '<tr><th class="mt-name">店铺</th><th class="mt-sum" title="' + avgTip + '">月均</th><th class="mt-sum">环比</th><th class="mt-sum mt-rank">排名</th>';
   for (let i = 1; i <= daysInMonth; i++) headHtml += `<th class="mt-day">${i}</th>`;
   headHtml += "</tr>";
   head.innerHTML = headHtml;
 
-  // 第一遍：收集每日值与日均
+  // 第一遍：收集每日值与月均
   const rows = shopsKeyFirst(cloudShops).map((shop) => {
     const vals = [];
-    let sum = 0, n = 0;
     for (let i = 1; i <= daysInMonth; i++) {
       const dateKey = prefix + "-" + String(i).padStart(2, "0");
       const day = cloudDays && cloudDays[dateKey];
       const v = (day && day.shopData && day.shopData[shop.id]) ? day.shopData[shop.id][monthlyMetric] : null;
-      const raw = (v !== undefined && v !== null && String(v).trim() !== "") ? Number(v) : null;
-      const num = (raw !== null && !isNaN(raw)) ? raw : null;
-      vals.push(num);
-      if (num !== null) { sum += num; n++; }
+      vals.push(toNumOrNull(v));
     }
-    const avg = n ? sum / n : null;
-    return { shop, vals, avg, prevAvg: shopMonthAvg(shop.id, prev.prefix, monthlyMetric), rank: 0 };
+    const stat = shopMonthStat(shop.id, prefix, monthlyMetric);
+    const pstat = shopMonthStat(shop.id, prev.prefix, monthlyMetric);
+    return { shop, vals, avg: stat.avg, mode: stat.mode, prevAvg: pstat.avg, prevMode: pstat.mode, rank: 0 };
   });
 
-  // 排名：有数据的店按日均降序
+  // 排名：有数据的店按月均降序
   rows.filter((r) => r.avg !== null).sort((a, b) => b.avg - a.avg).forEach((r, i) => { r.rank = i + 1; });
 
-  // 日均热力归一化（仅日均列，避免每日格子过度着色）
+  // 月均热力归一化（仅月均列，避免每日格子过度着色）
   const avgList = rows.map((r) => r.avg).filter((v) => v !== null);
   const lo = avgList.length ? Math.min(...avgList) : 0;
   const hi = avgList.length ? Math.max(...avgList) : 1;
@@ -456,13 +497,19 @@ function renderMonthlyTable() {
       const cls = Math.abs(d) < 0.005 ? "mt-flat" : (d > 0 ? "mt-up" : "mt-down");
       const txt = (d > 0 ? "+" : "") + (Math.round(d * 100) / 100) + (isScore ? "" : "pp");
       const arrow = Math.abs(d) < 0.005 ? "·" : (d > 0 ? "▲" : "▼");
-      cmp = `<span class="${cls}" title="上月日均 ${fmt2(r.prevAvg, sfx)}">${arrow}${txt}</span>`;
+      const warn = r.prevMode === "simple"
+        ? "（上月未存计数，为简单平均，口径略有差异）"
+        : "";
+      cmp = `<span class="${cls}" title="上月月均 ${fmt2(r.prevAvg, sfx)}${warn}">${arrow}${txt}</span>`;
     } else if (r.avg !== null) {
       cmp = '<span class="mt-na" title="上月无数据">—</span>';
     }
+    const avgTitle = r.mode === "simple"
+      ? "本月未存计数，退化为各日简单平均"
+      : "月均（累计口径）";
     return `<tr class="${isKey ? "key-row" : ""}">` +
       `<td class="mt-name" title="${r.shop.name}">${r.shop.name}</td>` +
-      `<td class="mt-sum mt-avg" style="${heat(r.avg)}">${fmt2(r.avg, sfx)}</td>` +
+      `<td class="mt-sum mt-avg" style="${heat(r.avg)}" title="${avgTitle}">${fmt2(r.avg, sfx)}</td>` +
       `<td class="mt-sum">${cmp}</td>` +
       `<td class="mt-sum mt-rank">${r.rank ? r.rank : "—"}</td>` +
       cells + "</tr>";
