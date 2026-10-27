@@ -20,6 +20,26 @@ const METRIC_ORDER = ["adopt", "gen", "conv", "pure", "reply", "exp", "risk"];
 const SLOT_STORE = "csa-mc-slots-v1";
 const DEFAULT_SLOTS = ["adopt", "gen", "conv", "pure"];
 
+/* 底部引导条「一次性」（2026-10-27）
+   滚轮换过 3 档、或点开过卡片，即视为学会了操作方式：引导文案淡出，
+   胶囊收窄成「鼠标图标 + 当前指标·店铺」，会话内记住，刷新不再打扰。 */
+const TIP_STORE = "csa-tip-learned";
+let tipWheelTurns = 0;
+let tipWheelAt = 0;
+function dismissScrollTip() {
+  const tip = document.querySelector(".scroll-tip");
+  if (!tip || tip.classList.contains("learned")) return;
+  tip.classList.add("learned");
+  try { sessionStorage.setItem(TIP_STORE, "1"); } catch (_) { }
+}
+function restoreScrollTip() {
+  try {
+    if (sessionStorage.getItem(TIP_STORE) !== "1") return;
+    const tip = document.querySelector(".scroll-tip");
+    if (tip) tip.classList.add("learned");
+  } catch (_) { }
+}
+
 function loadMetricSlots() {
   let arr = DEFAULT_SLOTS.slice();
   try {
@@ -1396,7 +1416,7 @@ function renderCards() {
       <span class="doc-copy"><strong>${doc.title}</strong><small>${m.label} ${display}${m.unit} · 体验 ${doc.metrics.exp === null ? "--" : doc.metrics.exp}</small></span>
     </button>`;
   }).join("");
-  scene.querySelectorAll(".doc-card").forEach((card) => card.addEventListener("click", () => selectCard(Number(card.dataset.index), true)));
+  scene.querySelectorAll(".doc-card").forEach((card) => card.addEventListener("click", () => { selectCard(Number(card.dataset.index), true); dismissScrollTip(); }));
   if (rankMode) renderRankTable();
 }
 
@@ -1541,7 +1561,7 @@ function setViewMode(mode) {
   fanModeBtn.classList.toggle("quiet", !fanView);
   fanModeBtn.setAttribute("aria-pressed", String(fanView));
   viewport.setAttribute("aria-label", fanView ? "可滚轮切换的侧向层叠店铺卡片" : "可滚轮切换的店铺卡片");
-  document.querySelector(".scroll-tip p").textContent = fanView ? "连续滚动浏览侧向层叠；点击卡片查看详情" : "连续滚动切换店铺卡片；点击卡片查看详情";
+  document.querySelector(".scroll-tip p").textContent = fanView ? "滚动浏览层叠 · 点击看详情" : "滚动切换店铺 · 点击看详情";
   updateCardPositions(visualPosition);
   window.setTimeout(() => viewport.classList.remove("view-switching"), 760);
 }
@@ -1689,7 +1709,15 @@ function updateDetails(doc) {
   if (smallEl) smallEl.textContent = "当前店铺" + cur.label;
   document.querySelector("#completionValue").textContent = fmt(curVal, cur.unit);
   const tipTitle = document.querySelector("#tipTitle");
-  if (tipTitle) tipTitle.textContent = cur.label + " · " + (doc.title || "");
+  if (tipTitle) {
+    // 2026-10-27：拆成「指标名(accent) · 店铺名(浅色)」两段，长店名由 CSS 省略号收口，
+    // 避免整段同色粗体糊成一根白柱抢视线。
+    const emEl = document.createElement("em");
+    emEl.textContent = cur.label;
+    const spEl = document.createElement("span");
+    spEl.textContent = doc.title || "";
+    tipTitle.replaceChildren(emEl, document.createTextNode(" · "), spEl);
+  }
   const completionBar = document.querySelector(".completion-card i b");
   if (completionBar) completionBar.style.width = `${curVal === null || curVal === undefined ? 0 : Math.min(100, curVal)}%`;
   // 详情字段
@@ -2033,6 +2061,12 @@ function bindEvents() {
     if (!dominantDelta) return;
     if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) dominantDelta *= 16;
     if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) dominantDelta *= viewport.clientHeight;
+    // 滚动节流计数：换过 3 档就收起引导文案
+    const tipNow = performance.now();
+    if (tipNow - tipWheelAt > 240) {
+      tipWheelAt = tipNow;
+      if (++tipWheelTurns >= 3) dismissScrollTip();
+    }
     const contribution = -Math.max(-140, Math.min(140, dominantDelta)) / 145;
     lastWheelDirection = Math.sign(contribution);
     targetPosition += contribution;
@@ -2364,6 +2398,7 @@ function setCloudStatus(text, cls) {
 }
 
 async function initDashboard() {
+  restoreScrollTip();
   setCloudStatus("同步中…", "loading");
   try {
     const data = await fetchCloud();

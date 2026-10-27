@@ -1075,8 +1075,8 @@ html, body { overflow-x: hidden; }
 /* ---- 时间轴 ---- */
 .timeline-dates button { font-size: 11px; height: 24px; }
 .timeline-dates button i { font-size: 10px; }
-.scroll-tip p { font-size: 11px; }
-.scroll-tip strong { font-size: 11px; }
+.scroll-tip p { font-size: 11px; letter-spacing: .1px; }
+.scroll-tip strong { font-size: 11px; letter-spacing: .2px; }
 
 /* ---- 指标卡 ---- */
 .metric-card > span { font-size: 10.5px; }
