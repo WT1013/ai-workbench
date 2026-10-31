@@ -161,6 +161,40 @@
     return day;
   }
 
+  /* 体验分回填（2026-10-31）
+     体验分在拼多多侧是滚动周期分，日间极少变化，逐天手填很浪费。
+     保存某天体验分时，把「该店上一次有值的日期」→「当前日期」之间，
+     已有店铺记录但体验分为空的日期，自动补成同一个值。
+     边界：只填空、不覆盖已有值；不新建店铺记录（没同步过的日期保持原样）；
+           找不到「上一次有值」时不回填，避免无锚点地大批量写库。 */
+  function backfillExperienceScore(shopId, key, value) {
+    if (value === "" || value === null || value === undefined) { return 0; }
+    var score = Number(value);
+    if (!isFinite(score)) { return 0; }
+    var days = (state && state.days) || {};
+    var isDate = function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); };
+    var last = "";
+    Object.keys(days).forEach(function (d) {
+      if (!isDate(d) || d >= key) { return; }
+      var rec = days[d] && days[d].shopData && days[d].shopData[shopId];
+      if (!rec) { return; }
+      var v = rec.experienceScore;
+      if (v !== "" && v !== null && v !== undefined && isFinite(Number(v))) {
+        if (d > last) { last = d; }
+      }
+    });
+    if (!last) { return 0; }
+    var filled = 0;
+    Object.keys(days).forEach(function (d) {
+      if (!isDate(d) || d <= last || d >= key) { return; }
+      var rec = days[d] && days[d].shopData && days[d].shopData[shopId];
+      if (!rec) { return; }
+      var v = rec.experienceScore;
+      if (v === "" || v === null || v === undefined) { rec.experienceScore = score; filled += 1; }
+    });
+    return filled;
+  }
+
   function taskData(key, taskId) {
     var day = dayData(key);
     if (!day.tasks[taskId]) { day.tasks[taskId] = { status: "todo", priority: "mid", note: "" }; }
@@ -250,7 +284,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, days: state.days, shifts: state.shifts }));
       if (IS_MIRROR) {
         // 镜像模式只读: 仅存本地, 不写云端(查看者无 Supabase 访问权限)
-        if (showTip) { toast("已保存到本地（镜像只读模式）"); }
+        if (showTip) { toast(typeof showTip === "string" ? showTip : "已保存到本地（镜像只读模式）"); }
         return;
       }
       if (saveTimer) { clearTimeout(saveTimer); }
@@ -260,7 +294,8 @@
           headers: { "Content-Type": "application/json", apikey: CLOUD_KEY, Authorization: "Bearer " + CLOUD_KEY, Prefer: "resolution=merge-duplicates" },
           body: JSON.stringify({ id: 1, days: state.days, shifts: state.shifts })
         }).then(function (r) {
-          if (showTip) { toast(r.ok ? "已同步到云端" : "云端同步失败"); }
+          // showTip 传字符串时用它作为同步成功的文案（如「已保存…并回填 N 天」）
+          if (showTip) { toast(r.ok ? (typeof showTip === "string" ? showTip : "已同步到云端") : "云端同步失败"); }
         }).catch(function () { if (showTip) { toast("云端同步失败"); } });
       }, 500);
     } catch (e) { if (showTip) { toast("保存失败"); } }
@@ -849,9 +884,13 @@
         });
         var d = dayData(key);
         d.shopData[shop.id] = Object.assign({}, d.shopData[shop.id] || {}, metrics);
-        wbSave(true);
+        // 体验分：把「上一次有值」到当前之间空着的日期自动补上（只填空、不覆盖）
+        var filledDays = backfillExperienceScore(shop.id, key, metrics.experienceScore);
+        var saveMsg = "已保存 " + shop.name + " " + key + " 的数据" + (filledDays ? "，并回填前 " + filledDays + " 天空缺体验分" : "");
+        toast(saveMsg);
+        // 回填过就沿用这条文案，避免 500ms 后「已同步到云端」把它冲掉、用户看不到补了几天
+        wbSave(filledDays ? saveMsg : true);
         renderRoster();
-        toast("已保存 " + shop.name + " " + key + " 的数据");
         renderShopDaily();
       };
     }
