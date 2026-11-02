@@ -609,6 +609,7 @@ function setDashboardMode(mode) {
   const wbViews = {
     today: document.querySelector("#todayView"),
     report: document.querySelector("#reportView"),
+    weekly: document.querySelector("#weeklyView"),
     shops: document.querySelector("#shopsView"),
     summary: document.querySelector("#summaryView"),
     groups: document.querySelector("#groupsView"),
@@ -633,6 +634,7 @@ function setDashboardMode(mode) {
     wbViews[mode].hidden = false;
     if (mode === "today" && typeof window.wbRenderToday === "function") window.wbRenderToday();
     else if (mode === "report" && typeof window.wbRenderReport === "function") window.wbRenderReport();
+    else if (mode === "weekly" && typeof window.wbRenderWeekly === "function") window.wbRenderWeekly();
     else if (mode === "shops" && typeof window.wbRenderShops === "function") window.wbRenderShops();
     else if (mode === "summary" && typeof window.wbRenderSummary === "function") window.wbRenderSummary();
     else if (mode === "groups" && typeof window.wbRenderGroups === "function") window.wbRenderGroups();

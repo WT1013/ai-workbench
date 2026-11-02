@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822p" />
-    <link rel="stylesheet" href="workbench.css?v=20260822p" />
+    <link rel="stylesheet" href="styles.css?v=20260822q" />
+    <link rel="stylesheet" href="workbench.css?v=20260822q" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -55,6 +55,7 @@
           <button class="nav-item" data-view="monthly"><svg><use href="#i-calendar"/></svg><span>月度汇总</span></button>
           <button class="nav-item" data-view="today" title="今日任务/排班/数据录入"><svg><use href="#i-grid"/></svg><span>今日工作台</span></button>
           <button class="nav-item" data-view="report" title="日报生成/复制下载图片"><svg><use href="#i-list"/></svg><span>日报表格</span></button>
+          <button class="nav-item" data-view="weekly" title="汇总一周日报，按问题分析法做周度复盘"><svg><use href="#i-calendar"/></svg><span>周度复盘</span></button>
           <button class="nav-item" data-view="shops" title="店铺库/每日数据/月度汇总"><svg><use href="#i-columns"/></svg><span>店铺库</span></button>
           <button class="nav-item" data-view="summary" title="单店历史趋势/多店指标对比"><svg><use href="#i-link"/></svg><span>数据总览</span></button>
           <button class="nav-item" data-view="groups" title="在售未绑商品 · 每日巡检待绑清单"><svg><use href="#i-columns"/></svg><span>待绑商品</span></button>
@@ -233,6 +234,22 @@
           <div id="reportContent" class="report-content"></div>
           <div class="section-heading" style="margin-top:20px"><h3>历史日报记录</h3><span id="reportLogCount"></span></div>
           <div id="reportLogList" class="report-log-list"></div>
+        </section>
+
+        <section id="weeklyView" class="workbench-view panel" hidden>
+          <header class="workbench-head">
+            <div class="section-heading"><h2>周度复盘</h2><span id="weeklyRangeLabel" class="report-date-badge"></span></div>
+            <div class="workbench-toolbar">
+              <input type="date" id="weeklyStart" class="wb-date-input" aria-label="开始日期">
+              <span class="wk-toolbar-sep">至</span>
+              <input type="date" id="weeklyEnd" class="wb-date-input" aria-label="结束日期">
+              <button id="weeklyGenBtn" class="pill-btn primary">生成复盘</button>
+              <button id="weeklyCopyBtn" class="pill-btn">复制复盘</button>
+              <button id="weeklyExportBtn" class="pill-btn quiet">导出指标CSV</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="weekly" title="让 AI 基于本周日报做复盘总结">✦ AI 复盘</button>
+            </div>
+          </header>
+          <div id="weeklyContent" class="report-content"></div>
         </section>
 
         <section id="shopsView" class="workbench-view panel" hidden>
@@ -557,7 +574,8 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822p"></script>
-    <script type="module" src="app.js?v=20260822p"></script>
+    <script src="workbench.js?v=20260822q"></script>
+    <script src="weekly-review.js?v=20260822q"></script>
+    <script type="module" src="app.js?v=20260822q"></script>
   </body>
 </html>

@@ -1443,3 +1443,106 @@ html[data-theme-resolved="light"] .rk-sum i.is-bad { color: #c0303a; }
 .mc-pick-en { font-size: 9.5px; letter-spacing: .04em; color: var(--muted); }
 .mc-pick-hint { font-size: 9.5px; color: var(--accent-300); }
 .mc-picker button.is-cur .mc-pick-hint { color: var(--muted); }
+
+/* ============================================================
+ * 周度复盘（weekly-review.js）
+ * 复用驾驶舱设计 token，不引入独立主题
+ * ============================================================ */
+.wk-toolbar-sep { color: var(--muted); font-size: 12px; }
+.wb-weekly { display: flex; flex-direction: column; gap: 14px; }
+.wb-weekly .wk-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.wb-weekly .wk-range { color: var(--muted); font-size: 12px; letter-spacing: .02em; }
+.wb-weekly .wk-card {
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 14px; padding: 16px 18px; min-width: 0;
+}
+.wb-weekly .wk-card h3 {
+  margin: 0 0 12px; font-size: 13px; font-weight: 500; color: var(--text);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.wb-weekly .wk-card h3 .tag {
+  font-size: 10.5px; font-weight: 400; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px;
+}
+.wb-weekly .wk-kv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 24px; }
+@media (max-width: 900px) { .wb-weekly .wk-kv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wb-weekly .kv {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-bottom: 1px dashed var(--line);
+  font-size: 12.5px; color: var(--muted); min-width: 0;
+}
+.wb-weekly .kv b { color: var(--text); font-weight: 500; white-space: nowrap; }
+.wb-weekly .wk-table-wrap { overflow-x: auto; }
+.wb-weekly table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.wb-weekly th, .wb-weekly td {
+  border-bottom: 1px solid var(--line); padding: 7px 9px; text-align: left; white-space: nowrap;
+}
+.wb-weekly th { color: var(--muted); font-weight: 500; font-size: 11px; }
+.wb-weekly td { color: var(--text); }
+.wb-weekly tr:last-child td { border-bottom: 0; }
+.wb-weekly td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.wb-weekly td.bad { color: var(--danger); }
+.wb-weekly .wk-wd { color: var(--muted); font-size: 10.5px; margin-left: 2px; }
+.wb-weekly .wk-target { color: var(--muted); font-size: 10.5px; }
+/* 与驾驶舱一致：涨=红 跌=绿 */
+.wb-weekly .up { color: var(--danger); }
+.wb-weekly .down { color: var(--accent-400); }
+.wb-weekly .flat { color: var(--muted); }
+.wb-weekly .badge {
+  display: inline-block; font-size: 10.5px; padding: 1px 8px; border-radius: 20px;
+  border: 1px solid var(--line); margin-right: 6px; vertical-align: 1px;
+}
+.wb-weekly .badge.drop { color: var(--danger); border-color: rgb(var(--accent-rgb) / .0); background: rgb(255 108 112 / .12); }
+.wb-weekly .fb {
+  background: var(--panel-soft); border: 1px solid var(--line); border-radius: 10px;
+  padding: 9px 12px; margin-bottom: 8px; font-size: 12.5px; color: var(--text); line-height: 1.65;
+}
+.wb-weekly .fb .dt { color: var(--muted); font-size: 11px; margin-bottom: 3px; }
+.wb-weekly .fb.muted { color: var(--muted); }
+.wb-weekly .tmpl {
+  background: rgb(var(--accent-rgb) / .04); border: 1px dashed var(--line-bright);
+  border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text);
+  line-height: 1.7; margin-top: 8px;
+}
+.wb-weekly .tmpl b { color: var(--accent-300); font-weight: 500; }
+.wb-weekly ul { margin: 4px 0 0; padding-left: 18px; }
+.wb-weekly li { margin: 3px 0; }
+.wb-weekly .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) { .wb-weekly .grid2 { grid-template-columns: 1fr; } }
+.wb-weekly .wk-sub { font-size: 12px; color: var(--text); margin: 12px 0 6px; }
+.wb-weekly .wk-sub2 { font-size: 12px; color: var(--accent-300); margin-bottom: 6px; }
+.wb-weekly .wk-recur { margin-top: 10px; font-size: 12.5px; color: var(--text); }
+.wb-weekly .wk-recur b { color: var(--accent-300); font-weight: 500; }
+.wb-weekly .empty { color: var(--muted); font-size: 12.5px; padding: 6px 0; }
+.wb-weekly details > summary.wk-summary { cursor: pointer; list-style: none; }
+.wb-weekly details > summary.wk-summary::-webkit-details-marker { display: none; }
+.wb-weekly details[open] > summary.wk-summary { margin-bottom: 10px; }
+.wb-weekly .wk-day { border-top: 1px dashed var(--line); padding: 10px 0 4px; }
+.wb-weekly .wk-day:first-of-type { border-top: 0; }
+.wb-weekly .wk-day-head { font-size: 12.5px; color: var(--accent-300); margin-bottom: 6px; }
+.wb-weekly .wk-day-empty { color: var(--muted); font-size: 11px; margin-left: 8px; }
+.wb-weekly .wk-day-row { display: flex; gap: 10px; font-size: 12px; padding: 3px 0; line-height: 1.65; }
+.wb-weekly .wk-day-row b { flex: 0 0 62px; color: var(--muted); font-weight: 400; }
+.wb-weekly .wk-day-row span { color: var(--text); min-width: 0; white-space: pre-wrap; }
+.wb-weekly .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 860px) { .wb-weekly .method-grid { grid-template-columns: 1fr; } }
+.wb-weekly .method { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel-soft); }
+.wb-weekly .method h4 { margin: 0 0 5px; font-size: 12px; font-weight: 500; color: var(--accent-300); }
+.wb-weekly .method p { margin: 0; font-size: 11.5px; color: var(--muted); line-height: 1.65; }
+.wb-weekly-toast {
+  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%) translateY(6px);
+  background: var(--panel-soft); color: var(--text); border: 1px solid var(--line-bright);
+  padding: 9px 16px; border-radius: 10px; font-size: 12.5px; z-index: 9999;
+  opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45);
+}
+.wb-weekly-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* 折叠卡片标题（③ 指标态势为 details） */
+.wb-weekly details > summary.wk-summary { display: block; }
+.wb-weekly details > summary.wk-summary h3 { margin: 0; }
+.wb-weekly details[open] > summary.wk-summary h3 { margin-bottom: 12px; }
+/* 折叠块标题里的 pill（⑧ 每日日报原文） */
+.wb-weekly summary.wk-summary .tag {
+  font-size: 10.5px; font-weight: 400; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; margin-left: 6px;
+}

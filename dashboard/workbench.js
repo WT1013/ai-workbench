@@ -2681,6 +2681,8 @@
 
   window.wbRenderAi = wbRenderAi;
   window.wbAiAsk = aiAsk;
+  // 供周度复盘(weekly-review.js)读取实时数据，避免走 localStorage 兜底拿到旧快照
+  window.__wbState = state;
 
   window.wbRefresh = function () { wbReady = false; wbInit(); };
   window.addEventListener("DOMContentLoaded", wbInit);
