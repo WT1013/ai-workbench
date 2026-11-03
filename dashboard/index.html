@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822s" />
-    <link rel="stylesheet" href="workbench.css?v=20260822s" />
+    <link rel="stylesheet" href="styles.css?v=20260822t" />
+    <link rel="stylesheet" href="workbench.css?v=20260822t" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -246,6 +246,7 @@
               <button id="weeklyGenBtn" class="pill-btn primary">生成复盘</button>
               <button id="weeklyCopyBtn" class="pill-btn">复制复盘</button>
               <button id="weeklyExportBtn" class="pill-btn quiet">导出指标CSV</button>
+              <button id="weeklyHtmlBtn" class="pill-btn quiet" title="导出为单个 HTML 文件，可直接发钉钉/微信/邮件">导出HTML</button>
               <button class="pill-btn ai-page-btn" data-ai-page="weekly" title="让 AI 基于本周日报做复盘总结">✦ AI 复盘</button>
             </div>
           </header>
@@ -574,8 +575,8 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822s"></script>
-    <script src="weekly-review.js?v=20260822s"></script>
-    <script type="module" src="app.js?v=20260822s"></script>
+    <script src="workbench.js?v=20260822t"></script>
+    <script src="weekly-review.js?v=20260822t"></script>
+    <script type="module" src="app.js?v=20260822t"></script>
   </body>
 </html>

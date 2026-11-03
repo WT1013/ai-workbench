@@ -401,9 +401,147 @@
     toast("CSV 已导出");
   }
 
+  /* ---------- 导出单文件 HTML（浅色、可离线打开、可直接发送） ---------- */
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  var EXPORT_CSS = [
+    ":root{color-scheme:light;",
+    "--bg:#ffffff;--panel:#ffffff;--panel-2:#ffffff;--panel-soft:#f5f8f6;",
+    "--line:#e3e9e5;--line-bright:#cfdad4;--text:#1b2420;--muted:#6b7770;",
+    "--accent-rgb:16 130 92;--danger:#c9333a;",
+    "--accent-300:#0f6f4e;--accent-400:#12805c;--accent-500:#0f6f4e;--accent-600:#0b5c40;",
+    "}",
+    "*{box-sizing:border-box}",
+    "body{margin:0;background:#eef1ef;color:#1b2420;",
+    "font:14px/1.65 Inter,ui-sans-serif,-apple-system,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;",
+    "-webkit-text-size-adjust:100%}",
+    ".wrap{max-width:1080px;margin:26px auto 44px;background:#fff;border:1px solid #e3e9e5;",
+    "border-radius:16px;padding:26px 30px 30px;box-shadow:0 2px 14px rgba(20,40,32,.05)}",
+    ".doc-head h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:.01em}",
+    ".doc-head .meta{margin:0 0 20px;color:#6b7770;font-size:12.5px}",
+    ".foot{margin-top:22px;padding-top:12px;border-top:1px solid #e3e9e5;color:#8b968f;font-size:11.5px}",
+    /* 与工作台一致的排版规则，靠上面的变量换成浅色 */
+    ".wb-weekly{display:flex;flex-direction:column;gap:14px}",
+    ".wb-weekly .wk-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}",
+    ".wb-weekly .wk-range{color:var(--muted);font-size:12px;letter-spacing:.02em}",
+    ".wb-weekly .wk-card{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}",
+    ".wb-weekly .wk-card h3{margin:0 0 12px;font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
+    ".wb-weekly .wk-card h3 .tag{font-size:10.5px;font-weight:400;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:1px 8px}",
+    ".wb-weekly .wk-kv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 24px}",
+    ".wb-weekly .kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px;color:var(--muted);min-width:0}",
+    ".wb-weekly .kv b{color:var(--text);font-weight:500;white-space:nowrap}",
+    ".wb-weekly .wk-table-wrap{overflow-x:auto}",
+    ".wb-weekly table{width:100%;border-collapse:collapse;font-size:12px}",
+    ".wb-weekly th,.wb-weekly td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;white-space:nowrap}",
+    ".wb-weekly th{color:var(--muted);font-weight:500;font-size:11px}",
+    ".wb-weekly td{color:var(--text)}",
+    ".wb-weekly tr:last-child td{border-bottom:0}",
+    ".wb-weekly td.num{text-align:right;font-variant-numeric:tabular-nums}",
+    ".wb-weekly td.bad{color:var(--danger)}",
+    ".wb-weekly .wk-wd{color:var(--muted);font-size:10.5px;margin-left:2px}",
+    ".wb-weekly .wk-target{color:var(--muted);font-size:10.5px}",
+    ".wb-weekly .up{color:var(--danger)}",
+    ".wb-weekly .down{color:var(--accent-400)}",
+    ".wb-weekly .flat{color:var(--muted)}",
+    ".wb-weekly .badge{display:inline-block;font-size:10.5px;padding:1px 8px;border-radius:20px;border:1px solid var(--line);margin-right:6px;vertical-align:1px}",
+    ".wb-weekly .badge.drop{color:var(--danger);border-color:transparent;background:rgb(201 51 58 / .10)}",
+    ".wb-weekly .fb{background:var(--panel-soft);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:8px;font-size:12.5px;color:var(--text);line-height:1.65}",
+    ".wb-weekly .fb .dt{color:var(--muted);font-size:11px;margin-bottom:3px}",
+    ".wb-weekly .fb.muted{color:var(--muted)}",
+    ".wb-weekly .tmpl{background:rgb(var(--accent-rgb) / .05);border:1px dashed var(--line-bright);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--text);line-height:1.7;margin-top:8px}",
+    ".wb-weekly .tmpl b{color:var(--accent-300);font-weight:500}",
+    ".wb-weekly ul{margin:4px 0 0;padding-left:18px}",
+    ".wb-weekly li{margin:3px 0}",
+    ".wb-weekly .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}",
+    ".wb-weekly .wk-sub{font-size:12px;color:var(--text);margin:12px 0 6px}",
+    ".wb-weekly .wk-sub2{font-size:12px;color:var(--accent-300);margin-bottom:6px}",
+    ".wb-weekly .wk-recur{margin-top:10px;font-size:12.5px;color:var(--text)}",
+    ".wb-weekly .wk-recur b{color:var(--accent-300);font-weight:500}",
+    ".wb-weekly .empty{color:var(--muted);font-size:12.5px;padding:6px 0}",
+    ".wb-weekly details>summary.wk-summary{cursor:default;list-style:none;display:block}",
+    ".wb-weekly details>summary.wk-summary::-webkit-details-marker{display:none}",
+    ".wb-weekly details>summary.wk-summary h3{margin:0 0 12px}",
+    ".wb-weekly details[open]>summary.wk-summary{margin-bottom:10px}",
+    ".wb-weekly summary.wk-summary .tag{font-size:10.5px;font-weight:400;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:1px 8px;margin-left:6px}",
+    ".wb-weekly .wk-day{border-top:1px dashed var(--line);padding:10px 0 4px}",
+    ".wb-weekly .wk-day:first-of-type{border-top:0}",
+    ".wb-weekly .wk-day-head{font-size:12.5px;color:var(--accent-300);margin-bottom:6px}",
+    ".wb-weekly .wk-day-empty{color:var(--muted);font-size:11px;margin-left:8px}",
+    ".wb-weekly .wk-day-row{display:flex;gap:10px;font-size:12px;padding:3px 0;line-height:1.65}",
+    ".wb-weekly .wk-day-row b{flex:0 0 62px;color:var(--muted);font-weight:400}",
+    ".wb-weekly .wk-day-row span{color:var(--text);min-width:0;white-space:pre-wrap}",
+    ".wb-weekly .method-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}",
+    ".wb-weekly .method{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel-soft)}",
+    ".wb-weekly .method h4{margin:0 0 5px;font-size:12px;font-weight:500;color:var(--accent-300)}",
+    ".wb-weekly .method p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.65}",
+    "@media (max-width:900px){.wb-weekly .wk-kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}",
+    "@media (max-width:860px){.wb-weekly .grid2,.wb-weekly .method-grid{grid-template-columns:1fr}}",
+    "@media (max-width:760px){.wrap{margin:0;border:0;border-radius:0;padding:16px 14px 24px}}",
+    "@media print{body{background:#fff}.wrap{max-width:none;margin:0;border:0;border-radius:0;padding:0;box-shadow:none}",
+    ".wb-weekly .wk-card{break-inside:avoid;page-break-inside:avoid}.wb-weekly table{font-size:10.5px}}"
+  ].join("\n");
+
+  function buildHtmlDoc(rangeLabel, keyShopCount, bodyHtml) {
+    var n = new Date();
+    var ts = n.getFullYear() + "-" + pad2(n.getMonth() + 1) + "-" + pad2(n.getDate()) +
+      " " + pad2(n.getHours()) + ":" + pad2(n.getMinutes());
+    return [
+      "<!DOCTYPE html>",
+      '<html lang="zh-CN">',
+      "<head>",
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1">',
+      "<title>周度复盘 " + esc(rangeLabel) + "</title>",
+      "<style>\n" + EXPORT_CSS + "\n</style>",
+      "</head>",
+      "<body>",
+      '<div class="wrap">',
+      '<div class="doc-head">',
+      "<h1>客服 AI 周度复盘</h1>",
+      '<p class="meta">周期 ' + esc(rangeLabel) + " · 重点店铺 " + keyShopCount + " 家 · 生成于 " + ts + "</p>",
+      "</div>",
+      '<div class="wb-weekly">',
+      bodyHtml,
+      "</div>",
+      '<div class="foot">由「拼多多客服 AI 数据驾驶舱 · 周度复盘」生成 · 数据来源：探域 + 拼多多后台</div>',
+      "</div>",
+      "</body>",
+      "</html>"
+    ].join("\n");
+  }
+
+  function exportHtml(ctx, start, end) {
+    var el = document.getElementById("weeklyContent");
+    if (!el || !String(el.innerHTML || "").trim()) {
+      toast("当前还没有复盘内容");
+      return null;
+    }
+    var data = collect(ctx || getWorkbenchData(), start, end);
+    var a0 = data.dayKeys[0] || start || "";
+    var a1 = data.dayKeys[data.dayKeys.length - 1] || end || "";
+    var rangeLabel = a0 + " ~ " + a1;
+    // 展开所有折叠块，收件人直接看到全部内容
+    var body = el.innerHTML.replace(/<details(?![^>]*\sopen[\s=>])/g, "<details open");
+    var html = buildHtmlDoc(rangeLabel, data.keyShops.length, body);
+    var name = "周度复盘-" + (a0 || "x") + "_" + (a1 || "x") + ".html";
+    var blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href);
+      if (a.parentNode) { a.parentNode.removeChild(a); }
+    }, 1500);
+    toast("HTML 已导出，可直接发送");
+    return { name: name, size: html.length };
+  }
+
   window.WeeklyReview = {
     render: render, collect: collect, analyze: analyze, buildText: buildText,
-    getWorkbenchData: getWorkbenchData, exportCsv: exportCsv,
+    getWorkbenchData: getWorkbenchData, exportCsv: exportCsv, exportHtml: exportHtml,
     latestDayKey: latestDayKey, shiftKey: shiftKey, todayKey: todayKey,
     METRICS: METRICS, TASKS: TASKS, toast: toast
   };
@@ -458,6 +596,12 @@
       if (exp) {
         exp.addEventListener("click", function () {
           WeeklyReview.exportCsv(getWorkbenchData(), startEl ? startEl.value : "", endEl ? endEl.value : "");
+        });
+      }
+      var htmlBtn = document.getElementById("weeklyHtmlBtn");
+      if (htmlBtn) {
+        htmlBtn.addEventListener("click", function () {
+          WeeklyReview.exportHtml(getWorkbenchData(), startEl ? startEl.value : "", endEl ? endEl.value : "");
         });
       }
     }
