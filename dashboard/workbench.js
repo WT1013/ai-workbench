@@ -533,6 +533,80 @@
         var d = reportDraft()[key] || {};
         d[ta.dataset.draftField] = ta.value;
         saveReportDraft(key, d);
+        clearTimeout(renderDailyReport._logT);
+        renderDailyReport._logT = setTimeout(renderReportLog, 600);
+      });
+    });
+    renderReportLog();
+  }
+
+  /* ---------- 历史日报记录（数据源：本机 localStorage csa-report-draft，按日期累积） ---------- */
+  var REPORT_LOG_FIELDS = [
+    { key: "summary", label: "配置总结" },
+    { key: "feedback", label: "问题反馈" },
+    { key: "weekFocus", label: "本周重点" },
+    { key: "tomorrow", label: "明日待办" }
+  ];
+  function reportLogEntries() {
+    var all = reportDraft(), out = [];
+    Object.keys(all || {}).forEach(function (k) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) { return; }
+      var d = all[k] || {};
+      var filled = REPORT_LOG_FIELDS.filter(function (f) { return String(d[f.key] == null ? "" : d[f.key]).trim(); });
+      if (!filled.length) { return; }
+      out.push({ key: k, data: d, filled: filled.length });
+    });
+    out.sort(function (a, b) { return a.key < b.key ? 1 : (a.key > b.key ? -1 : 0); });
+    return out;
+  }
+  function renderReportLog() {
+    var list = $id("reportLogList");
+    var counter = $id("reportLogCount");
+    if (!list) { return; }
+    var items = reportLogEntries();
+    if (counter) { counter.textContent = items.length ? "共 " + items.length + " 天 · 存本机浏览器" : ""; }
+    if (!items.length) {
+      list.innerHTML = '<div class="wb-log-empty">暂无历史日报。上面四个输入框填写后会自动留存，按日期累积在这里（存在本机浏览器，不同步云端）。</div>';
+      return;
+    }
+    list.innerHTML = items.slice(0, 60).map(function (it) {
+      var d = it.data;
+      var head = String(d.summary || d.feedback || d.weekFocus || d.tomorrow || "").replace(/\s+/g, " ").trim();
+      if (head.length > 42) { head = head.slice(0, 42) + "…"; }
+      var rows = REPORT_LOG_FIELDS.map(function (f) {
+        var v = String(d[f.key] == null ? "" : d[f.key]).trim();
+        return v ? '<div class="wb-log-row"><b>' + f.label + '</b><span>' + esc(v) + '</span></div>' : "";
+      }).join("");
+      return '<div class="wb-report-log-item" data-log="' + it.key + '">' +
+        '<div class="wb-log-head">' +
+          '<span class="wb-log-date">' + it.key + '（' + weekdayLabel(it.key) + '）</span>' +
+          '<span class="wb-log-preview">' + esc(head) + '</span>' +
+        '</div>' +
+        '<div class="wb-log-side">' +
+          '<span class="wb-log-tag">' + it.filled + '/4 段</span>' +
+          '<button class="wb-log-copy" type="button" data-log-copy="' + it.key + '">复制</button>' +
+        '</div>' +
+        '<div class="wb-log-detail" hidden>' + rows + '</div>' +
+      '</div>';
+    }).join("");
+    Array.prototype.forEach.call(list.querySelectorAll("[data-log]"), function (row) {
+      row.addEventListener("click", function (ev) {
+        if (ev.target.closest("[data-log-copy]")) { return; }
+        var d = row.querySelector(".wb-log-detail");
+        if (!d) { return; }
+        d.hidden = !d.hidden;
+        row.classList.toggle("open", !d.hidden);
+      });
+    });
+    Array.prototype.forEach.call(list.querySelectorAll("[data-log-copy]"), function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        var k = btn.getAttribute("data-log-copy");
+        var d = reportDraft()[k] || {};
+        var txt = ["【" + k + " 日报】"].concat(REPORT_LOG_FIELDS.map(function (f) {
+          return f.label + "：" + String(d[f.key] == null ? "" : d[f.key]).trim();
+        })).join("\n");
+        copyTextToClipboard(txt);
       });
     });
   }

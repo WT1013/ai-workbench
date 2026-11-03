@@ -28,6 +28,50 @@
     { id: "rpa",            name: "售后RPA维护" }
   ];
 
+  /* ---------- 内联图标（SVG，无外链，离线/打印均可用） ---------- */
+  var ICON = {
+    calendar: '<rect x="3.2" y="4.8" width="17.6" height="15.4" rx="2.6"/><path d="M8 2.8v3.6M16 2.8v3.6M3.2 9.6h17.6"/>',
+    shop:     '<path d="M3.4 9.4h17.2M4.9 9.4V20h14.2V9.4"/><path d="M3.4 9.4 5.4 4h13.2l2 5.4"/><path d="M9.6 20v-5.2h4.8V20"/>',
+    alert:    '<path d="M12 3.9 21.2 20H2.8z"/><path d="M12 9.6v4.4M12 16.9v.3"/>',
+    chat:     '<path d="M20.2 15.1a2.7 2.7 0 0 1-2.7 2.7H8.2L4 21V6.9a2.7 2.7 0 0 1 2.7-2.7h10.8a2.7 2.7 0 0 1 2.7 2.7z"/>',
+    chart:    '<path d="M4 4v16h16"/><path d="M7.4 15.2 11 10.6l3 2.9 5.4-6.2"/>',
+    check:    '<rect x="3.8" y="3.8" width="16.4" height="16.4" rx="3.4"/><path d="M8.2 12.3l2.7 2.7 5-5.6"/>',
+    doc:      '<path d="M13.4 3.4H6.6A1.6 1.6 0 0 0 5 5v14a1.6 1.6 0 0 0 1.6 1.6h10.8A1.6 1.6 0 0 0 19 19V9z"/><path d="M13.4 3.4V9H19"/>',
+    target:   '<circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="3.6"/>',
+    bolt:     '<path d="M13.2 3 5.8 13.4h5.4L10.8 21l7.4-10.4h-5.4z"/>'
+  };
+  function ico(name, cls, size) {
+    var d = ICON[name];
+    if (!d) { return ""; }
+    var s = size || 14;
+    return '<svg class="ico' + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" width="' + s + '" height="' + s +
+      '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  }
+  // 迷你走势线：一眼看出这一周是涨、是跌、还是平
+  function sparkSvg(vals) {
+    var idx = [], min = Infinity, max = -Infinity;
+    (vals || []).forEach(function (v, i) {
+      if (v === null || v === undefined || !isFinite(v)) { return; }
+      idx.push([i, v]);
+      if (v < min) { min = v; }
+      if (v > max) { max = v; }
+    });
+    if (idx.length < 2) { return ""; }
+    var W = 58, H = 16, P = 3;
+    var span = (max - min) || 1;
+    var step = (W - P * 2) / Math.max(1, (vals.length - 1));
+    var pts = idx.map(function (p) {
+      return [Math.round((P + p[0] * step) * 10) / 10, Math.round((H - P - ((p[1] - min) / span) * (H - P * 2)) * 10) / 10];
+    });
+    var d = pts.map(function (p, i) { return (i ? "L" : "M") + p[0] + " " + p[1]; }).join(" ");
+    var f = idx[0][1], l = idx[idx.length - 1][1];
+    var cls = (l > f + 1e-9) ? "up" : ((l < f - 1e-9) ? "down" : "flat");
+    var lp = pts[pts.length - 1];
+    return '<svg class="spark" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" aria-hidden="true">' +
+      '<path class="ln" d="' + d + '"/>' +
+      '<circle class="spark-dot ' + cls + '" cx="' + lp[0] + '" cy="' + lp[1] + '" r="2.3"/></svg>';
+  }
+
   function isKeyShop(s) { return !!(s && s.key === true); }
   function num(v) {
     if (v === undefined || v === null || v === "") { return null; }
@@ -233,11 +277,12 @@
     // ① 概览
     var doneTotal = TASKS.reduce(function (a, t) { return a + data.taskDone[t.id]; }, 0);
     var taskCap = TASKS.length * data.taskDays;
-    html.push('<div class="wk-card"><h3>① 本周概览</h3><div class="wk-kv-grid">');
-    html.push('<div class="kv"><span>覆盖天数</span><b>' + data.dayKeys.length + ' 天</b></div>');
-    html.push('<div class="kv"><span>重点店铺</span><b>' + data.keyShops.length + ' 家</b></div>');
-    html.push('<div class="kv"><span>指标下滑</span><b>' + an.drops.length + ' 项</b></div>');
-    html.push('<div class="kv"><span>问题反馈</span><b>' + an.feedbackDays + ' 天</b></div>');
+    html.push('<div class="wk-card"><h3><span class="wk-ico">' + ico("chart", "", 13) + '</span>① 本周概览</h3><div class="wk-kv-grid">');
+    html.push('<div class="kv"><span>' + ico("calendar", "kv-ico", 13) + '覆盖天数</span><b>' + data.dayKeys.length + ' 天</b></div>');
+    html.push('<div class="kv"><span>' + ico("shop", "kv-ico", 13) + '重点店铺</span><b>' + data.keyShops.length + ' 家</b></div>');
+    html.push('<div class="kv"><span>' + ico(an.drops.length ? "alert" : "check", "kv-ico" + (an.drops.length ? " warn" : ""), 13) +
+      '指标下滑</span><b' + (an.drops.length ? ' class="up"' : '') + '>' + an.drops.length + ' 项</b></div>');
+    html.push('<div class="kv"><span>' + ico("chat", "kv-ico", 13) + '问题反馈</span><b>' + an.feedbackDays + ' 天</b></div>');
     html.push('</div>');
     html.push('<div class="wk-note">任务完成 ' + doneTotal + ' / ' + taskCap + '（项·天）' +
       (data.taskStatus && (data.taskStatus.done + data.taskStatus.doing + data.taskStatus.todo) ?
@@ -245,23 +290,36 @@
     html.push('</div>');
 
     // ② 每日指标速览
-    html.push('<div class="wk-card"><h3>② 每日指标速览 <span class="tag">重点店均值</span></h3>');
-    html.push('<div class="wk-table-wrap"><table><thead><tr><th>日期</th>');
-    METRICS.forEach(function (mt) { html.push('<th class="num">' + esc(mt.label) + '</th>'); });
+    html.push('<div class="wk-card"><h3><span class="wk-ico">' + ico("calendar", "", 13) + '</span>② 每日指标速览 <span class="tag">重点店均值</span></h3>');
+    html.push('<div class="wk-table-wrap"><table class="tbl-daily"><thead><tr><th>日期</th>');
+    // 表头带一周迷你走势线：不看数字也能看出涨跌方向
+    METRICS.forEach(function (mt) {
+      var col = data.dailyAvg.map(function (r) { return r.vals[mt.key]; });
+      html.push('<th class="num"><span class="th-l">' + esc(mt.label) + '</span>' + sparkSvg(col) + '</th>');
+    });
     html.push('</tr></thead><tbody>');
-    data.dailyAvg.forEach(function (row) {
+    data.dailyAvg.forEach(function (row, ri) {
       html.push('<tr><td>' + esc(row.date) + ' <span class="wk-wd">' + weekday(row.date) + '</span></td>');
       METRICS.forEach(function (mt) {
         var v = row.vals[mt.key];
+        var pv = ri > 0 ? data.dailyAvg[ri - 1].vals[mt.key] : null;
         var bad = mt.target != null && v !== null && (mt.higher ? v < mt.target : v > mt.target);
-        html.push('<td class="num' + (bad ? ' bad' : '') + '">' + fmt(v, mt.unit) + '</td>');
+        var ar = "";
+        var arCls = "";
+        if (v !== null && pv !== null) {
+          var dv = v - pv;
+          if (Math.abs(dv) >= 0.01) { arCls = dv > 0 ? "up" : "down"; ar = dv > 0 ? "▲" : "▼"; }
+        }
+        // 箭头槽固定宽度：无论有无箭头，右对齐的数值都落在同一条竖线上
+        html.push('<td class="num' + (bad ? ' bad' : '') + '">' + fmt(v, mt.unit) +
+          '<i class="ar ' + arCls + '">' + ar + '</i></td>');
       });
       html.push('</tr>');
     });
     html.push('</tbody></table></div></div>');
 
     // ③ 需要关注（只列真问题：指标下滑 + 日报问题）
-    html.push('<div class="wk-card"><h3>③ 需要关注 <span class="tag">下滑 ' + an.drops.length + ' 项 ｜ 日报反馈 ' + an.feedbackDays + ' 天</span></h3>');
+    html.push('<div class="wk-card"><h3><span class="wk-ico wk-ico-warn">' + ico("alert", "", 13) + '</span>③ 需要关注 <span class="tag">下滑 ' + an.drops.length + ' 项 ｜ 日报反馈 ' + an.feedbackDays + ' 天</span></h3>');
     if (an.drops.length) {
       html.push('<div class="wk-table-wrap"><table><thead><tr><th>店铺</th><th>指标</th><th class="num">首日 → 末日</th><th class="num">变动</th><th class="num">周均</th></tr></thead><tbody>');
       var prevShop = null;
@@ -270,9 +328,11 @@
         var nameCell = (x.shop === prevShop) ? "" : esc(x.shop);
         var isGrp = (prevShop !== null && x.shop !== prevShop) ? ' class="grp"' : "";
         prevShop = x.shop;
-        html.push('<tr' + isGrp + '><td>' + nameCell + '</td><td>' + esc(x.label) + (tgt ? ' <span class="wk-target">' + tgt + '</span>' : '') +
+        // 本表全为「变差」项，变动列统一警示色，箭头表方向、数字用绝对值，避免「↓-5.21」方向重复
+        var mag = Math.round(Math.abs(x.delta) * 100) / 100;
+        html.push('<tr' + isGrp + '><td>' + nameCell + '</td><td>' + ico("alert", "row-alert", 12) + esc(x.label) + (tgt ? ' <span class="wk-target">' + tgt + '</span>' : '') +
           '</td><td class="num">' + fmt(x.first, x.unit) + ' → ' + fmt(x.last, x.unit) + '</td>' +
-          '<td class="num ' + (x.delta > 0 ? "up" : (x.delta < 0 ? "down" : "flat")) + '">' + (x.delta > 0 ? "+" : "") + (Math.round(x.delta * 100) / 100) +
+          '<td class="num mov"><i class="ar">' + (x.delta > 0 ? "▲" : (x.delta < 0 ? "▼" : "—")) + '</i>' + mag +
           (x.unit === "%" ? "pct" : "") + '</td><td class="num">' + fmt(x.avg, x.unit) + '</td></tr>');
       });
       html.push('</tbody></table></div>');
@@ -285,13 +345,13 @@
     html.push('</div>');
 
     // ③附：全店指标明细（折叠；导出发给他人时自动剔除）
-    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3>全店指标明细 <span class="tag">首日 → 末日 ｜ 周均 ｜ ' + an.metricStatus.length + ' 行</span></h3></summary>');
+    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3><span class="wk-ico">' + ico("chart", "", 13) + '</span>全店指标明细 <span class="tag">首日 → 末日 ｜ 周均 ｜ ' + an.metricStatus.length + ' 行</span></h3></summary>');
     html.push('<div class="wk-table-wrap"><table><thead><tr><th>店铺</th><th>指标</th><th class="num">首日</th><th class="num">末日</th><th class="num">周均</th><th class="num">变动</th></tr></thead><tbody>');
     an.metricStatus.forEach(function (x) {
       // 箭头按数值方向（涨↑跌↓），颜色沿用驾驶舱约定（涨红跌绿），⚠ 表示"变差"
       var dir = x.delta > 0.0001 ? 1 : (x.delta < -0.0001 ? -1 : 0);
       var cls = dir > 0 ? "up" : (dir < 0 ? "down" : "flat");
-      var arrow = dir > 0 ? "↑" : (dir < 0 ? "↓" : "—");
+      var arrow = dir > 0 ? "▲" : (dir < 0 ? "▼" : "—");
       var tgt = x.target != null ? (x.higher === false ? " ≤" : " ≥") + x.target + (x.unit === "%" ? "%" : "") : "";
       html.push('<tr><td>' + esc(x.shop) + '</td><td>' + esc(x.label) + (tgt ? ' <span class="wk-target">' + tgt + '</span>' : '') +
         '</td><td class="num">' + fmt(x.first, x.unit) + '</td><td class="num">' + fmt(x.last, x.unit) +
@@ -303,7 +363,7 @@
     // ④ 方案与验证（原方案三段式 + 验证闭环 + 下周待办合并）
     var summJoined = data.texts.map(function (t) { return t.summary; }).filter(Boolean).join("；");
     var toms = data.texts.map(function (t) { return t.tomorrow; }).filter(Boolean);
-    html.push('<div class="wk-card"><h3>④ 方案与验证 <span class="tag">止血 / 治本 / 防复发</span></h3>');
+    html.push('<div class="wk-card"><h3><span class="wk-ico">' + ico("target", "", 13) + '</span>④ 方案与验证 <span class="tag">止血 / 治本 / 防复发</span></h3>');
     html.push('<div class="wk-row-k"><b>止血</b><span>' + (summJoined ? esc(summJoined) : "（日报未填配置总结，待补充）") + '</span></div>');
     html.push('<div class="wk-row-k"><b>治本</b><span class="wk-blank">针对归因的永久方案：_____</span></div>');
     html.push('<div class="wk-row-k"><b>防复发</b><span>日巡检 + 周复盘；关键场景上线前回归验证。</span></div>');
@@ -313,7 +373,7 @@
     html.push('</div>');
 
     // ⑤ 每日日报原文（默认折叠，仅在页面查看；导出稿已含问题反馈，不重复带出）
-    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3>⑤ 每日日报原文 <span class="tag">' + data.texts.length + ' 天</span></h3></summary>');
+    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3><span class="wk-ico">' + ico("doc", "", 13) + '</span>⑤ 每日日报原文 <span class="tag">' + data.texts.length + ' 天</span></h3></summary>');
     data.texts.forEach(function (t) {
       var has = t.summary || t.feedback || t.weekFocus || t.tomorrow;
       html.push('<div class="wk-day"><div class="wk-day-head">' + t.date + '（' + weekday(t.date) + '）' +
@@ -327,7 +387,7 @@
     html.push('</details>');
 
     // 方法速查（折叠；导出发送时剔除）
-    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3>方法速查 <span class="tag">《问题分析与解决》</span></h3><div class="method-grid">');
+    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3><span class="wk-ico">' + ico("bolt", "", 13) + '</span>方法速查 <span class="tag">《问题分析与解决》</span></h3><div class="method-grid">');
     html.push('<div class="method"><h4>问题定义</h4><p>问题 = 现状 − 目标 = 差距。指标型（数字倒推）vs 事务型（事件正推）。5W1H 界定，假设≠结论。</p></div>');
     html.push('<div class="method"><h4>归因框架</h4><p>能力边界先行；四层：口径/历史配置/可修/合规；三层：瞬时检索/合规拦截/未覆盖；四类：答非所问/笼统/生硬/超纲。</p></div>');
     html.push('<div class="method"><h4>闭环流程</h4><p>五步：发现→界定→归因→方案→验证。方案三段式：止血→治本→防复发。</p></div>');
@@ -417,7 +477,7 @@
   }
 
 
-  var EXPORT_CSS = ":root{\n  --ink:#17201c;--ink-2:#3c4742;--muted:#6a7671;--line:#e6ebe8;--line-2:#eff3f1;\n  --soft:#f6f8f7;--brand:#0f6f4e;--brand-soft:#eff7f3;--up:#c9333a;--down:#12805c;\n  --text:#17201c;--panel-2:#ffffff;--panel-soft:#f6f8f7;--line-bright:#e6ebe8;\n  --danger:#c9333a;--accent-rgb:16 130 92;--accent-300:#0f6f4e;--accent-400:#12805c;--accent-500:#0f6f4e;\n}\n*{box-sizing:border-box}\nbody{\n  margin:0;background:#f4f6f5;color:var(--ink);\n  font:13px/1.7 -apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;\n  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;\n}\n.page{max-width:1000px;margin:0 auto;background:#fff;padding:40px 46px 52px;min-height:100vh}\n.doc-head{padding-bottom:16px;border-bottom:2px solid var(--ink)}\n.doc-head h1{margin:0 0 7px;font-size:21px;font-weight:600;letter-spacing:-.01em}\n.doc-head .meta{margin:0;color:var(--muted);font-size:12px}\n.doc-head .meta b{color:var(--ink-2);font-weight:500}\n.foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:#98a29d;font-size:11px}\n\n/* 章节：去卡片框，改用分隔线 + 左侧色条，降低视觉噪音 */\n.wb-weekly{display:block}\n.wk-head{display:none}\n.wk-card{margin:0;padding:24px 0 4px;border:0;border-top:1px solid var(--line);background:none;border-radius:0}\n.wk-head + .wk-card{border-top:0;padding-top:24px}\n.wk-card h3{\n  margin:0 0 14px;font-size:14px;font-weight:600;color:var(--ink);\n  display:flex;align-items:center;gap:9px;flex-wrap:wrap;\n}\n.wk-card h3::before{content:\"\";width:3px;height:15px;border-radius:2px;background:var(--brand);flex:0 0 auto}\n.wk-card h3 .tag{\n  font-size:11px;font-weight:400;color:var(--muted);\n  padding:0;border:0;background:none;letter-spacing:.01em;\n}\n.wk-card h3 .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 概览：标签下、数字上，四列 KPI */\n.wk-kv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 26px}\n.kv{display:flex;flex-direction:column-reverse;gap:3px;padding:0;border:0;min-width:0}\n.kv span{font-size:11.5px;color:var(--muted);letter-spacing:.01em}\n.kv b{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.4}\n\n/* 表格：表头浅底、分组行分隔、数字右对齐 */\n.wk-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}\ntable{width:100%;border-collapse:collapse;font-size:12.5px}\nthead th{\n  background:var(--soft);color:var(--muted);font-weight:500;font-size:11px;\n  padding:8px 10px;text-align:left;white-space:nowrap;letter-spacing:.02em;\n  border-bottom:1px solid var(--line);\n}\nthead th:first-child{border-top-left-radius:6px;border-bottom-left-radius:6px}\nthead th:last-child{border-top-right-radius:6px;border-bottom-right-radius:6px}\ntbody td{padding:6px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap;color:var(--ink-2)}\ntbody td:first-child{color:var(--ink);font-weight:500}\ntbody tr.grp td{border-top:1px solid var(--line)}\ntbody tr.grp:first-child td{border-top:0}\ntbody tr:last-child td{border-bottom:0}\ntd.num{text-align:right;font-variant-numeric:tabular-nums}\n\n/* 涨=红 跌=绿 */\n.up{color:var(--up)}\n.down{color:var(--down)}\n.flat{color:var(--muted)}\ntd.bad{color:var(--up)}\n.wk-wd{color:var(--muted);font-size:10.5px;margin-left:3px;font-weight:400}\n.wk-target{color:var(--muted);font-size:10.5px;font-weight:400}\n\n.badge{\n  display:inline-block;font-size:11px;padding:1px 8px;border-radius:4px;\n  background:#f2f5f3;color:var(--muted);margin-right:6px;vertical-align:1px;\n}\n.badge.drop{color:var(--up);background:#fdf0f0}\n\n/* 归因待填行：清单式，不加底色块 */\n.wk-q{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px;color:var(--ink-2);line-height:1.75}\n.wk-q:last-of-type{border-bottom:0}\n.wk-q b{color:var(--ink);font-weight:500}\n\n/* 问题 / 反馈：改为左侧引用线 */\n.fb{\n  border:0;background:none;border-left:2px solid #cfe3d9;\n  border-radius:0;padding:2px 0 2px 14px;margin:0 0 14px;\n  font-size:12.5px;color:var(--ink-2);line-height:1.75;\n}\n.fb .dt{color:var(--muted);font-size:11px;margin-bottom:2px}\n.fb.muted{color:var(--muted);border-left-color:var(--line)}\n\n/* 提示块 */\n.tmpl{\n  background:var(--brand-soft);border:0;border-radius:8px;\n  padding:12px 16px;font-size:12.5px;color:var(--ink-2);\n  line-height:1.8;margin-top:12px;\n}\n.tmpl b{color:var(--brand);font-weight:600}\n\nul{margin:6px 0;padding-left:18px}\nli{margin:3px 0}\n.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px 30px}\n.wk-sub{font-size:12.5px;font-weight:600;color:var(--ink);margin:18px 0 8px}\n.wk-sub2{font-size:12px;font-weight:500;color:var(--brand);margin-bottom:6px}\n.wk-recur{margin-top:14px;font-size:12.5px;color:var(--ink-2);line-height:1.8}\n.wk-recur b{color:var(--brand);font-weight:600}\n.empty{color:var(--muted);font-size:12.5px;padding:4px 0}\n\n/* 折叠块在导出稿里全部展开，标题退化成分组小标题 */\ndetails>summary{display:block;cursor:default;list-style:none}\ndetails>summary::-webkit-details-marker{display:none}\ndetails>summary h3{margin:0 0 18px}\nsummary .tag{font-size:11px;font-weight:400;color:var(--muted);margin-left:2px}\nsummary .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 每日日报原文 */\n.wk-day{border-top:1px solid var(--line-2);padding:13px 0 3px}\n.wk-day:first-of-type{border-top:0;padding-top:0}\n.wk-day-head{font-size:12.5px;font-weight:600;color:var(--brand);margin-bottom:8px}\n.wk-day-empty{color:var(--muted);font-size:11px;margin-left:8px;font-weight:400}\n.wk-day-row{display:flex;gap:12px;font-size:12.5px;padding:2px 0;line-height:1.75}\n.wk-day-row b{flex:0 0 66px;color:var(--muted);font-weight:400;font-size:11.5px;padding-top:2px}\n.wk-day-row span{color:var(--ink-2);min-width:0;white-space:pre-wrap}\n\n/* 方法速查 */\n.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 30px}\n.method{border:0;border-left:2px solid var(--line);background:none;border-radius:0;padding:0 0 0 13px}\n.method h4{margin:0 0 3px;font-size:12px;font-weight:600;color:var(--ink)}\n.method p{margin:0;font-size:12px;color:var(--muted);line-height:1.7}\n\n@media (max-width:900px){\n  .wk-kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .grid2,.method-grid{grid-template-columns:1fr}\n}\n@media (max-width:700px){\n  .page{padding:22px 18px 32px;min-height:0}\n  .doc-head h1{font-size:18px}\n  body{font-size:12.5px}\n}\n@media print{\n  body{background:#fff}\n  .page{max-width:none;padding:0;min-height:0}\n  .wk-card{break-inside:avoid;page-break-inside:avoid}\n  thead{display:table-header-group}\n  table{font-size:10.5px}\n  .tmpl,.fb,.method{break-inside:avoid}\n}\n\n/* 精简版新增：概览脚注、方案清单行 */\n.wk-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.75}\n.wk-row-k{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:12.5px;line-height:1.8}\n.wk-row-k:last-of-type{border-bottom:0}\n.wk-row-k b{flex:0 0 62px;color:var(--brand);font-weight:600;font-size:12px;padding-top:1px}\n.wk-row-k span{color:var(--ink-2);min-width:0}\n.wk-row-k .wk-blank{color:var(--muted)}\n";
+  var EXPORT_CSS = ":root{\n  --ink:#17201c;--ink-2:#3c4742;--muted:#6a7671;--line:#e6ebe8;--line-2:#eff3f1;\n  --soft:#f6f8f7;--brand:#0f6f4e;--brand-soft:#eff7f3;--up:#c9333a;--down:#12805c;\n  --text:#17201c;--panel-2:#ffffff;--panel-soft:#f6f8f7;--line-bright:#e6ebe8;\n  --danger:#c9333a;--accent-rgb:16 130 92;--accent-300:#0f6f4e;--accent-400:#12805c;--accent-500:#0f6f4e;\n}\n*{box-sizing:border-box}\nbody{\n  margin:0;background:#f4f6f5;color:var(--ink);\n  font:13px/1.7 -apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;\n  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;\n}\n.page{max-width:1000px;margin:0 auto;background:#fff;padding:40px 46px 52px;min-height:100vh}\n.doc-head{padding-bottom:16px;border-bottom:2px solid var(--ink)}\n.doc-head h1{margin:0 0 7px;font-size:21px;font-weight:600;letter-spacing:-.01em}\n.doc-head .meta{margin:0;color:var(--muted);font-size:12px}\n.doc-head .meta b{color:var(--ink-2);font-weight:500}\n.foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:#98a29d;font-size:11px}\n\n/* 章节：去卡片框，改用分隔线 + 左侧色条，降低视觉噪音 */\n.wb-weekly{display:block}\n.wk-head{display:none}\n.wk-card{margin:0;padding:24px 0 4px;border:0;border-top:1px solid var(--line);background:none;border-radius:0}\n.wk-head + .wk-card{border-top:0;padding-top:24px}\n.wk-card h3{\n  margin:0 0 14px;font-size:14px;font-weight:600;color:var(--ink);\n  display:flex;align-items:center;gap:9px;flex-wrap:wrap;\n}\n.wk-card h3::before{content:\"\";width:3px;height:15px;border-radius:2px;background:var(--brand);flex:0 0 auto}\n.wk-card h3 .tag{\n  font-size:11px;font-weight:400;color:var(--muted);\n  padding:0;border:0;background:none;letter-spacing:.01em;\n}\n.wk-card h3 .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 概览：标签下、数字上，四列 KPI */\n.wk-kv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 26px}\n.kv{display:flex;flex-direction:column-reverse;gap:3px;padding:0;border:0;min-width:0}\n.kv span{font-size:11.5px;color:var(--muted);letter-spacing:.01em}\n.kv b{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.4}\n\n/* 表格：表头浅底、分组行分隔、数字右对齐 */\n.wk-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}\ntable{width:100%;border-collapse:collapse;font-size:12.5px}\nthead th{\n  background:var(--soft);color:var(--muted);font-weight:500;font-size:11px;\n  padding:8px 10px;text-align:left;white-space:nowrap;letter-spacing:.02em;\n  border-bottom:1px solid var(--line);\n}\nthead th:first-child{border-top-left-radius:6px;border-bottom-left-radius:6px}\nthead th:last-child{border-top-right-radius:6px;border-bottom-right-radius:6px}\ntbody td{padding:6px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap;color:var(--ink-2)}\ntbody td:first-child{color:var(--ink);font-weight:500}\ntbody tr.grp td{border-top:1px solid var(--line)}\ntbody tr.grp:first-child td{border-top:0}\ntbody tr:last-child td{border-bottom:0}\ntd.num{text-align:right;font-variant-numeric:tabular-nums}\n\n/* 涨=红 跌=绿 */\n.up{color:var(--up)}\n.down{color:var(--down)}\n.flat{color:var(--muted)}\ntd.bad{color:var(--up)}\n.wk-wd{color:var(--muted);font-size:10.5px;margin-left:3px;font-weight:400}\n.wk-target{color:var(--muted);font-size:10.5px;font-weight:400}\n\n.badge{\n  display:inline-block;font-size:11px;padding:1px 8px;border-radius:4px;\n  background:#f2f5f3;color:var(--muted);margin-right:6px;vertical-align:1px;\n}\n.badge.drop{color:var(--up);background:#fdf0f0}\n\n/* 归因待填行：清单式，不加底色块 */\n.wk-q{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px;color:var(--ink-2);line-height:1.75}\n.wk-q:last-of-type{border-bottom:0}\n.wk-q b{color:var(--ink);font-weight:500}\n\n/* 问题 / 反馈：改为左侧引用线 */\n.fb{\n  border:0;background:none;border-left:2px solid #cfe3d9;\n  border-radius:0;padding:2px 0 2px 14px;margin:0 0 14px;\n  font-size:12.5px;color:var(--ink-2);line-height:1.75;\n}\n.fb .dt{color:var(--muted);font-size:11px;margin-bottom:2px}\n.fb.muted{color:var(--muted);border-left-color:var(--line)}\n\n/* 提示块 */\n.tmpl{\n  background:var(--brand-soft);border:0;border-radius:8px;\n  padding:12px 16px;font-size:12.5px;color:var(--ink-2);\n  line-height:1.8;margin-top:12px;\n}\n.tmpl b{color:var(--brand);font-weight:600}\n\nul{margin:6px 0;padding-left:18px}\nli{margin:3px 0}\n.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px 30px}\n.wk-sub{font-size:12.5px;font-weight:600;color:var(--ink);margin:18px 0 8px}\n.wk-sub2{font-size:12px;font-weight:500;color:var(--brand);margin-bottom:6px}\n.wk-recur{margin-top:14px;font-size:12.5px;color:var(--ink-2);line-height:1.8}\n.wk-recur b{color:var(--brand);font-weight:600}\n.empty{color:var(--muted);font-size:12.5px;padding:4px 0}\n\n/* 折叠块在导出稿里全部展开，标题退化成分组小标题 */\ndetails>summary{display:block;cursor:default;list-style:none}\ndetails>summary::-webkit-details-marker{display:none}\ndetails>summary h3{margin:0 0 18px}\nsummary .tag{font-size:11px;font-weight:400;color:var(--muted);margin-left:2px}\nsummary .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 每日日报原文 */\n.wk-day{border-top:1px solid var(--line-2);padding:13px 0 3px}\n.wk-day:first-of-type{border-top:0;padding-top:0}\n.wk-day-head{font-size:12.5px;font-weight:600;color:var(--brand);margin-bottom:8px}\n.wk-day-empty{color:var(--muted);font-size:11px;margin-left:8px;font-weight:400}\n.wk-day-row{display:flex;gap:12px;font-size:12.5px;padding:2px 0;line-height:1.75}\n.wk-day-row b{flex:0 0 66px;color:var(--muted);font-weight:400;font-size:11.5px;padding-top:2px}\n.wk-day-row span{color:var(--ink-2);min-width:0;white-space:pre-wrap}\n\n/* 方法速查 */\n.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 30px}\n.method{border:0;border-left:2px solid var(--line);background:none;border-radius:0;padding:0 0 0 13px}\n.method h4{margin:0 0 3px;font-size:12px;font-weight:600;color:var(--ink)}\n.method p{margin:0;font-size:12px;color:var(--muted);line-height:1.7}\n\n@media (max-width:900px){\n  .wk-kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .grid2,.method-grid{grid-template-columns:1fr}\n}\n@media (max-width:700px){\n  .page{padding:22px 18px 32px;min-height:0}\n  .doc-head h1{font-size:18px}\n  body{font-size:12.5px}\n}\n@media print{\n  body{background:#fff}\n  .page{max-width:none;padding:0;min-height:0}\n  .wk-card{break-inside:avoid;page-break-inside:avoid}\n  thead{display:table-header-group}\n  table{font-size:10.5px}\n  .tmpl,.fb,.method{break-inside:avoid}\n}\n\n/* 精简版新增：概览脚注、方案清单行 */\n.wk-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.75}\n.wk-row-k{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:12.5px;line-height:1.8}\n.wk-row-k:last-of-type{border-bottom:0}\n.wk-row-k b{flex:0 0 62px;color:var(--brand);font-weight:600;font-size:12px;padding-top:1px}\n.wk-row-k span{color:var(--ink-2);min-width:0}\n.wk-row-k .wk-blank{color:var(--muted)}\n\n/* 图标体系：内联 SVG，无外链；分区徽标 / KPI / 涨跌箭头 / 迷你走势线 */\n.doc-head h1{display:flex;align-items:center;gap:9px}\n.doc-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:26px;height:26px;border-radius:8px;\n  background:var(--brand);color:#fff;flex:0 0 auto;\n}\n.ico{display:inline-block;vertical-align:-2px;flex:0 0 auto}\n.wk-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:22px;height:22px;border-radius:7px;\n  background:var(--brand-soft);color:var(--brand);flex:0 0 auto;\n}\n.wk-ico-warn{background:#fdf0f0;color:var(--up)}\n.wk-card h3::before{content:none}\n.kv-ico{color:var(--brand);margin-right:4px}\n.kv-ico.warn{color:var(--up)}\n.th-l{display:block}\n.spark{display:block;margin:4px 0 0 auto;color:var(--muted)}\ntable.tbl-daily{table-layout:fixed}\ntable.tbl-daily th:first-child,table.tbl-daily td:first-child{width:104px}\n.spark .ln{stroke:currentColor;stroke-width:1.4;fill:none;stroke-opacity:.5;stroke-linecap:round;stroke-linejoin:round}\n.spark-dot.up{fill:var(--up)}\n.spark-dot.down{fill:var(--down)}\n.spark-dot.flat{fill:var(--muted)}\n.ar{font-style:normal;font-size:8px;line-height:1;display:inline-block;width:7px;margin-left:2px;text-align:center;vertical-align:1px;opacity:.95}\ntd.mov{color:var(--up)}\n.row-alert{color:var(--up);margin-right:5px;vertical-align:-2px}\n@media print{\n  .wk-ico,.doc-ico,.spark{-webkit-print-color-adjust:exact;print-color-adjust:exact}\n}";
 
   function buildHtmlDoc(rangeLabel, keyShopCount, bodyHtml) {
     var n = new Date();
@@ -435,7 +495,7 @@
       "<body>",
       '<div class="page">',
       '<div class="doc-head">',
-      "<h1>客服 AI 周度复盘</h1>",
+      '<h1><span class="doc-ico">' + ico("chart", "", 16) + '</span>客服 AI 周度复盘</h1>',
       '<p class="meta">周期 ' + esc(rangeLabel) + " · 重点店铺 " + keyShopCount + " 家 · 生成于 " + ts + "</p>",
       "</div>",
       '<div class="wb-weekly">',
