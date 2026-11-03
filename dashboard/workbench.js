@@ -239,6 +239,7 @@
         state.shifts = obj.shifts || {};
         if (!state.shifts || Object.keys(state.shifts).length === 0) { seedDefaultShifts(); }
         ensureShopLibrary(false);
+        if (hydrateReportDraft().needPush) { try { wbSave(); } catch (e) {} }
         wbReady = true;
       }).catch(function () {
         try {
@@ -247,6 +248,7 @@
         } catch (e) { state.days = {}; state.shifts = {}; }
         if (!state.shifts || Object.keys(state.shifts).length === 0) { seedDefaultShifts(); }
         ensureShopLibrary(false);
+        if (hydrateReportDraft().needPush) { try { wbSave(); } catch (e) {} }
         wbReady = true;
       });
     }
@@ -261,6 +263,7 @@
       }
       if (!state.shifts || Object.keys(state.shifts).length === 0) { seedDefaultShifts(); }
       ensureShopLibrary(false);
+      if (hydrateReportDraft().needPush) { try { wbSave(); } catch (e) {} }
       wbReady = true;
     }).catch(function () {
       // 云端不可达时回退本地
@@ -270,6 +273,7 @@
       } catch (e) { state.days = {}; state.shifts = {}; }
       if (!state.shifts || Object.keys(state.shifts).length === 0) { seedDefaultShifts(); }
       ensureShopLibrary(false);
+      if (hydrateReportDraft().needPush) { try { wbSave(); } catch (e) {} }
       wbReady = true;
     });
   }
@@ -468,10 +472,55 @@
     try { return JSON.parse(localStorage.getItem("csa-report-draft") || "{}") || {}; }
     catch (e) { return {}; }
   }
-  function saveReportDraft(key, obj) {
+  /* ---------- 日报正文云端同步（state.days[YYYY-MM-DD].report） ----------
+     形态：{ summary, feedback, weekFocus, tomorrow, updatedAt }
+     本机 localStorage 仍作主读源（渲染/周度复盘都读它），云端作跨设备备份与补齐。 */
+  function cloudReportOf(key) {
+    var day = state.days && state.days[key];
+    var r = day && day.report;
+    return (r && typeof r === "object") ? r : null;
+  }
+  function reportFilled(d) {
+    if (!d) { return false; }
+    return ["summary", "feedback", "weekFocus", "tomorrow"].some(function (f) {
+      return String(d[f] == null ? "" : d[f]).trim();
+    });
+  }
+  // 云端 → 本机：补齐缺失日期，冲突时取 updatedAt 较新者
+  function hydrateReportDraft() {
+    var local = reportDraft(), changed = false, needPush = false, pulled = 0;
+    Object.keys(state.days || {}).forEach(function (k) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) { return; }
+      var cr = cloudReportOf(k);
+      if (!cr || !reportFilled(cr)) { return; }
+      var lr = local[k];
+      var cts = Number(cr.updatedAt || 0);
+      var lts = Number((lr && lr.updatedAt) || 0);
+      if (!lr || !reportFilled(lr)) {
+        local[k] = Object.assign({}, cr);
+        changed = true; pulled += 1;
+      } else if (!lts) {
+        // 本机是加时间戳之前的旧草稿：保留本机内容，补时间戳并推一次云端
+        local[k] = Object.assign({}, lr, { updatedAt: Date.now() });
+        changed = true; needPush = true;
+      } else if (cts > lts) {
+        local[k] = Object.assign({}, cr);
+        changed = true; pulled += 1;
+      }
+    });
+    if (changed) {
+      try { localStorage.setItem("csa-report-draft", JSON.stringify(local)); } catch (e) {}
+    }
+    return { pulled: pulled, needPush: needPush };
+  }
+  function saveReportDraft(key, obj, opts) {
+    obj.updatedAt = Date.now();
     var d = reportDraft();
     d[key] = obj;
     try { localStorage.setItem("csa-report-draft", JSON.stringify(d)); } catch (e) {}
+    // 写进云端 state.days[key].report；wbSave 内部自带 500ms 防抖并整列 POST（已保留 __library__）
+    state.days[key] = Object.assign({}, state.days[key] || {}, { report: Object.assign({}, obj) });
+    if (!(opts && opts.skipCloud)) { try { wbSave(); } catch (e) {} }
   }
 
   function renderDailyReport() {
@@ -540,7 +589,7 @@
     renderReportLog();
   }
 
-  /* ---------- 历史日报记录（数据源：本机 localStorage csa-report-draft，按日期累积） ---------- */
+  /* ---------- 历史日报记录（数据源：本机 localStorage ∪ 云端 state.days[*].report，按日期累积） ---------- */
   var REPORT_LOG_FIELDS = [
     { key: "summary", label: "配置总结" },
     { key: "feedback", label: "问题反馈" },
@@ -548,7 +597,19 @@
     { key: "tomorrow", label: "明日待办" }
   ];
   function reportLogEntries() {
-    var all = reportDraft(), out = [];
+    var all = reportDraft(), out = [], touched = false;
+    // 云端可能已有本机还没的日期（另一台设备填写），渲染前再对齐一次
+    Object.keys(state.days || {}).forEach(function (k) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) { return; }
+      var cr = cloudReportOf(k);
+      if (!cr || !reportFilled(cr)) { return; }
+      var lr = all[k];
+      if (!lr || !reportFilled(lr) || Number(cr.updatedAt || 0) > Number(lr.updatedAt || 0)) {
+        all[k] = Object.assign({}, lr || {}, cr);
+        touched = true;
+      }
+    });
+    if (touched) { try { localStorage.setItem("csa-report-draft", JSON.stringify(all)); } catch (e) {} }
     Object.keys(all || {}).forEach(function (k) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) { return; }
       var d = all[k] || {};
@@ -564,9 +625,9 @@
     var counter = $id("reportLogCount");
     if (!list) { return; }
     var items = reportLogEntries();
-    if (counter) { counter.textContent = items.length ? "共 " + items.length + " 天 · 存本机浏览器" : ""; }
+    if (counter) { counter.textContent = items.length ? "共 " + items.length + " 天 · 本机 + 云端" : ""; }
     if (!items.length) {
-      list.innerHTML = '<div class="wb-log-empty">暂无历史日报。上面四个输入框填写后会自动留存，按日期累积在这里（存在本机浏览器，不同步云端）。</div>';
+      list.innerHTML = '<div class="wb-log-empty">暂无历史日报。上面四个输入框填写后会自动留存并按日期累积，同时同步到云端（换设备也能看到）。</div>';
       return;
     }
     list.innerHTML = items.slice(0, 60).map(function (it) {
