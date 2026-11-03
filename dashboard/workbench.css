@@ -1546,3 +1546,10 @@ html[data-theme-resolved="light"] .rk-sum i.is-bad { color: #c0303a; }
   font-size: 10.5px; font-weight: 400; color: var(--muted);
   border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; margin-left: 6px;
 }
+/* 归因待填行（清单式，替代原来的 .tmpl 色块堆叠） */
+.wb-weekly .wk-q {
+  padding: 7px 0; border-bottom: 1px dashed var(--line);
+  font-size: 12.5px; color: var(--muted); line-height: 1.75;
+}
+.wb-weekly .wk-q:last-of-type { border-bottom: 0; }
+.wb-weekly .wk-q b { color: var(--text); font-weight: 500; }
