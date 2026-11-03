@@ -2238,6 +2238,23 @@
       (txt ? "当前日报原文（节选）：\n" + txt.slice(0, 1800) : "当前还没有生成日报内容。");
   }
 
+  function ctxWeekly() {
+    var W = window.WeeklyReview;
+    if (!W || typeof W.collect !== "function") {
+      return "【当前页面：周度复盘】复盘模块未加载，没有数据。";
+    }
+    var start = (($id("weeklyStart") || {}).value || "").trim();
+    var end = (($id("weeklyEnd") || {}).value || "").trim();
+    try {
+      var data = W.collect(W.getWorkbenchData(), start, end);
+      var an = W.analyze(data);
+      var txt = W.buildText(data, an, start + " ~ " + end);
+      return txt.length > 6000 ? txt.slice(0, 6000) + "\n（内容较长已截断）" : txt;
+    } catch (e) {
+      return "【当前页面：周度复盘】上下文读取失败：" + (e && e.message ? e.message : e);
+    }
+  }
+
   function ctxGroups() {
     var list = (groupsCache && groupsCache.list) || [];
     if (!list.length) {
@@ -2297,6 +2314,15 @@
       qs: [
         { t: "谁缺数据", q: "按数据完整度排序，哪些店缺得最多？缺口集中在哪些日期？建议怎么补。" },
         { t: "数据质量体检", q: "从完整度看，哪些店的数据不足以支撑月度汇报？需要提醒我什么。" }
+      ]
+    },
+    weekly: {
+      name: "周度复盘",
+      ctx: ctxWeekly,
+      qs: [
+        { t: "逐项归因", q: "针对本周的每一项下滑指标和日报里的问题反馈，先判是否在 AI 能力边界内，再按四层（口径/历史配置/可修/合规）、三层（瞬时检索失败/合规拦截/未覆盖场景）、四类（答非所问/笼统/生硬/超纲）逐项归因，最后给止血/治本/防复发三段式方案。" },
+        { t: "写成周报", q: "把这份周度复盘改写成给主管看的一页周报：本周结论先行、关键数字、两三个问题及对应动作、下周计划。去掉过程叙述。" },
+        { t: "下周盯什么", q: "按本周数据走势，下周最该盯的三个指标是哪三个（含具体店铺和目标值）？如果继续不动会有什么后果。" }
       ]
     },
     summary: {
