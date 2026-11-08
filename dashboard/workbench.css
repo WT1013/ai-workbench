@@ -1666,6 +1666,46 @@ html[data-theme-resolved="light"] .rk-sum i.is-bad { color: #c0303a; }
 .wb-weekly .wk-kv-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 2px 18px; }
 .wb-weekly tbody tr.grp td { border-top: 1px solid var(--line); }
 
+/* ④ 分析与思考 / ⑤ 解决方案与下周计划：可编辑笔记（输入即存本地+云端） */
+.wb-weekly .wk-ai-btn {
+  margin-left: auto; font: inherit; font-size: 11px; line-height: 1.6; cursor: pointer;
+  color: var(--accent-300); background: rgb(var(--accent-rgb) / .08);
+  border: 1px solid rgb(var(--accent-rgb) / .3); border-radius: 20px; padding: 2px 10px;
+  transition: background .15s, border-color .15s;
+}
+.wb-weekly .wk-ai-btn:hover { background: rgb(var(--accent-rgb) / .16); border-color: rgb(var(--accent-rgb) / .5); }
+.wb-weekly .wk-ai-btn:disabled { opacity: .55; cursor: default; }
+
+.wb-weekly .wk-facts {
+  border-left: 2px solid rgb(var(--accent-rgb) / .32);
+  background: rgb(var(--accent-rgb) / .05);
+  border-radius: 0 8px 8px 0; padding: 9px 12px; margin-bottom: 10px;
+  font-size: 11.5px; line-height: 1.75; color: var(--text);
+}
+.wb-weekly .wk-facts-h { color: var(--muted); font-size: 10.5px; margin-bottom: 4px; letter-spacing: .02em; }
+.wb-weekly .wk-facts-row { word-break: break-word; }
+.wb-weekly .wk-facts-row + .wk-facts-row { margin-top: 3px; }
+.wb-weekly .wk-facts-row b { color: var(--accent-300); font-weight: 500; margin-right: 4px; }
+
+.wb-weekly .wk-ta {
+  display: block; width: 100%; box-sizing: border-box; resize: vertical;
+  font: inherit; font-size: 12.5px; line-height: 1.75; color: var(--text);
+  background: var(--panel-soft, #f8faf9);
+  border: 1px solid var(--line); border-radius: 9px;
+  padding: 9px 11px; outline: none; min-height: 56px;
+  transition: border-color .15s, background .15s;
+}
+.wb-weekly .wk-ta::placeholder { color: var(--muted); opacity: .85; }
+.wb-weekly .wk-ta:focus { border-color: rgb(var(--accent-rgb) / .55); background: var(--panel-2); }
+.wb-weekly .wk-ta-think { min-height: 86px; }
+
+.wb-weekly .wk-note-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 960px) { .wb-weekly .wk-note-grid { grid-template-columns: 1fr; } }
+.wb-weekly .wk-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.wb-weekly .wk-field > span { font-size: 11px; color: var(--accent-300); font-weight: 500; letter-spacing: .02em; }
+.wb-weekly .wk-field-plan { margin-top: 10px; }
+.wb-weekly .wk-note-save { margin-top: 6px; font-size: 10.5px; color: var(--muted); text-align: right; }
+
 /* 内联图标体系：分区徽标 / KPI / 涨跌箭头 / 迷你走势线（无外链，离线可用） */
 .wb-weekly .ico { display: inline-block; vertical-align: -2px; flex: 0 0 auto; }
 .wb-weekly .wk-ico {

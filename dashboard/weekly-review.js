@@ -108,6 +108,138 @@
     try { return JSON.parse(localStorage.getItem("csa-report-draft") || "{}") || {}; } catch (e) { return {}; }
   }
 
+  /* ---------- 周度笔记：分析与思考 / 止血 / 治本 / 防复发 / 下周计划 ----------
+   * 存 localStorage(csa-weekly-note-v1) + 云端 state.days.__library__.weekly[区间键]
+   * 两端按 updatedAt 取新，换设备能看到 */
+  var NOTE_KEY = "csa-weekly-note-v1";
+  var NOTE_FIELDS = ["think", "stop", "fix", "prevent", "plan"];
+
+  function rangeKeyOf(start, end) { return String(start || "") + "_" + String(end || ""); }
+
+  function readNotes() {
+    try { return JSON.parse(localStorage.getItem(NOTE_KEY) || "{}") || {}; } catch (e) { return {}; }
+  }
+  function emptyNote() {
+    return { think: "", stop: "", fix: "", prevent: "", plan: "", updatedAt: 0 };
+  }
+  function normNote(n) {
+    var o = emptyNote();
+    if (n && typeof n === "object") {
+      NOTE_FIELDS.forEach(function (k) { if (n[k] != null) { o[k] = String(n[k]); } });
+      o.updatedAt = Number(n.updatedAt) || 0;
+    }
+    return o;
+  }
+  // 云端更晚的覆盖本机，返回合并后的全量
+  function hydrateNotes(ctx) {
+    var all = readNotes();
+    var lib = ((ctx && ctx.days && ctx.days["__library__"]) || {});
+    var cloud = lib.weekly || {};
+    var changed = false;
+    Object.keys(cloud).forEach(function (rk) {
+      var c = normNote(cloud[rk]);
+      var l = normNote(all[rk]);
+      if (c.updatedAt > l.updatedAt) { all[rk] = c; changed = true; }
+    });
+    if (changed) { try { localStorage.setItem(NOTE_KEY, JSON.stringify(all)); } catch (e) {} }
+    return all;
+  }
+  function readNote(rk) { return normNote(readNotes()[rk]); }
+
+  function saveNote(rk, obj, pushCloud) {
+    var all = readNotes();
+    var n = emptyNote();
+    NOTE_FIELDS.forEach(function (k) { n[k] = obj && obj[k] != null ? String(obj[k]) : ""; });
+    n.updatedAt = Date.now();
+    all[rk] = n;
+    try { localStorage.setItem(NOTE_KEY, JSON.stringify(all)); } catch (e) {}
+    if (pushCloud !== false && typeof window.wbSaveWeeklyNote === "function") {
+      try { window.wbSaveWeeklyNote(rk, n); } catch (e) {}
+    }
+    return n;
+  }
+  function noteFilled(n) {
+    return NOTE_FIELDS.filter(function (k) { return String((n && n[k]) || "").trim(); }).length;
+  }
+  function tsLabel(ms) {
+    if (!ms) { return ""; }
+    var d = new Date(Number(ms));
+    if (isNaN(d.getTime())) { return ""; }
+    var today = todayKey();
+    var k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    var hm = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    return k === today ? hm : (k.slice(5) + " " + hm);
+  }
+
+  /* ---------- AI 拟稿（读 workbench 同一份 Key 配置，浏览器直连） ---------- */
+  function aiCfg() {
+    try {
+      var c = JSON.parse(localStorage.getItem("csa-ai-cfg-v1") || "null");
+      return (c && c.apiKey) ? c : null;
+    } catch (e) { return null; }
+  }
+  var DRAFT_SYS = "你是拼多多客服 AI 运营的数据分析助手。只依据给定事实写周复盘结论，禁止编造店铺名、数字或未发生的事。" +
+    "下面五个标签必须全部输出，缺一不可；每个标签下写 1~3 句具体、可执行的中文，不要空话套话，不要照抄事实原文。\n" +
+    "严格按此格式输出，标签独占一行，标签后直接写内容，不要任何额外说明：\n" +
+    "【思考】根因判断与依据\n" +
+    "【止血】本周已做或立即要做的止损动作\n" +
+    "【治本】针对根因的永久修复（改哪一处配置/补哪个场景）\n" +
+    "【防复发】巡检或校验机制，让同类问题下次能被提前发现\n" +
+    "【下周计划】2~4 条，每条一行，写清做什么、做到什么程度";
+
+  function parseDraft(text) {
+    var out = { think: "", stop: "", fix: "", prevent: "", plan: "" };
+    var map = { "思考": "think", "止血": "stop", "治本": "fix", "防复发": "prevent", "下周计划": "plan" };
+    var re = /【(思考|止血|治本|防复发|下周计划)】/g;
+    var marks = [], m;
+    while ((m = re.exec(text))) { marks.push({ key: map[m[1]], at: m.index, after: re.lastIndex }); }
+    if (!marks.length) { out.think = String(text || "").trim(); return out; }
+    marks.forEach(function (x, i) {
+      var seg = text.slice(x.after, i + 1 < marks.length ? marks[i + 1].at : text.length);
+      out[x.key] = String(seg).replace(/^[\s:：]+/, "").trim();
+    });
+    return out;
+  }
+
+  function aiDraft(factsText, cb) {
+    var c = aiCfg();
+    if (!c) { cb(new Error("尚未配置 AI 接口 · 在工作台右上角「接口设置」填 Key")); return; }
+    var url = String(c.baseUrl || "https://api.deepseek.com").replace(/\/+$/, "") + "/chat/completions";
+    // 模型偶发返回空内容，自动重试一次
+    function attempt(left) {
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + c.apiKey },
+        body: JSON.stringify({
+          model: c.model || "deepseek-chat",
+          messages: [
+            { role: "system", content: DRAFT_SYS },
+            { role: "user", content: "以下是本周真实数据与日报记录：\n" + factsText }
+          ],
+          temperature: 0.35,
+          max_tokens: 2400,
+          stream: false
+        })
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) { throw new Error((j && j.error && j.error.message) || ("HTTP " + r.status)); }
+          var t = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+          var parsed = parseDraft(t || "");
+          if (!(parsed.think || parsed.stop || parsed.fix || parsed.prevent || parsed.plan)) {
+            throw new Error("接口返回内容为空");
+          }
+          return parsed;
+        });
+      }).catch(function (e) {
+        if (left > 1) { return attempt(left - 1); }
+        throw e;
+      });
+    }
+    attempt(2).then(function (p) { cb(null, p); }, function (e) {
+      cb(new Error((e && e.message) || String(e)));
+    });
+  }
+
   // 实时优先：workbench.js 已挂 window.__wbState
   function getWorkbenchData() {
     var days = {}, shops = [];
@@ -222,7 +354,8 @@
     return { metricStatus: metricStatus, drops: drops, feedbackDays: feedbackDays, summDays: summDays };
   }
 
-  function buildText(data, an, rangeLabel) {
+  function buildText(data, an, rangeLabel, note) {
+    var n = normNote(note);
     var L = [];
     var doneTotal = TASKS.reduce(function (a, t) { return a + data.taskDone[t.id]; }, 0);
     L.push("【周度复盘】" + rangeLabel);
@@ -241,14 +374,161 @@
     }
     data.texts.forEach(function (t) { if (t.feedback) { L.push("· " + t.date + " 问题反馈：" + t.feedback); } });
     L.push("");
-    L.push("二、方案与验证");
-    L.push("· 止血：" + (data.texts.map(function (t) { return t.summary; }).filter(Boolean).join("；") || "（待补充）"));
-    L.push("· 治本：_____");
-    L.push("· 防复发：日巡检 + 周复盘；关键场景上线前回归验证。");
+    L.push("二、分析与思考");
+    L.push(n.think ? n.think : "（待补充：根因判断与依据）");
+    L.push("");
+    L.push("三、解决方案与下周计划");
+    var summJoined = data.texts.map(function (t) { return t.summary; }).filter(Boolean).join("；");
     var toms = data.texts.map(function (t) { return t.tomorrow; }).filter(Boolean);
-    L.push("· 下周待办：" + (toms.length ? toms.join("；") : "（日报未填明日待办）"));
+    L.push("· 止血：" + (n.stop || summJoined || "（待补充）"));
+    L.push("· 治本：" + (n.fix || "（待补充）"));
+    L.push("· 防复发：" + (n.prevent || "（待补充）"));
+    L.push("· 下周计划：" + (n.plan || (toms.length ? toms.join("；") : "（待补充）")));
     L.push("· 验证：下周同区间复查，回到目标线或环比改善即通过（T-3 / T-1 观察）。");
     return L.join("\n");
+  }
+
+  /* ---------- 笔记交互：输入即存、AI 拟稿 ---------- */
+  function curRangeKey(container) {
+    var el = container.querySelector("[data-wk-note]");
+    return el ? el.getAttribute("data-wk-note") : "";
+  }
+  function setSaveTip(container, text, key) {
+    var els = container.querySelectorAll("[data-save-tip]");
+    for (var i = 0; i < els.length; i++) {
+      if (key && els[i].getAttribute("data-save-tip") !== key) { continue; }
+      els[i].textContent = text;
+    }
+  }
+  function factsTextOf(data, an) {
+    var L = [];
+    L.push("区间 " + (data.dayKeys[0] || "") + " ~ " + (data.dayKeys[data.dayKeys.length - 1] || "") +
+      "，覆盖 " + data.dayKeys.length + " 天，重点店 " + data.keyShops.length + " 家。");
+    L.push("");
+    L.push("【重点店指标下滑】共 " + an.drops.length + " 项");
+    an.drops.slice(0, 20).forEach(function (x) {
+      L.push("- " + x.shop + " " + x.label + "：" + fmt(x.first, x.unit) + " → " + fmt(x.last, x.unit) +
+        "，周均 " + fmt(x.avg, x.unit) + (x.target != null ? "，目标 " + x.target + x.unit : ""));
+    });
+    if (!an.drops.length) { L.push("- 无显著下滑"); }
+    L.push("");
+    L.push("【每日重点店均值】");
+    data.dailyAvg.forEach(function (row) {
+      L.push("- " + row.date + "：" + METRICS.map(function (mt) {
+        return mt.label + " " + fmt(row.vals[mt.key], mt.unit);
+      }).join(" / "));
+    });
+    L.push("");
+    L.push("【日报记录】");
+    var anyText = false;
+    data.texts.forEach(function (t) {
+      var seg = [];
+      if (t.summary) { seg.push("配置总结:" + t.summary); }
+      if (t.feedback) { seg.push("问题反馈:" + t.feedback); }
+      if (t.weekFocus) { seg.push("本周重点:" + t.weekFocus); }
+      if (t.tomorrow) { seg.push("明日待办:" + t.tomorrow); }
+      if (seg.length) { L.push("- " + t.date + " " + seg.join(" | ")); anyText = true; }
+    });
+    if (!anyText) { L.push("- 本周日报未填写"); }
+    return L.join("\n");
+  }
+
+  function bindNoteEvents(container) {
+    if (container._wkNoteBound) { return; }
+    container._wkNoteBound = true;
+
+    function autoGrow(ta) {
+      if (!ta || ta.tagName !== "TEXTAREA") { return; }
+      ta.style.height = "auto";
+      var h = Math.min(Math.max(ta.scrollHeight + 2, 56), 460);
+      ta.style.height = h + "px";
+      // 同一行三列取等高，底部不参差
+      var grid = ta.closest ? ta.closest(".wk-note-grid") : null;
+      if (!grid) { return; }
+      var sibs = grid.querySelectorAll("textarea[data-note]");
+      var max = 0, i;
+      for (i = 0; i < sibs.length; i++) {
+        sibs[i].style.height = "auto";
+        if (sibs[i].scrollHeight + 2 > max) { max = sibs[i].scrollHeight + 2; }
+      }
+      max = Math.min(Math.max(max, 56), 460);
+      for (i = 0; i < sibs.length; i++) { sibs[i].style.height = max + "px"; }
+    }
+    container._wkAutoGrow = function () {
+      var all = container.querySelectorAll("textarea[data-note]");
+      for (var i = 0; i < all.length; i++) { autoGrow(all[i]); }
+    };
+
+    container.addEventListener("input", function (e) {
+      var ta = e.target;
+      if (!ta || !ta.getAttribute || !ta.getAttribute("data-note")) { return; }
+      autoGrow(ta);
+      var rk = curRangeKey(container);
+      if (!rk) { return; }
+      var key = ta.getAttribute("data-note");
+      // 先落本地：两个框同时编辑时不会互相覆盖
+      var all = readNotes();
+      var n = normNote(all[rk]);
+      n[key] = ta.value;
+      n.updatedAt = Date.now();
+      all[rk] = n;
+      try { localStorage.setItem(NOTE_KEY, JSON.stringify(all)); } catch (e2) {}
+      setSaveTip(container, "保存中…", key);
+      clearTimeout(container._wkPushT);
+      container._wkPushT = setTimeout(function () {
+        var last = readNote(rk);
+        saveNote(rk, last, true);
+        setSaveTip(container, "已保存 · " + tsLabel(last.updatedAt), key);
+      }, 900);
+    });
+
+    // 失焦时立即推云端，避免关页面丢内容
+    container.addEventListener("blur", function (e) {
+      var ta = e.target;
+      if (!ta || !ta.getAttribute || !ta.getAttribute("data-note")) { return; }
+      var rk = curRangeKey(container);
+      if (!rk) { return; }
+      clearTimeout(container._wkPushT);
+      var last = readNote(rk);
+      saveNote(rk, last, true);
+      setSaveTip(container, "已保存 · " + tsLabel(last.updatedAt), ta.getAttribute("data-note"));
+    }, true);
+
+    container.addEventListener("click", function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest("[data-wk-draft]") : null;
+      if (!btn) { return; }
+      var cx = container._wkCtx;
+      if (!cx) { return; }
+      var rk = curRangeKey(container);
+      var n = readNote(rk);
+      var blank = NOTE_FIELDS.filter(function (k) { return !String(n[k] || "").trim(); });
+      if (!blank.length) {
+        if (!window.confirm("五栏都已有内容，要用 AI 初稿覆盖吗？")) { return; }
+      }
+      btn.disabled = true;
+      btn.textContent = "生成中…";
+      aiDraft(factsTextOf(cx.data, cx.an), function (err, out) {
+        btn.disabled = false;
+        btn.textContent = "✦ AI 拟稿";
+        if (err) { toast("AI 拟稿失败：" + err.message); return; }
+        var now = readNote(rk);
+        var filled = 0;
+        NOTE_FIELDS.forEach(function (k) {
+          var hasOld = String(now[k] || "").trim();
+          var gen = String(out[k] || "").trim();
+          if (gen && (!hasOld || !blank.length)) { now[k] = gen; filled++; }
+        });
+        if (!filled) { toast("AI 未返回可用内容，请重试"); return; }
+        saveNote(rk, now, true);
+        NOTE_FIELDS.forEach(function (k) {
+          var ta = container.querySelector('textarea[data-note="' + k + '"]');
+          if (ta) { ta.value = now[k] || ""; }
+        });
+        if (container._wkAutoGrow) { container._wkAutoGrow(); }
+        setSaveTip(container, "AI 初稿 · 已保存，可继续修改");
+        toast("AI 已生成初稿 · " + filled + " 栏");
+      });
+    });
   }
 
   function render(container, opts) {
@@ -360,20 +640,63 @@
     });
     html.push('</tbody></table></div></details>');
 
-    // ④ 方案与验证（原方案三段式 + 验证闭环 + 下周待办合并）
+    // ④ 分析与思考（归因）：事实底稿自动汇总 + 结论自己写，存本地与云端
+    var rk = rangeKeyOf(opts.start, opts.end);
+    var note = readNote(rk);
     var summJoined = data.texts.map(function (t) { return t.summary; }).filter(Boolean).join("；");
     var toms = data.texts.map(function (t) { return t.tomorrow; }).filter(Boolean);
-    html.push('<div class="wk-card"><h3><span class="wk-ico">' + ico("target", "", 13) + '</span>④ 方案与验证 <span class="tag">止血 / 治本 / 防复发</span></h3>');
-    html.push('<div class="wk-row-k"><b>止血</b><span>' + (summJoined ? esc(summJoined) : "（日报未填配置总结，待补充）") + '</span></div>');
-    html.push('<div class="wk-row-k"><b>治本</b><span class="wk-blank">针对归因的永久方案：_____</span></div>');
-    html.push('<div class="wk-row-k"><b>防复发</b><span>日巡检 + 周复盘；关键场景上线前回归验证。</span></div>');
-    html.push('<div class="wk-row-k"><b>下周待办</b><span>' + (toms.length ? esc(toms.join("；")) : "（日报未填明日待办）") + '</span></div>');
+    var fbJoined = data.texts.filter(function (t) { return t.feedback; })
+      .map(function (t) { return t.date + " " + t.feedback; }).join("；");
+
+    var facts = [];
+    function clip(s, n) {
+      s = String(s || "").replace(/\s+/g, " ").trim();
+      return s.length > n ? s.slice(0, n) + "…" : s;
+    }
+    if (an.drops.length) {
+      var dTop = an.drops.slice(0, 6).map(function (x) {
+        return clip(x.shop.replace(/旗舰店|专营店|专卖店|企业店|官方店/g, ""), 9) + " " + x.label + " " +
+          fmt(x.first, x.unit) + "→" + fmt(x.last, x.unit);
+      });
+      facts.push('<b>指标下滑 ' + an.drops.length + ' 项</b>：' + esc(dTop.join("；")) +
+        (an.drops.length > 6 ? ' 等' : ''));
+    } else {
+      facts.push('<b>指标</b>：重点店本周无显著下滑项。');
+    }
+    if (fbJoined) { facts.push('<b>日报问题反馈</b>：' + esc(clip(fbJoined, 200))); }
+    if (summJoined) { facts.push('<b>日报配置总结</b>：' + esc(clip(summJoined, 200))); }
+
+    html.push('<div class="wk-card wk-note-card" data-wk-note="' + esc(rk) + '">');
+    html.push('<h3><span class="wk-ico">' + ico("bolt", "", 13) + '</span>④ 分析与思考 <span class="tag">归因 · 判断</span>' +
+      '<button class="wk-ai-btn" data-wk-draft="1" title="按本周事实生成初稿，生成后可自行修改">✦ AI 拟稿</button></h3>');
+    html.push('<div class="wk-facts"><div class="wk-facts-h">事实底稿（按本周数据自动汇总，只读）</div>' +
+      facts.map(function (f) { return '<div class="wk-facts-row">' + f + '</div>'; }).join("") + '</div>');
+    html.push('<textarea class="wk-ta wk-ta-think" data-note="think" rows="4" placeholder="' +
+      esc('为什么会出现这些下滑或反馈？判断属于哪一类：口径变化 / 历史配置回退 / 场景未覆盖 / 能力边界。写下你的判断和依据，1~3 句即可。') +
+      '">' + esc(note.think) + '</textarea>');
+    html.push('<div class="wk-note-save" data-save-tip="think">' + (note.think ? '已保存 · ' + tsLabel(note.updatedAt) : '未填写 · 输入后自动保存') + '</div>');
+    html.push('</div>');
+
+    // ⑤ 解决方案与下周计划
+    html.push('<div class="wk-card wk-note-card" data-wk-note="' + esc(rk) + '">');
+    html.push('<h3><span class="wk-ico">' + ico("target", "", 13) + '</span>⑤ 解决方案与下周计划 <span class="tag">止血 / 治本 / 防复发</span></h3>');
+    html.push('<div class="wk-note-grid">');
+    html.push('<label class="wk-field"><span>止血</span><textarea class="wk-ta" data-note="stop" rows="3" placeholder="' +
+      esc('这周马上做什么先止损？（可参照上方日报配置总结）') + '">' + esc(note.stop) + '</textarea></label>');
+    html.push('<label class="wk-field"><span>治本</span><textarea class="wk-ta" data-note="fix" rows="3" placeholder="' +
+      esc('针对上面的根因，改哪一处配置 / 补哪个场景，能永久解决？') + '">' + esc(note.fix) + '</textarea></label>');
+    html.push('<label class="wk-field"><span>防复发</span><textarea class="wk-ta" data-note="prevent" rows="3" placeholder="' +
+      esc('加什么巡检或校验，让同类问题下次能被提前发现？') + '">' + esc(note.prevent) + '</textarea></label>');
+    html.push('</div>');
+    html.push('<div class="wk-field wk-field-plan"><span>下周计划</span><textarea class="wk-ta" data-note="plan" rows="4" placeholder="' +
+      esc('一行一条，写清做什么、做到什么程度、什么时候验证') + '">' + esc(note.plan) + '</textarea></div>');
+    html.push('<div class="wk-note-save" data-save-tip="plan">' + (noteFilled(note) ? '已保存 · ' + tsLabel(note.updatedAt) : '未填写 · 输入后自动保存') + '</div>');
     html.push('<div class="wk-note">验证：下周同区间复查，回到目标线或环比改善即通过（T-3 / T-1 观察）' +
       (an.drops.length ? '；复发预警 ' + an.drops.length + ' 项优先排期' : '') + '。</div>');
     html.push('</div>');
 
-    // ⑤ 每日日报原文（默认折叠，仅在页面查看；导出稿已含问题反馈，不重复带出）
-    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3><span class="wk-ico">' + ico("doc", "", 13) + '</span>⑤ 每日日报原文 <span class="tag">' + data.texts.length + ' 天</span></h3></summary>');
+    // ⑥ 每日日报原文（默认折叠，仅在页面查看；导出稿已含问题反馈，不重复带出）
+    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3><span class="wk-ico">' + ico("doc", "", 13) + '</span>⑥ 每日日报原文 <span class="tag">' + data.texts.length + ' 天</span></h3></summary>');
     data.texts.forEach(function (t) {
       var has = t.summary || t.feedback || t.weekFocus || t.tomorrow;
       html.push('<div class="wk-day"><div class="wk-day-head">' + t.date + '（' + weekday(t.date) + '）' +
@@ -395,8 +718,12 @@
     html.push('</div></details>');
 
     container.innerHTML = '<div class="wb-weekly">' + html.join("") + '</div>';
-    container._weeklyText = buildText(data, an, rangeLabel);
-    return { data: data, analyze: an, text: container._weeklyText };
+    container._wkCtx = { data: data, an: an, rangeLabel: rangeLabel, rk: rk };
+    bindNoteEvents(container);
+    if (container._wkAutoGrow) { container._wkAutoGrow(); }
+    var curNote = readNote(rk);
+    container._weeklyText = buildText(data, an, rangeLabel, curNote);
+    return { data: data, analyze: an, text: container._weeklyText, note: curNote, rangeKey: rk };
   }
 
   function toast(msg) {
@@ -477,7 +804,7 @@
   }
 
 
-  var EXPORT_CSS = ":root{\n  --ink:#17201c;--ink-2:#3c4742;--muted:#6a7671;--line:#e6ebe8;--line-2:#eff3f1;\n  --soft:#f6f8f7;--brand:#0f6f4e;--brand-soft:#eff7f3;--up:#c9333a;--down:#12805c;\n  --text:#17201c;--panel-2:#ffffff;--panel-soft:#f6f8f7;--line-bright:#e6ebe8;\n  --danger:#c9333a;--accent-rgb:16 130 92;--accent-300:#0f6f4e;--accent-400:#12805c;--accent-500:#0f6f4e;\n}\n*{box-sizing:border-box}\nbody{\n  margin:0;background:#f4f6f5;color:var(--ink);\n  font:13px/1.7 -apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;\n  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;\n}\n.page{max-width:1000px;margin:0 auto;background:#fff;padding:40px 46px 52px;min-height:100vh}\n.doc-head{padding-bottom:16px;border-bottom:2px solid var(--ink)}\n.doc-head h1{margin:0 0 7px;font-size:21px;font-weight:600;letter-spacing:-.01em}\n.doc-head .meta{margin:0;color:var(--muted);font-size:12px}\n.doc-head .meta b{color:var(--ink-2);font-weight:500}\n.foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:#98a29d;font-size:11px}\n\n/* 章节：去卡片框，改用分隔线 + 左侧色条，降低视觉噪音 */\n.wb-weekly{display:block}\n.wk-head{display:none}\n.wk-card{margin:0;padding:24px 0 4px;border:0;border-top:1px solid var(--line);background:none;border-radius:0}\n.wk-head + .wk-card{border-top:0;padding-top:24px}\n.wk-card h3{\n  margin:0 0 14px;font-size:14px;font-weight:600;color:var(--ink);\n  display:flex;align-items:center;gap:9px;flex-wrap:wrap;\n}\n.wk-card h3::before{content:\"\";width:3px;height:15px;border-radius:2px;background:var(--brand);flex:0 0 auto}\n.wk-card h3 .tag{\n  font-size:11px;font-weight:400;color:var(--muted);\n  padding:0;border:0;background:none;letter-spacing:.01em;\n}\n.wk-card h3 .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 概览：标签下、数字上，四列 KPI */\n.wk-kv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 26px}\n.kv{display:flex;flex-direction:column-reverse;gap:3px;padding:0;border:0;min-width:0}\n.kv span{font-size:11.5px;color:var(--muted);letter-spacing:.01em}\n.kv b{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.4}\n\n/* 表格：表头浅底、分组行分隔、数字右对齐 */\n.wk-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}\ntable{width:100%;border-collapse:collapse;font-size:12.5px}\nthead th{\n  background:var(--soft);color:var(--muted);font-weight:500;font-size:11px;\n  padding:8px 10px;text-align:left;white-space:nowrap;letter-spacing:.02em;\n  border-bottom:1px solid var(--line);\n}\nthead th:first-child{border-top-left-radius:6px;border-bottom-left-radius:6px}\nthead th:last-child{border-top-right-radius:6px;border-bottom-right-radius:6px}\ntbody td{padding:6px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap;color:var(--ink-2)}\ntbody td:first-child{color:var(--ink);font-weight:500}\ntbody tr.grp td{border-top:1px solid var(--line)}\ntbody tr.grp:first-child td{border-top:0}\ntbody tr:last-child td{border-bottom:0}\ntd.num{text-align:right;font-variant-numeric:tabular-nums}\n\n/* 涨=红 跌=绿 */\n.up{color:var(--up)}\n.down{color:var(--down)}\n.flat{color:var(--muted)}\ntd.bad{color:var(--up)}\n.wk-wd{color:var(--muted);font-size:10.5px;margin-left:3px;font-weight:400}\n.wk-target{color:var(--muted);font-size:10.5px;font-weight:400}\n\n.badge{\n  display:inline-block;font-size:11px;padding:1px 8px;border-radius:4px;\n  background:#f2f5f3;color:var(--muted);margin-right:6px;vertical-align:1px;\n}\n.badge.drop{color:var(--up);background:#fdf0f0}\n\n/* 归因待填行：清单式，不加底色块 */\n.wk-q{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px;color:var(--ink-2);line-height:1.75}\n.wk-q:last-of-type{border-bottom:0}\n.wk-q b{color:var(--ink);font-weight:500}\n\n/* 问题 / 反馈：改为左侧引用线 */\n.fb{\n  border:0;background:none;border-left:2px solid #cfe3d9;\n  border-radius:0;padding:2px 0 2px 14px;margin:0 0 14px;\n  font-size:12.5px;color:var(--ink-2);line-height:1.75;\n}\n.fb .dt{color:var(--muted);font-size:11px;margin-bottom:2px}\n.fb.muted{color:var(--muted);border-left-color:var(--line)}\n\n/* 提示块 */\n.tmpl{\n  background:var(--brand-soft);border:0;border-radius:8px;\n  padding:12px 16px;font-size:12.5px;color:var(--ink-2);\n  line-height:1.8;margin-top:12px;\n}\n.tmpl b{color:var(--brand);font-weight:600}\n\nul{margin:6px 0;padding-left:18px}\nli{margin:3px 0}\n.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px 30px}\n.wk-sub{font-size:12.5px;font-weight:600;color:var(--ink);margin:18px 0 8px}\n.wk-sub2{font-size:12px;font-weight:500;color:var(--brand);margin-bottom:6px}\n.wk-recur{margin-top:14px;font-size:12.5px;color:var(--ink-2);line-height:1.8}\n.wk-recur b{color:var(--brand);font-weight:600}\n.empty{color:var(--muted);font-size:12.5px;padding:4px 0}\n\n/* 折叠块在导出稿里全部展开，标题退化成分组小标题 */\ndetails>summary{display:block;cursor:default;list-style:none}\ndetails>summary::-webkit-details-marker{display:none}\ndetails>summary h3{margin:0 0 18px}\nsummary .tag{font-size:11px;font-weight:400;color:var(--muted);margin-left:2px}\nsummary .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 每日日报原文 */\n.wk-day{border-top:1px solid var(--line-2);padding:13px 0 3px}\n.wk-day:first-of-type{border-top:0;padding-top:0}\n.wk-day-head{font-size:12.5px;font-weight:600;color:var(--brand);margin-bottom:8px}\n.wk-day-empty{color:var(--muted);font-size:11px;margin-left:8px;font-weight:400}\n.wk-day-row{display:flex;gap:12px;font-size:12.5px;padding:2px 0;line-height:1.75}\n.wk-day-row b{flex:0 0 66px;color:var(--muted);font-weight:400;font-size:11.5px;padding-top:2px}\n.wk-day-row span{color:var(--ink-2);min-width:0;white-space:pre-wrap}\n\n/* 方法速查 */\n.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 30px}\n.method{border:0;border-left:2px solid var(--line);background:none;border-radius:0;padding:0 0 0 13px}\n.method h4{margin:0 0 3px;font-size:12px;font-weight:600;color:var(--ink)}\n.method p{margin:0;font-size:12px;color:var(--muted);line-height:1.7}\n\n@media (max-width:900px){\n  .wk-kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .grid2,.method-grid{grid-template-columns:1fr}\n}\n@media (max-width:700px){\n  .page{padding:22px 18px 32px;min-height:0}\n  .doc-head h1{font-size:18px}\n  body{font-size:12.5px}\n}\n@media print{\n  body{background:#fff}\n  .page{max-width:none;padding:0;min-height:0}\n  .wk-card{break-inside:avoid;page-break-inside:avoid}\n  thead{display:table-header-group}\n  table{font-size:10.5px}\n  .tmpl,.fb,.method{break-inside:avoid}\n}\n\n/* 精简版新增：概览脚注、方案清单行 */\n.wk-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.75}\n.wk-row-k{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:12.5px;line-height:1.8}\n.wk-row-k:last-of-type{border-bottom:0}\n.wk-row-k b{flex:0 0 62px;color:var(--brand);font-weight:600;font-size:12px;padding-top:1px}\n.wk-row-k span{color:var(--ink-2);min-width:0}\n.wk-row-k .wk-blank{color:var(--muted)}\n\n/* 图标体系：内联 SVG，无外链；分区徽标 / KPI / 涨跌箭头 / 迷你走势线 */\n.doc-head h1{display:flex;align-items:center;gap:9px}\n.doc-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:26px;height:26px;border-radius:8px;\n  background:var(--brand);color:#fff;flex:0 0 auto;\n}\n.ico{display:inline-block;vertical-align:-2px;flex:0 0 auto}\n.wk-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:22px;height:22px;border-radius:7px;\n  background:var(--brand-soft);color:var(--brand);flex:0 0 auto;\n}\n.wk-ico-warn{background:#fdf0f0;color:var(--up)}\n.wk-card h3::before{content:none}\n.kv-ico{color:var(--brand);margin-right:4px}\n.kv-ico.warn{color:var(--up)}\n.th-l{display:block}\n.spark{display:block;margin:4px 0 0 auto;color:var(--muted)}\ntable.tbl-daily{table-layout:fixed}\ntable.tbl-daily th:first-child,table.tbl-daily td:first-child{width:104px}\n.spark .ln{stroke:currentColor;stroke-width:1.4;fill:none;stroke-opacity:.5;stroke-linecap:round;stroke-linejoin:round}\n.spark-dot.up{fill:var(--up)}\n.spark-dot.down{fill:var(--down)}\n.spark-dot.flat{fill:var(--muted)}\n.ar{font-style:normal;font-size:8px;line-height:1;display:inline-block;width:7px;margin-left:2px;text-align:center;vertical-align:1px;opacity:.95}\ntd.mov{color:var(--up)}\n.row-alert{color:var(--up);margin-right:5px;vertical-align:-2px}\n@media print{\n  .wk-ico,.doc-ico,.spark{-webkit-print-color-adjust:exact;print-color-adjust:exact}\n}";
+  var EXPORT_CSS = ":root{\n  --ink:#17201c;--ink-2:#3c4742;--muted:#6a7671;--line:#e6ebe8;--line-2:#eff3f1;\n  --soft:#f6f8f7;--brand:#0f6f4e;--brand-soft:#eff7f3;--up:#c9333a;--down:#12805c;\n  --text:#17201c;--panel-2:#ffffff;--panel-soft:#f6f8f7;--line-bright:#e6ebe8;\n  --danger:#c9333a;--accent-rgb:16 130 92;--accent-300:#0f6f4e;--accent-400:#12805c;--accent-500:#0f6f4e;\n}\n*{box-sizing:border-box}\nbody{\n  margin:0;background:#f4f6f5;color:var(--ink);\n  font:13px/1.7 -apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;\n  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;\n}\n.page{max-width:1000px;margin:0 auto;background:#fff;padding:40px 46px 52px;min-height:100vh}\n.doc-head{padding-bottom:16px;border-bottom:2px solid var(--ink)}\n.doc-head h1{margin:0 0 7px;font-size:21px;font-weight:600;letter-spacing:-.01em}\n.doc-head .meta{margin:0;color:var(--muted);font-size:12px}\n.doc-head .meta b{color:var(--ink-2);font-weight:500}\n.foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:#98a29d;font-size:11px}\n\n/* 章节：去卡片框，改用分隔线 + 左侧色条，降低视觉噪音 */\n.wb-weekly{display:block}\n.wk-head{display:none}\n.wk-card{margin:0;padding:24px 0 4px;border:0;border-top:1px solid var(--line);background:none;border-radius:0}\n.wk-head + .wk-card{border-top:0;padding-top:24px}\n.wk-card h3{\n  margin:0 0 14px;font-size:14px;font-weight:600;color:var(--ink);\n  display:flex;align-items:center;gap:9px;flex-wrap:wrap;\n}\n.wk-card h3::before{content:\"\";width:3px;height:15px;border-radius:2px;background:var(--brand);flex:0 0 auto}\n.wk-card h3 .tag{\n  font-size:11px;font-weight:400;color:var(--muted);\n  padding:0;border:0;background:none;letter-spacing:.01em;\n}\n.wk-card h3 .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 概览：标签下、数字上，四列 KPI */\n.wk-kv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 26px}\n.kv{display:flex;flex-direction:column-reverse;gap:3px;padding:0;border:0;min-width:0}\n.kv span{font-size:11.5px;color:var(--muted);letter-spacing:.01em}\n.kv b{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.4}\n\n/* 表格：表头浅底、分组行分隔、数字右对齐 */\n.wk-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}\ntable{width:100%;border-collapse:collapse;font-size:12.5px}\nthead th{\n  background:var(--soft);color:var(--muted);font-weight:500;font-size:11px;\n  padding:8px 10px;text-align:left;white-space:nowrap;letter-spacing:.02em;\n  border-bottom:1px solid var(--line);\n}\nthead th:first-child{border-top-left-radius:6px;border-bottom-left-radius:6px}\nthead th:last-child{border-top-right-radius:6px;border-bottom-right-radius:6px}\ntbody td{padding:6px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap;color:var(--ink-2)}\ntbody td:first-child{color:var(--ink);font-weight:500}\ntbody tr.grp td{border-top:1px solid var(--line)}\ntbody tr.grp:first-child td{border-top:0}\ntbody tr:last-child td{border-bottom:0}\ntd.num{text-align:right;font-variant-numeric:tabular-nums}\n\n/* 涨=红 跌=绿 */\n.up{color:var(--up)}\n.down{color:var(--down)}\n.flat{color:var(--muted)}\ntd.bad{color:var(--up)}\n.wk-wd{color:var(--muted);font-size:10.5px;margin-left:3px;font-weight:400}\n.wk-target{color:var(--muted);font-size:10.5px;font-weight:400}\n\n.badge{\n  display:inline-block;font-size:11px;padding:1px 8px;border-radius:4px;\n  background:#f2f5f3;color:var(--muted);margin-right:6px;vertical-align:1px;\n}\n.badge.drop{color:var(--up);background:#fdf0f0}\n\n/* 归因待填行：清单式，不加底色块 */\n.wk-q{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px;color:var(--ink-2);line-height:1.75}\n.wk-q:last-of-type{border-bottom:0}\n.wk-q b{color:var(--ink);font-weight:500}\n\n/* 问题 / 反馈：改为左侧引用线 */\n.fb{\n  border:0;background:none;border-left:2px solid #cfe3d9;\n  border-radius:0;padding:2px 0 2px 14px;margin:0 0 14px;\n  font-size:12.5px;color:var(--ink-2);line-height:1.75;\n}\n.fb .dt{color:var(--muted);font-size:11px;margin-bottom:2px}\n.fb.muted{color:var(--muted);border-left-color:var(--line)}\n\n/* 提示块 */\n.tmpl{\n  background:var(--brand-soft);border:0;border-radius:8px;\n  padding:12px 16px;font-size:12.5px;color:var(--ink-2);\n  line-height:1.8;margin-top:12px;\n}\n.tmpl b{color:var(--brand);font-weight:600}\n\nul{margin:6px 0;padding-left:18px}\nli{margin:3px 0}\n.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px 30px}\n.wk-sub{font-size:12.5px;font-weight:600;color:var(--ink);margin:18px 0 8px}\n.wk-sub2{font-size:12px;font-weight:500;color:var(--brand);margin-bottom:6px}\n.wk-recur{margin-top:14px;font-size:12.5px;color:var(--ink-2);line-height:1.8}\n.wk-recur b{color:var(--brand);font-weight:600}\n.empty{color:var(--muted);font-size:12.5px;padding:4px 0}\n\n/* 折叠块在导出稿里全部展开，标题退化成分组小标题 */\ndetails>summary{display:block;cursor:default;list-style:none}\ndetails>summary::-webkit-details-marker{display:none}\ndetails>summary h3{margin:0 0 18px}\nsummary .tag{font-size:11px;font-weight:400;color:var(--muted);margin-left:2px}\nsummary .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 每日日报原文 */\n.wk-day{border-top:1px solid var(--line-2);padding:13px 0 3px}\n.wk-day:first-of-type{border-top:0;padding-top:0}\n.wk-day-head{font-size:12.5px;font-weight:600;color:var(--brand);margin-bottom:8px}\n.wk-day-empty{color:var(--muted);font-size:11px;margin-left:8px;font-weight:400}\n.wk-day-row{display:flex;gap:12px;font-size:12.5px;padding:2px 0;line-height:1.75}\n.wk-day-row b{flex:0 0 66px;color:var(--muted);font-weight:400;font-size:11.5px;padding-top:2px}\n.wk-day-row span{color:var(--ink-2);min-width:0;white-space:pre-wrap}\n\n/* 方法速查 */\n.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 30px}\n.method{border:0;border-left:2px solid var(--line);background:none;border-radius:0;padding:0 0 0 13px}\n.method h4{margin:0 0 3px;font-size:12px;font-weight:600;color:var(--ink)}\n.method p{margin:0;font-size:12px;color:var(--muted);line-height:1.7}\n\n@media (max-width:900px){\n  .wk-kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .grid2,.method-grid{grid-template-columns:1fr}\n}\n@media (max-width:700px){\n  .page{padding:22px 18px 32px;min-height:0}\n  .doc-head h1{font-size:18px}\n  body{font-size:12.5px}\n}\n@media print{\n  body{background:#fff}\n  .page{max-width:none;padding:0;min-height:0}\n  .wk-card{break-inside:avoid;page-break-inside:avoid}\n  thead{display:table-header-group}\n  table{font-size:10.5px}\n  .tmpl,.fb,.method{break-inside:avoid}\n}\n\n/* 精简版新增：概览脚注、方案清单行 */\n.wk-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.75}\n.wk-row-k{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:12.5px;line-height:1.8}\n.wk-row-k:last-of-type{border-bottom:0}\n.wk-row-k b{flex:0 0 62px;color:var(--brand);font-weight:600;font-size:12px;padding-top:1px}\n.wk-row-k span{color:var(--ink-2);min-width:0}\n.wk-row-k .wk-blank{color:var(--muted)}\n\n/* ④⑤ 可编辑笔记：导出后为静态文本 */\n.wk-ai-btn{display:none}\n.wk-facts{border-left:2px solid #d3e6dd;background:#f5faf8;border-radius:0 8px 8px 0;padding:9px 12px;margin-bottom:12px;font-size:11.5px;line-height:1.8}\n.wk-facts-h{color:var(--muted);font-size:10.5px;margin-bottom:4px;letter-spacing:.02em}\n.wk-facts-row{color:var(--ink-2);word-break:break-word}\n.wk-facts-row + .wk-facts-row{margin-top:3px}\n.wk-facts-row b{color:var(--brand);font-weight:600;margin-right:4px}\n.wk-note-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}\n.wk-field{display:flex;flex-direction:column;gap:4px;min-width:0}\n.wk-field > span{font-size:11px;color:var(--brand);font-weight:600;letter-spacing:.02em}\n.wk-field-plan{margin-top:12px}\n.wk-note-static{font-size:12.5px;line-height:1.85;color:var(--ink-2);padding:8px 11px;background:var(--soft);border-radius:8px;white-space:pre-wrap;word-break:break-word}\n.wk-note-static-empty{color:#a3ada8}\n\n/* 图标体系：内联 SVG，无外链；分区徽标 / KPI / 涨跌箭头 / 迷你走势线 */\n.doc-head h1{display:flex;align-items:center;gap:9px}\n.doc-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:26px;height:26px;border-radius:8px;\n  background:var(--brand);color:#fff;flex:0 0 auto;\n}\n.ico{display:inline-block;vertical-align:-2px;flex:0 0 auto}\n.wk-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:22px;height:22px;border-radius:7px;\n  background:var(--brand-soft);color:var(--brand);flex:0 0 auto;\n}\n.wk-ico-warn{background:#fdf0f0;color:var(--up)}\n.wk-card h3::before{content:none}\n.kv-ico{color:var(--brand);margin-right:4px}\n.kv-ico.warn{color:var(--up)}\n.th-l{display:block}\n.spark{display:block;margin:4px 0 0 auto;color:var(--muted)}\ntable.tbl-daily{table-layout:fixed}\ntable.tbl-daily th:first-child,table.tbl-daily td:first-child{width:104px}\n.spark .ln{stroke:currentColor;stroke-width:1.4;fill:none;stroke-opacity:.5;stroke-linecap:round;stroke-linejoin:round}\n.spark-dot.up{fill:var(--up)}\n.spark-dot.down{fill:var(--down)}\n.spark-dot.flat{fill:var(--muted)}\n.ar{font-style:normal;font-size:8px;line-height:1;display:inline-block;width:7px;margin-left:2px;text-align:center;vertical-align:1px;opacity:.95}\ntd.mov{color:var(--up)}\n.row-alert{color:var(--up);margin-right:5px;vertical-align:-2px}\n@media print{\n  .wk-ico,.doc-ico,.spark{-webkit-print-color-adjust:exact;print-color-adjust:exact}\n}";
 
   function buildHtmlDoc(rangeLabel, keyShopCount, bodyHtml) {
     var n = new Date();
@@ -527,6 +854,18 @@
     for (var si = 0; si < skips.length; si++) { if (skips[si].parentNode) { skips[si].parentNode.removeChild(skips[si]); } }
     var dropRows = tmp.querySelectorAll('.wk-day-row[data-row="sum"], .wk-day-row[data-row="focus"]');
     for (var di = 0; di < dropRows.length; di++) { if (dropRows[di].parentNode) { dropRows[di].parentNode.removeChild(dropRows[di]); } }
+    // 可编辑框 → 静态文本；去掉「保存中」提示与 AI 按钮
+    var tas = tmp.querySelectorAll("textarea[data-note]");
+    for (var ti = 0; ti < tas.length; ti++) {
+      var ta = tas[ti];
+      var val = String(ta.value || "").trim();
+      var dv = document.createElement("div");
+      dv.className = "wk-note-static" + (val ? "" : " wk-note-static-empty");
+      dv.textContent = val || "（未填写）";
+      if (ta.parentNode) { ta.parentNode.replaceChild(dv, ta); }
+    }
+    var tips = tmp.querySelectorAll(".wk-note-save, [data-wk-draft]");
+    for (var pi = 0; pi < tips.length; pi++) { if (tips[pi].parentNode) { tips[pi].parentNode.removeChild(tips[pi]); } }
     body = tmp.innerHTML;
     body = tidyTables(body);
     body = tidyEmptyDays(body);
@@ -551,6 +890,8 @@
     render: render, collect: collect, analyze: analyze, buildText: buildText,
     getWorkbenchData: getWorkbenchData, exportCsv: exportCsv, exportHtml: exportHtml,
     latestDayKey: latestDayKey, shiftKey: shiftKey, todayKey: todayKey,
+    readNote: readNote, saveNote: saveNote, rangeKeyOf: rangeKeyOf, noteFilled: noteFilled,
+    hydrateNotes: hydrateNotes, NOTE_FIELDS: NOTE_FIELDS,
     METRICS: METRICS, TASKS: TASKS, toast: toast
   };
 
@@ -565,6 +906,8 @@
     if (!content) { return; }
 
     var ctx = getWorkbenchData();
+    // 换设备时云端笔记更新：渲染前先合并，避免本机旧值覆盖云端新值
+    try { hydrateNotes(ctx); } catch (e) {}
     var end = wbRenderWeekly._end || (endEl && endEl.value) || latestDayKey(ctx);
     var start = wbRenderWeekly._start || (startEl && startEl.value) || shiftKey(end, -6);
     // 首次进入 / 数据更新后：默认跟到最新一天

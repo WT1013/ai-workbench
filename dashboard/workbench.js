@@ -2578,7 +2578,8 @@
     try {
       var data = W.collect(W.getWorkbenchData(), start, end);
       var an = W.analyze(data);
-      var txt = W.buildText(data, an, start + " ~ " + end);
+      var note = (typeof W.readNote === "function") ? W.readNote(W.rangeKeyOf(start, end)) : null;
+      var txt = W.buildText(data, an, start + " ~ " + end, note);
       return txt.length > 6000 ? txt.slice(0, 6000) + "\n（内容较长已截断）" : txt;
     } catch (e) {
       return "【当前页面：周度复盘】上下文读取失败：" + (e && e.message ? e.message : e);
@@ -3599,6 +3600,17 @@
   window.wbAiAsk = aiAsk;
   // 供周度复盘(weekly-review.js)读取实时数据，避免走 localStorage 兜底拿到旧快照
   window.__wbState = state;
+
+  // 周度复盘笔记（分析与思考 / 止血 / 治本 / 防复发 / 下周计划）写云端：
+  // 存 state.days.__library__.weekly[区间键]，Object.assign 保留 monthly / shops 等其它键
+  window.wbSaveWeeklyNote = function (rk, note) {
+    if (!rk || !note) { return; }
+    var lib = state.days["__library__"] || {};
+    var weekly = Object.assign({}, lib.weekly || {});
+    weekly[rk] = note;
+    state.days["__library__"] = Object.assign({}, lib, { weekly: weekly });
+    try { wbSave(); } catch (e) { /* 云端不可用时本地已存 */ }
+  };
 
   window.wbRefresh = function () { wbReady = false; wbInit(); };
   window.addEventListener("DOMContentLoaded", wbInit);
