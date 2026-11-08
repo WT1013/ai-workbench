@@ -804,31 +804,202 @@
   }
 
 
-  var EXPORT_CSS = ":root{\n  --ink:#17201c;--ink-2:#3c4742;--muted:#6a7671;--line:#e6ebe8;--line-2:#eff3f1;\n  --soft:#f6f8f7;--brand:#0f6f4e;--brand-soft:#eff7f3;--up:#c9333a;--down:#12805c;\n  --text:#17201c;--panel-2:#ffffff;--panel-soft:#f6f8f7;--line-bright:#e6ebe8;\n  --danger:#c9333a;--accent-rgb:16 130 92;--accent-300:#0f6f4e;--accent-400:#12805c;--accent-500:#0f6f4e;\n}\n*{box-sizing:border-box}\nbody{\n  margin:0;background:#f4f6f5;color:var(--ink);\n  font:13px/1.7 -apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;\n  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;\n}\n.page{max-width:1000px;margin:0 auto;background:#fff;padding:40px 46px 52px;min-height:100vh}\n.doc-head{padding-bottom:16px;border-bottom:2px solid var(--ink)}\n.doc-head h1{margin:0 0 7px;font-size:21px;font-weight:600;letter-spacing:-.01em}\n.doc-head .meta{margin:0;color:var(--muted);font-size:12px}\n.doc-head .meta b{color:var(--ink-2);font-weight:500}\n.foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);color:#98a29d;font-size:11px}\n\n/* 章节：去卡片框，改用分隔线 + 左侧色条，降低视觉噪音 */\n.wb-weekly{display:block}\n.wk-head{display:none}\n.wk-card{margin:0;padding:24px 0 4px;border:0;border-top:1px solid var(--line);background:none;border-radius:0}\n.wk-head + .wk-card{border-top:0;padding-top:24px}\n.wk-card h3{\n  margin:0 0 14px;font-size:14px;font-weight:600;color:var(--ink);\n  display:flex;align-items:center;gap:9px;flex-wrap:wrap;\n}\n.wk-card h3::before{content:\"\";width:3px;height:15px;border-radius:2px;background:var(--brand);flex:0 0 auto}\n.wk-card h3 .tag{\n  font-size:11px;font-weight:400;color:var(--muted);\n  padding:0;border:0;background:none;letter-spacing:.01em;\n}\n.wk-card h3 .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 概览：标签下、数字上，四列 KPI */\n.wk-kv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 26px}\n.kv{display:flex;flex-direction:column-reverse;gap:3px;padding:0;border:0;min-width:0}\n.kv span{font-size:11.5px;color:var(--muted);letter-spacing:.01em}\n.kv b{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.4}\n\n/* 表格：表头浅底、分组行分隔、数字右对齐 */\n.wk-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}\ntable{width:100%;border-collapse:collapse;font-size:12.5px}\nthead th{\n  background:var(--soft);color:var(--muted);font-weight:500;font-size:11px;\n  padding:8px 10px;text-align:left;white-space:nowrap;letter-spacing:.02em;\n  border-bottom:1px solid var(--line);\n}\nthead th:first-child{border-top-left-radius:6px;border-bottom-left-radius:6px}\nthead th:last-child{border-top-right-radius:6px;border-bottom-right-radius:6px}\ntbody td{padding:6px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap;color:var(--ink-2)}\ntbody td:first-child{color:var(--ink);font-weight:500}\ntbody tr.grp td{border-top:1px solid var(--line)}\ntbody tr.grp:first-child td{border-top:0}\ntbody tr:last-child td{border-bottom:0}\ntd.num{text-align:right;font-variant-numeric:tabular-nums}\n\n/* 涨=红 跌=绿 */\n.up{color:var(--up)}\n.down{color:var(--down)}\n.flat{color:var(--muted)}\ntd.bad{color:var(--up)}\n.wk-wd{color:var(--muted);font-size:10.5px;margin-left:3px;font-weight:400}\n.wk-target{color:var(--muted);font-size:10.5px;font-weight:400}\n\n.badge{\n  display:inline-block;font-size:11px;padding:1px 8px;border-radius:4px;\n  background:#f2f5f3;color:var(--muted);margin-right:6px;vertical-align:1px;\n}\n.badge.drop{color:var(--up);background:#fdf0f0}\n\n/* 归因待填行：清单式，不加底色块 */\n.wk-q{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px;color:var(--ink-2);line-height:1.75}\n.wk-q:last-of-type{border-bottom:0}\n.wk-q b{color:var(--ink);font-weight:500}\n\n/* 问题 / 反馈：改为左侧引用线 */\n.fb{\n  border:0;background:none;border-left:2px solid #cfe3d9;\n  border-radius:0;padding:2px 0 2px 14px;margin:0 0 14px;\n  font-size:12.5px;color:var(--ink-2);line-height:1.75;\n}\n.fb .dt{color:var(--muted);font-size:11px;margin-bottom:2px}\n.fb.muted{color:var(--muted);border-left-color:var(--line)}\n\n/* 提示块 */\n.tmpl{\n  background:var(--brand-soft);border:0;border-radius:8px;\n  padding:12px 16px;font-size:12.5px;color:var(--ink-2);\n  line-height:1.8;margin-top:12px;\n}\n.tmpl b{color:var(--brand);font-weight:600}\n\nul{margin:6px 0;padding-left:18px}\nli{margin:3px 0}\n.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px 30px}\n.wk-sub{font-size:12.5px;font-weight:600;color:var(--ink);margin:18px 0 8px}\n.wk-sub2{font-size:12px;font-weight:500;color:var(--brand);margin-bottom:6px}\n.wk-recur{margin-top:14px;font-size:12.5px;color:var(--ink-2);line-height:1.8}\n.wk-recur b{color:var(--brand);font-weight:600}\n.empty{color:var(--muted);font-size:12.5px;padding:4px 0}\n\n/* 折叠块在导出稿里全部展开，标题退化成分组小标题 */\ndetails>summary{display:block;cursor:default;list-style:none}\ndetails>summary::-webkit-details-marker{display:none}\ndetails>summary h3{margin:0 0 18px}\nsummary .tag{font-size:11px;font-weight:400;color:var(--muted);margin-left:2px}\nsummary .tag::before{content:\"·\";margin-right:6px;color:#c2ccc7}\n\n/* 每日日报原文 */\n.wk-day{border-top:1px solid var(--line-2);padding:13px 0 3px}\n.wk-day:first-of-type{border-top:0;padding-top:0}\n.wk-day-head{font-size:12.5px;font-weight:600;color:var(--brand);margin-bottom:8px}\n.wk-day-empty{color:var(--muted);font-size:11px;margin-left:8px;font-weight:400}\n.wk-day-row{display:flex;gap:12px;font-size:12.5px;padding:2px 0;line-height:1.75}\n.wk-day-row b{flex:0 0 66px;color:var(--muted);font-weight:400;font-size:11.5px;padding-top:2px}\n.wk-day-row span{color:var(--ink-2);min-width:0;white-space:pre-wrap}\n\n/* 方法速查 */\n.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 30px}\n.method{border:0;border-left:2px solid var(--line);background:none;border-radius:0;padding:0 0 0 13px}\n.method h4{margin:0 0 3px;font-size:12px;font-weight:600;color:var(--ink)}\n.method p{margin:0;font-size:12px;color:var(--muted);line-height:1.7}\n\n@media (max-width:900px){\n  .wk-kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .grid2,.method-grid{grid-template-columns:1fr}\n}\n@media (max-width:700px){\n  .page{padding:22px 18px 32px;min-height:0}\n  .doc-head h1{font-size:18px}\n  body{font-size:12.5px}\n}\n@media print{\n  body{background:#fff}\n  .page{max-width:none;padding:0;min-height:0}\n  .wk-card{break-inside:avoid;page-break-inside:avoid}\n  thead{display:table-header-group}\n  table{font-size:10.5px}\n  .tmpl,.fb,.method{break-inside:avoid}\n}\n\n/* 精简版新增：概览脚注、方案清单行 */\n.wk-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.75}\n.wk-row-k{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:12.5px;line-height:1.8}\n.wk-row-k:last-of-type{border-bottom:0}\n.wk-row-k b{flex:0 0 62px;color:var(--brand);font-weight:600;font-size:12px;padding-top:1px}\n.wk-row-k span{color:var(--ink-2);min-width:0}\n.wk-row-k .wk-blank{color:var(--muted)}\n\n/* ④⑤ 可编辑笔记：导出后为静态文本 */\n.wk-ai-btn{display:none}\n.wk-facts{border-left:2px solid #d3e6dd;background:#f5faf8;border-radius:0 8px 8px 0;padding:9px 12px;margin-bottom:12px;font-size:11.5px;line-height:1.8}\n.wk-facts-h{color:var(--muted);font-size:10.5px;margin-bottom:4px;letter-spacing:.02em}\n.wk-facts-row{color:var(--ink-2);word-break:break-word}\n.wk-facts-row + .wk-facts-row{margin-top:3px}\n.wk-facts-row b{color:var(--brand);font-weight:600;margin-right:4px}\n.wk-note-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}\n.wk-field{display:flex;flex-direction:column;gap:4px;min-width:0}\n.wk-field > span{font-size:11px;color:var(--brand);font-weight:600;letter-spacing:.02em}\n.wk-field-plan{margin-top:12px}\n.wk-note-static{font-size:12.5px;line-height:1.85;color:var(--ink-2);padding:8px 11px;background:var(--soft);border-radius:8px;white-space:pre-wrap;word-break:break-word}\n.wk-note-static-empty{color:#a3ada8}\n\n/* 图标体系：内联 SVG，无外链；分区徽标 / KPI / 涨跌箭头 / 迷你走势线 */\n.doc-head h1{display:flex;align-items:center;gap:9px}\n.doc-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:26px;height:26px;border-radius:8px;\n  background:var(--brand);color:#fff;flex:0 0 auto;\n}\n.ico{display:inline-block;vertical-align:-2px;flex:0 0 auto}\n.wk-ico{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:22px;height:22px;border-radius:7px;\n  background:var(--brand-soft);color:var(--brand);flex:0 0 auto;\n}\n.wk-ico-warn{background:#fdf0f0;color:var(--up)}\n.wk-card h3::before{content:none}\n.kv-ico{color:var(--brand);margin-right:4px}\n.kv-ico.warn{color:var(--up)}\n.th-l{display:block}\n.spark{display:block;margin:4px 0 0 auto;color:var(--muted)}\ntable.tbl-daily{table-layout:fixed}\ntable.tbl-daily th:first-child,table.tbl-daily td:first-child{width:104px}\n.spark .ln{stroke:currentColor;stroke-width:1.4;fill:none;stroke-opacity:.5;stroke-linecap:round;stroke-linejoin:round}\n.spark-dot.up{fill:var(--up)}\n.spark-dot.down{fill:var(--down)}\n.spark-dot.flat{fill:var(--muted)}\n.ar{font-style:normal;font-size:8px;line-height:1;display:inline-block;width:7px;margin-left:2px;text-align:center;vertical-align:1px;opacity:.95}\ntd.mov{color:var(--up)}\n.row-alert{color:var(--up);margin-right:5px;vertical-align:-2px}\n@media print{\n  .wk-ico,.doc-ico,.spark{-webkit-print-color-adjust:exact;print-color-adjust:exact}\n}";
+  var EXPORT_CSS = ":root{\n  --ink:#131b18;--ink-2:#3a453f;--muted:#6c7873;\n  --line:#e4e9e6;--line-2:#eff3f1;--soft:#f5f8f6;\n  --brand:#0d6b4c;--brand-2:#0a5238;--brand-soft:#eff7f2;\n  --up:#c0392b;--down:#12805c;--danger:#c0392b;--amber:#a86400;\n  --text:#131b18;--panel-2:#ffffff;--panel-soft:#f5f8f6;--line-bright:#e4e9e6;\n  --accent-rgb:13 107 76;--accent-300:#0d6b4c;--accent-400:#12805c;--accent-500:#0d6b4c;\n}\n*{box-sizing:border-box}\nhtml,body{margin:0;padding:0}\nbody{\n  background:#e9edeb;color:var(--ink);\n  font:13px/1.72 -apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;\n  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;\n}\n.page{\n  max-width:1080px;margin:26px auto;background:#fff;border-radius:18px;overflow:hidden;\n  box-shadow:0 1px 2px rgba(19,27,24,.06),0 12px 34px rgba(19,27,24,.09);\n}\n\n/* ============ 封面横幅 ============ */\n.rpt-hero{\n  position:relative;overflow:hidden;color:#fff;\n  padding:32px 44px 30px;\n  background:\n    radial-gradient(120% 140% at 100% 0%,rgba(255,255,255,.18),rgba(255,255,255,0) 58%),\n    linear-gradient(132deg,#093f2c 0%,#0d6b4c 54%,#12815b 100%);\n}\n.rpt-hero::after{\n  content:\"\";position:absolute;right:-90px;bottom:-140px;width:300px;height:300px;border-radius:50%;\n  background:rgba(255,255,255,.04);pointer-events:none;\n}\n.rpt-hero-top{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;z-index:1}\n.rpt-tag{\n  display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.08em;\n  padding:3px 11px;border-radius:20px;color:#dff3ea;\n  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);\n}\n.rpt-tag::before{content:\"\";width:5px;height:5px;border-radius:50%;background:#7ee0b0}\n.rpt-org{font-size:11px;color:rgba(255,255,255,.62);letter-spacing:.03em}\n.rpt-hero h1{\n  position:relative;z-index:1;margin:16px 0 0;font-size:27px;line-height:1.3;font-weight:600;\n  letter-spacing:-.015em;\n}\n.rpt-hero-meta{\n  position:relative;z-index:1;margin-top:9px;display:flex;flex-wrap:wrap;gap:6px 22px;\n  font-size:12px;color:rgba(255,255,255,.72);\n}\n.rpt-hero-meta b{color:#fff;font-weight:500}\n\n/* 四张核心 KPI */\n.rpt-kpis{\n  position:relative;z-index:1;margin-top:22px;\n  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;\n}\n.rpt-kpi{\n  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);\n  border-radius:12px;padding:12px 14px 11px;\n}\n.rpt-kpi-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11.5px;color:rgba(255,255,255,.78)}\n.rpt-kpi-h span{font-size:10.5px;color:rgba(255,255,255,.52);white-space:nowrap}\n.rpt-kpi-v{margin-top:3px;font-size:26px;font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums;letter-spacing:-.01em}\n.rpt-kpi-v i{font-style:normal;font-size:13px;font-weight:500;opacity:.72;margin-left:1px}\n.rpt-kpi-d{margin-top:1px;font-size:11.5px;color:rgba(255,255,255,.72)}\n.rpt-kpi-d.is-bad{color:#ffb0a3}\n.rpt-kpi-d.is-good{color:#8ae6bd}\n.rpt-kpi-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.16);margin-top:9px;overflow:hidden}\n.rpt-kpi-bar span{display:block;height:100%;border-radius:2px;background:#7ee0b0}\n.rpt-kpi.is-bad .rpt-kpi-bar span{background:#ff9d8d}\n.rpt-kpi-n{margin-top:5px;font-size:10.5px;color:rgba(255,255,255,.55)}\n.rpt-kpi.is-bad .rpt-kpi-n{color:#ffc4ba}\n\n/* ============ 执行摘要 ============ */\n.rpt-body{padding:26px 44px 28px}\n.rpt-brief{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}\n.rpt-brief-h{\n  display:flex;align-items:center;gap:9px;padding:11px 18px;\n  background:var(--soft);border-bottom:1px solid var(--line);\n  font-size:12px;font-weight:600;color:var(--ink);letter-spacing:.02em;\n}\n.rpt-brief-h em{font-style:normal;font-size:10.5px;font-weight:400;color:var(--muted);letter-spacing:.04em}\n.rpt-brief-item{display:flex;gap:14px;padding:13px 18px;border-bottom:1px solid var(--line-2)}\n.rpt-brief-item:last-child{border-bottom:0}\n.rpt-brief-k{\n  flex:0 0 52px;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--brand);\n  padding-top:1px;\n}\n.rpt-brief-item.is-risk .rpt-brief-k{color:var(--up)}\n.rpt-brief-item.is-next .rpt-brief-k{color:var(--amber)}\n.rpt-brief-t{font-size:12.5px;line-height:1.85;color:var(--ink-2);min-width:0}\n.rpt-brief-t b{color:var(--ink);font-weight:600}\n.rpt-brief-t .hi{color:var(--up);font-weight:600}\n.rpt-brief-t .ok{color:var(--down);font-weight:600}\n\n/* ============ 分区卡片 ============ */\n.wk-head{display:none}\n.wb-weekly{display:block;margin-top:18px}\n.wk-card{\n  background:#fff;border:1px solid var(--line);border-radius:14px;\n  padding:18px 20px 16px;margin:0 0 14px;\n}\n.wk-card--sum{background:linear-gradient(180deg,#f7fbf9,#fff 120px)}\n.wk-card--warn{border-color:#f0d8d3;background:linear-gradient(180deg,#fdf8f7,#fff 150px)}\n.wk-card--note{border-color:#d9e8e0;background:linear-gradient(180deg,#f8fcfa,#fff 130px)}\n.wk-card h3{\n  margin:0 0 14px;font-size:15px;font-weight:600;color:var(--ink);\n  display:flex;align-items:center;gap:9px;flex-wrap:wrap;letter-spacing:-.005em;\n}\n.wk-card h3 .wk-ico{display:none}\n.wk-card h3::before{content:none}\n.rpt-no{\n  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;\n  width:22px;height:22px;border-radius:7px;cursor:default;\n  background:var(--brand);color:#fff;font-style:normal;font-size:12px;font-weight:600;\n}\n.wk-card--warn .rpt-no{background:var(--up)}\n.wk-card h3 .tag{\n  margin-left:auto;font-size:11px;font-weight:400;color:var(--muted);\n  background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:1px 10px;\n  letter-spacing:.01em;\n}\n.wk-card h3 .tag::before{content:none}\n\n/* ① 概览：四格数据条 */\n.wk-kv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:2px 0 4px}\n.kv{display:flex;flex-direction:column-reverse;gap:2px;padding:0 20px;border-left:1px solid var(--line);min-width:0}\n.kv:first-child{border-left:0;padding-left:2px}\n.kv span{font-size:11.5px;color:var(--muted);letter-spacing:.01em;white-space:nowrap}\n.kv b{font-size:23px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.35}\n.kv b.up{color:var(--up)}\n.wk-note{margin-top:12px;font-size:11.5px;color:var(--muted);line-height:1.7}\n\n/* ============ 表格 ============ */\n.wk-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}\ntable{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}\nthead th{\n  background:var(--soft);color:var(--muted);font-weight:500;font-size:11px;\n  padding:8px 11px;text-align:left;white-space:nowrap;letter-spacing:.02em;\n  border-bottom:1px solid var(--line);\n}\nthead th:first-child{border-radius:8px 0 0 0}\nthead th:last-child{border-radius:0 8px 0 0}\ntbody td{\n  padding:7px 11px;border-bottom:1px solid var(--line-2);white-space:nowrap;color:var(--ink-2);\n  font-variant-numeric:tabular-nums;\n}\ntbody td:first-child{color:var(--ink);font-weight:600}\ntbody tr.grp td{border-top:1px solid var(--line)}\ntbody tr.grp:first-child td{border-top:0}\ntbody tr:last-child td{border-bottom:0}\ntd.num{text-align:right}\ntd.bad{color:var(--up);font-weight:600}\ntd.mov{color:var(--up);font-weight:600}\n.up{color:var(--up)}\n.down{color:var(--down)}\n.flat{color:var(--muted)}\n.wk-wd{color:var(--muted);font-size:10.5px;margin-left:3px;font-weight:400}\n.wk-target{color:var(--muted);font-size:10.5px;font-weight:400}\n.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:5px;background:#f2f5f3;color:var(--muted);margin-right:6px;vertical-align:1px}\n.badge.drop{color:var(--up);background:#fdf0f0}\n.ar{font-style:normal;font-size:9px;line-height:1;display:inline-block;width:9px;margin-left:2px;text-align:center;vertical-align:1px;opacity:.95}\n.row-alert{color:var(--up);margin-right:5px;vertical-align:-2px}\n.th-l{display:block}\n\n/* ============ 文本块 / 反馈 ============ */\n.wk-q{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px;color:var(--ink-2);line-height:1.8}\n.wk-q:last-of-type{border-bottom:0}\n.wk-q b{color:var(--ink);font-weight:600}\n.fb{border-left:3px solid #d6e7de;padding:2px 0 2px 14px;margin:0 0 12px;font-size:12.5px;color:var(--ink-2);line-height:1.8}\n.fb .dt{color:var(--muted);font-size:11px;margin-bottom:2px}\n.fb.muted{color:var(--muted);border-left-color:var(--line)}\n.tmpl{background:var(--brand-soft);border-radius:10px;padding:12px 15px;font-size:12.5px;color:var(--ink-2);line-height:1.85;margin-top:12px}\n.tmpl b{color:var(--brand);font-weight:600}\nul{margin:6px 0;padding-left:18px}\nli{margin:3px 0}\n.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px 30px}\n.wk-sub{font-size:12.5px;font-weight:600;color:var(--ink);margin:18px 0 8px}\n.wk-sub2{font-size:12px;font-weight:600;color:var(--brand);margin-bottom:6px}\n.wk-recur{margin-top:14px;font-size:12.5px;color:var(--ink-2);line-height:1.85}\n.wk-recur b{color:var(--brand);font-weight:600}\n.empty{color:var(--muted);font-size:12.5px;padding:4px 0}\n.wk-row-k{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:12.5px;line-height:1.8}\n.wk-row-k:last-of-type{border-bottom:0}\n.wk-row-k b{flex:0 0 62px;color:var(--brand);font-weight:600;font-size:12px;padding-top:1px}\n.wk-row-k span{color:var(--ink-2);min-width:0}\n.wk-row-k .wk-blank{color:var(--muted)}\n\n/* ============ ④ 事实底稿 ============ */\n.wk-facts{border-left:3px solid rgb(var(--accent-rgb) / .38);background:var(--brand-soft);border-radius:0 10px 10px 0;padding:11px 14px;margin-bottom:13px;font-size:12px;line-height:1.8}\n.wk-facts-h{color:var(--brand);font-size:10.5px;margin-bottom:5px;letter-spacing:.05em;font-weight:600}\n.wk-facts-row{color:var(--ink-2);word-break:break-word}\n.wk-facts-row + .wk-facts-row{margin-top:3px}\n.wk-facts-row b{color:var(--ink);font-weight:600;margin-right:4px}\n\n/* ============ ⑤ 三列方案 ============ */\n.wk-note-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}\n.wk-field{display:flex;flex-direction:column;gap:0;min-width:0}\n.wk-note-grid .wk-field{\n  background:#fff;border:1px solid var(--line);border-radius:11px;\n  border-top-width:3px;border-top-style:solid;padding:11px 13px 12px;\n}\n.wk-note-grid .wk-field:nth-child(1){border-top-color:#c0392b}\n.wk-note-grid .wk-field:nth-child(2){border-top-color:var(--brand)}\n.wk-note-grid .wk-field:nth-child(3){border-top-color:#2f6f9f}\n.wk-field > span{font-size:11px;font-weight:600;color:var(--brand);letter-spacing:.06em;margin-bottom:6px}\n.wk-note-grid .wk-field:nth-child(1) > span{color:#c0392b}\n.wk-note-grid .wk-field:nth-child(3) > span{color:#2f6f9f}\n.wk-field-plan{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px 13px}\n.wk-note-static{font-size:12.5px;line-height:1.9;color:var(--ink-2);white-space:pre-wrap;word-break:break-word}\n/* ④ 的思考正文是卡片直属块，单独给一个浅底容器与上方事实底稿拉开层次 */\n.wk-card--note > .wk-note-static{\n  background:#f7faf8;border-left:3px solid rgb(var(--accent-rgb) / .32);\n  border-radius:0 9px 9px 0;padding:10px 14px;margin-top:2px;\n}\n.wk-note-static-empty{color:#a9b3ae}\n.wk-ai-btn{display:none}\n\n/* ============ 日报原文 / 方法速查 ============ */\ndetails>summary{display:block;cursor:default;list-style:none}\ndetails>summary::-webkit-details-marker{display:none}\n.wk-day{border-top:1px solid var(--line-2);padding:13px 0 3px}\n.wk-day:first-of-type{border-top:0;padding-top:0}\n.wk-day-head{font-size:12.5px;font-weight:600;color:var(--brand);margin-bottom:8px}\n.wk-day-empty{color:var(--muted);font-size:11px;margin-left:8px;font-weight:400}\n.wk-day-row{display:flex;gap:12px;font-size:12.5px;padding:2px 0;line-height:1.8}\n.wk-day-row b{flex:0 0 66px;color:var(--muted);font-weight:400;font-size:11.5px;padding-top:2px}\n.wk-day-row span{color:var(--ink-2);min-width:0;white-space:pre-wrap}\n.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 30px}\n.method{border-left:2px solid var(--line);padding:0 0 0 13px}\n.method h4{margin:0 0 3px;font-size:12px;font-weight:600;color:var(--ink)}\n.method p{margin:0;font-size:12px;color:var(--muted);line-height:1.7}\n\n/* ============ 图标 / 走势 ============ */\n.ico{display:inline-block;vertical-align:-2px;flex:0 0 auto}\n.wk-ico{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--brand-soft);color:var(--brand);flex:0 0 auto}\n.wk-ico-warn{background:#fdf0f0;color:var(--up)}\n.kv-ico{color:var(--brand);margin-right:4px}\n.kv-ico.warn{color:var(--up)}\n.spark{display:block;margin:3px 0 0 auto;color:#9fb3a9}\n.spark .ln{stroke:currentColor;stroke-width:1.4;fill:none;stroke-opacity:.75;stroke-linecap:round;stroke-linejoin:round}\n.spark-dot.up{fill:var(--up)}\n.spark-dot.down{fill:var(--down)}\n.spark-dot.flat{fill:var(--muted)}\ntable.tbl-daily{table-layout:fixed}\ntable.tbl-daily th:first-child,table.tbl-daily td:first-child{width:104px}\n\n/* ============ 页脚 ============ */\n.rpt-foot{\n  margin-top:22px;padding-top:13px;border-top:1px solid var(--line);\n  color:#9aa6a1;font-size:11px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;\n}\n\n/* ============ 响应式 ============ */\n@media screen and (max-width:900px){\n  .rpt-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .wk-kv-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 0}\n  .kv{padding:0 16px}\n  .kv:nth-child(3){border-left:0;padding-left:2px}\n  .grid2,.method-grid,.wk-note-grid{grid-template-columns:1fr}\n}\n@media screen and (max-width:640px){\n  .page{margin:0;border-radius:0;box-shadow:none}\n  .rpt-hero{padding:24px 20px 22px}\n  .rpt-hero h1{font-size:21px}\n  .rpt-body{padding:18px 16px 20px}\n  .rpt-kpis{grid-template-columns:1fr 1fr;gap:9px}\n  .rpt-kpi-v{font-size:22px}\n  .wk-card{padding:15px 14px 13px}\n}\n\n/* ============ 打印 / 另存 PDF ============ */\n@media print{\n  @page{size:A4;margin:11mm}\n  body{background:#fff}\n  .page{max-width:none;margin:0;border-radius:0;box-shadow:none}\n  .rpt-hero,.rpt-kpi,.wk-card,.wk-facts,.wk-ico,.rpt-no{\n    -webkit-print-color-adjust:exact;print-color-adjust:exact;\n  }\n  .wk-card{break-inside:avoid;page-break-inside:avoid;margin-bottom:10px}\n  thead{display:table-header-group}\n  table{font-size:10.5px}\n  .rpt-hero{padding:22px 26px 20px}\n  .rpt-body{padding:16px 26px 18px}\n  .rpt-hero h1{font-size:22px}\n  .rpt-kpi-v{font-size:21px}\n  .rpt-brief,.fb,.method,.wk-field{break-inside:avoid}\n}";
 
-  function buildHtmlDoc(rangeLabel, keyShopCount, bodyHtml) {
+  /* ---------- 汇报稿增强：封面 KPI 横幅 + 执行摘要 ---------- */
+  function aggMetric(an, key) {
+    var mt = null, rows = [];
+    METRICS.forEach(function (m) { if (m.key === key) { mt = m; } });
+    if (!mt) { return null; }
+    an.metricStatus.forEach(function (r) { if (r.key === key) { rows.push(r); } });
+    if (!rows.length) { return null; }
+    var avg = 0, first = 0, last = 0;
+    rows.forEach(function (r) { avg += r.avg; first += r.first; last += r.last; });
+    var n = rows.length;
+    avg /= n; first /= n; last /= n;
+    var miss = mt.target == null ? 0 : rows.filter(function (r) {
+      return mt.higher === false ? r.avg > mt.target : r.avg < mt.target;
+    }).length;
+    return { mt: mt, avg: avg, first: first, last: last, delta: last - first, miss: miss, n: n };
+  }
+
+  function num2(v) {
+    if (v === null || v === undefined || !isFinite(v)) { return "—"; }
+    var s = (Math.round(v * 100) / 100).toFixed(2);
+    return s.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+  }
+
+  function nowLabel() {
     var n = new Date();
-    var ts = n.getFullYear() + "-" + pad2(n.getMonth() + 1) + "-" + pad2(n.getDate()) +
+    return n.getFullYear() + "-" + pad2(n.getMonth() + 1) + "-" + pad2(n.getDate()) +
       " " + pad2(n.getHours()) + ":" + pad2(n.getMinutes());
+  }
+
+  function shortShop(name) {
+    var s = String(name || "");
+    var m = s.match(/（([^）]*)）/);
+    var tail = m ? m[1] : "";
+    s = s.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "")
+      .replace(/(旗舰店|专营店|专卖店|企业店|官方店)$/g, "").replace(/官方$/g, "");
+    return (s + (tail ? "·" + tail : "")).trim();
+  }
+
+  function buildHero(an, data, rangeLabel) {
+    var picks = ["adoptionRate", "generationRate", "pureAgentRatio", "riskRate"];
+    var tiles = [];
+    picks.forEach(function (k) {
+      var g = aggMetric(an, k);
+      if (!g) { return; }
+      var mt = g.mt;
+      var bad = mt.target != null && g.miss > 0;
+      var w = 100;
+      if (mt.target != null) {
+        w = mt.higher === false ? (mt.target / (g.avg || 0.001) * 100) : (g.avg / mt.target * 100);
+        w = Math.max(4, Math.min(100, w));
+      }
+      var worse = mt.higher === false ? (g.delta > 0.005) : (g.delta < -0.005);
+      var better = mt.higher === false ? (g.delta < -0.005) : (g.delta > 0.005);
+      var dCls = worse ? "is-bad" : (better ? "is-good" : "");
+      var dTxt = g.delta > 0.005 ? "上升 " + num2(Math.abs(g.delta)) + (mt.unit === "%" ? "pct" : "")
+        : (g.delta < -0.005 ? "下降 " + num2(Math.abs(g.delta)) + (mt.unit === "%" ? "pct" : "") : "与首日持平");
+      tiles.push('<div class="rpt-kpi' + (bad ? " is-bad" : "") + '">' +
+        '<div class="rpt-kpi-h">' + esc(mt.label) +
+        (mt.target != null ? '<span>目标 ' + (mt.higher === false ? "≤" : "≥") + mt.target + (mt.unit === "%" ? "%" : "") + '</span>' : '') +
+        '</div>' +
+        '<div class="rpt-kpi-v">' + num2(g.avg) + (mt.unit === "%" ? '<i>%</i>' : '') + '</div>' +
+        '<div class="rpt-kpi-d ' + dCls + '">' + dTxt + '</div>' +
+        '<div class="rpt-kpi-bar"><span style="width:' + Math.round(w) + '%"></span></div>' +
+        '<div class="rpt-kpi-n">' + (mt.target == null ? "覆盖 " + g.n + " 家"
+          : (bad ? g.miss + " / " + g.n + " 家未达标" : g.n + " 家全部达标")) + '</div>' +
+        '</div>');
+    });
+    return '<header class="rpt-hero">' +
+      '<div class="rpt-hero-top"><span class="rpt-tag">拼多多客服 AI · 周度复盘</span>' +
+      '<span class="rpt-org">数据来源：探域 + 拼多多后台</span></div>' +
+      '<h1>客服 AI 运营周报</h1>' +
+      '<div class="rpt-hero-meta">' +
+      '<span>周期 <b>' + esc(rangeLabel) + '</b></span>' +
+      '<span>重点店铺 <b>' + data.keyShops.length + '</b> 家</span>' +
+      '<span>覆盖 <b>' + data.dayKeys.length + '</b> 天</span>' +
+      '<span>生成于 ' + nowLabel() + '</span>' +
+      '</div>' +
+      '<div class="rpt-kpis">' + tiles.join("") + '</div>' +
+      '</header>';
+  }
+
+  function buildBrief(an, data, notes) {
+    var adp = aggMetric(an, "adoptionRate"), gen = aggMetric(an, "generationRate"),
+      pure = aggMetric(an, "pureAgentRatio"), risk = aggMetric(an, "riskRate");
+    var missLabels = [];
+    [adp, gen, pure, risk].forEach(function (g) {
+      if (g && g.mt.target != null && g.miss > 0) { missLabels.push(g.mt.label + "（" + g.miss + " 家未达标）"); }
+    });
+    var t1 = "重点店 <b>" + data.keyShops.length + "</b> 家";
+    if (missLabels.length) {
+      t1 += "本周 <span class=\"hi\">" + missLabels.length + " 项核心指标未达标</span>：" + missLabels.join("、") + "。";
+    } else {
+      t1 += "核心指标<span class=\"ok\">全部达标</span>。";
+    }
+    if (adp && adp.delta < -0.005) {
+      t1 += "采纳率由 " + num2(adp.first) + "% 降至 <span class=\"hi\">" + num2(adp.last) + "%</span>（" +
+        num2(Math.abs(adp.delta)) + "pct）";
+      if (pure && pure.delta < -0.005) {
+        t1 += "，纯智能体占比同步由 " + num2(pure.first) + "% 降至 " + num2(pure.last) + "%";
+      }
+      t1 += "。";
+    }
+    var items = [{ k: "结论", t: t1 }];
+
+    // 每个店只取下滑幅度最大的一项，避免「同一家店同一指标」重复占位
+    var byShop = {}, order = [];
+    an.drops.forEach(function (x) {
+      if (!byShop[x.shop] || Math.abs(x.delta) > Math.abs(byShop[x.shop].delta)) { byShop[x.shop] = x; }
+      if (order.indexOf(x.shop) < 0) { order.push(x.shop); }
+    });
+    var ds = order.map(function (s) { return byShop[s]; })
+      .sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); }).slice(0, 3);
+    if (ds.length) {
+      items.push({
+        k: "风险", cls: "is-risk",
+        t: "下滑幅度最大：" + ds.map(function (x) {
+          return "<b>" + esc(shortShop(x.shop)) + "</b> " + esc(x.label) + " " +
+            (x.delta > 0 ? "+" : "-") + num2(Math.abs(x.delta)) + (x.unit === "%" ? "pct" : "");
+        }).join("；") + "。共 <span class=\"hi\">" + an.drops.length + " 项</span>指标环比走弱。"
+      });
+    }
+
+    var plan = String((notes && notes.plan) || "").split(/\n+/).filter(function (s) { return String(s).trim(); })[0] || "";
+    plan = plan.replace(/^\s*\d+[.、)）]\s*/, "").trim();
+    if (!plan) {
+      plan = (gen && gen.mt.target != null && gen.avg < gen.mt.target)
+        ? "优先补齐未生成话术场景，把生成率从 " + num2(gen.avg) + "% 拉回 " + gen.mt.target + "% 以上，并盯住采纳率最低的 2 家门店。"
+        : "维持现有配置，盯住下滑项，下周同区间复查是否回到目标线。";
+    }
+    items.push({ k: "下一步", cls: "is-next", t: esc(plan) });
+
+    return '<div class="rpt-brief"><div class="rpt-brief-h">执行摘要 <em>结论 · 风险 · 下一步</em></div>' +
+      items.map(function (it) {
+        return '<div class="rpt-brief-item ' + (it.cls || "") + '"><div class="rpt-brief-k">' + it.k + '</div>' +
+          '<div class="rpt-brief-t">' + it.t + '</div></div>';
+      }).join("") + '</div>';
+  }
+
+  // 编号徽标：把 h3 文本开头的 ①②③ 抠出来做色块，卡片按编号上色
+  function decorateCards(root) {
+    var cards = root.querySelectorAll(".wk-card");
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      var h = card.querySelector("h3");
+      var no = "";
+      if (h) {
+        var tn = null;
+        for (var c = 0; c < h.childNodes.length; c++) {
+          var nd = h.childNodes[c];
+          if (nd.nodeType === 3 && /[①②③④⑤⑥⑦⑧⑨]/.test(nd.nodeValue)) { tn = nd; break; }
+        }
+        if (tn) {
+          var m = String(tn.nodeValue).match(/([①②③④⑤⑥⑦⑧⑨])\s*/);
+          if (m) {
+            no = m[1];
+            tn.nodeValue = String(tn.nodeValue).replace(m[0], "");
+            var pill = document.createElement("i");
+            pill.className = "rpt-no";
+            pill.textContent = no;
+            h.insertBefore(pill, h.firstChild);
+            while (h.firstChild && h.firstChild.nodeType === 3 && !String(h.firstChild.nodeValue).trim()) {
+              h.removeChild(h.firstChild);
+            }
+          }
+        }
+      }
+      if (no === "①") { card.className += " wk-card--sum"; }
+      else if (no === "③") { card.className += " wk-card--warn"; }
+      else if (no === "④" || no === "⑤") { card.className += " wk-card--note"; }
+    }
+  }
+
+  function buildHtmlDoc(rangeLabel, keyShopCount, bodyHtml, hero, brief) {
+    var ts = nowLabel();
     return [
       "<!DOCTYPE html>",
       '<html lang="zh-CN">',
       "<head>",
       '<meta charset="utf-8">',
       '<meta name="viewport" content="width=device-width,initial-scale=1">',
-      "<title>周度复盘 " + esc(rangeLabel) + "</title>",
+      "<title>客服 AI 运营周报 " + esc(rangeLabel) + "</title>",
       "<style>\n" + EXPORT_CSS + "\n</style>",
       "</head>",
       "<body>",
       '<div class="page">',
-      '<div class="doc-head">',
-      '<h1><span class="doc-ico">' + ico("chart", "", 16) + '</span>客服 AI 周度复盘</h1>',
-      '<p class="meta">周期 ' + esc(rangeLabel) + " · 重点店铺 " + keyShopCount + " 家 · 生成于 " + ts + "</p>",
-      "</div>",
+      hero || "",
+      '<div class="rpt-body">',
+      brief || "",
       '<div class="wb-weekly">',
       bodyHtml,
       "</div>",
-      '<div class="foot">由「拼多多客服 AI 数据驾驶舱 · 周度复盘」生成 · 数据来源：探域 + 拼多多后台</div>',
+      '<div class="rpt-foot"><span>拼多多客服 AI 数据驾驶舱 · 周度复盘</span>' +
+      '<span>数据来源：探域 + 拼多多后台 · 生成于 ' + ts + '</span></div>',
+      "</div>",
       "</div>",
       "</body>",
       "</html>"
@@ -845,6 +1016,13 @@
     var a0 = data.dayKeys[0] || start || "";
     var a1 = data.dayKeys[data.dayKeys.length - 1] || end || "";
     var rangeLabel = a0 + " ~ " + a1;
+    var an = analyze(data);
+    // 覆盖前先取输入框当前值（执行摘要的「下一步」直接用下周计划首行）
+    var notes = {};
+    var ntas = el.querySelectorAll("textarea[data-note]");
+    for (var ni = 0; ni < ntas.length; ni++) {
+      notes[ntas[ni].getAttribute("data-note")] = String(ntas[ni].value || "").trim();
+    }
     // 展开所有折叠块，收件人直接看到全部内容
     var body = el.innerHTML.replace(/<details(?![^>]*\sopen[\s=>])/g, "<details open");
     // 发给他人时剔除「自己看」的内容：全店明细、方法速查、日报里的配置总结/本周重点
@@ -852,6 +1030,7 @@
     tmp.innerHTML = body;
     var skips = tmp.querySelectorAll("[data-skip-export]");
     for (var si = 0; si < skips.length; si++) { if (skips[si].parentNode) { skips[si].parentNode.removeChild(skips[si]); } }
+    decorateCards(tmp);
     var dropRows = tmp.querySelectorAll('.wk-day-row[data-row="sum"], .wk-day-row[data-row="focus"]');
     for (var di = 0; di < dropRows.length; di++) { if (dropRows[di].parentNode) { dropRows[di].parentNode.removeChild(dropRows[di]); } }
     // 可编辑框 → 静态文本；去掉「保存中」提示与 AI 按钮
@@ -866,10 +1045,30 @@
     }
     var tips = tmp.querySelectorAll(".wk-note-save, [data-wk-draft]");
     for (var pi = 0; pi < tips.length; pi++) { if (tips[pi].parentNode) { tips[pi].parentNode.removeChild(tips[pi]); } }
+    // 没填的框不发出去（汇报稿里「未填写」比留白更难看）：空格连同外层一起去掉，整卡全空就整卡去掉
+    var empt = tmp.querySelectorAll("[data-wk-note] .wk-note-static-empty");
+    for (var ei = 0; ei < empt.length; ei++) {
+      var en = empt[ei];
+      var fld = en.closest ? en.closest(".wk-field") : null;
+      var gon = fld || en;
+      if (gon.parentNode) { gon.parentNode.removeChild(gon); }
+    }
+    var ncs = tmp.querySelectorAll("[data-wk-note]");
+    for (var ci = 0; ci < ncs.length; ci++) {
+      if (!ncs[ci].querySelector(".wk-note-static")) {
+        if (ncs[ci].parentNode) { ncs[ci].parentNode.removeChild(ncs[ci]); }
+      }
+    }
+    var grids = tmp.querySelectorAll(".wk-note-grid");
+    for (var gi = 0; gi < grids.length; gi++) {
+      var rest = grids[gi].children.length;
+      if (rest > 0 && rest < 3) { grids[gi].style.gridTemplateColumns = "repeat(" + rest + ",minmax(0,1fr))"; }
+      if (!rest && grids[gi].parentNode) { grids[gi].parentNode.removeChild(grids[gi]); }
+    }
     body = tmp.innerHTML;
     body = tidyTables(body);
     body = tidyEmptyDays(body);
-    var html = buildHtmlDoc(rangeLabel, data.keyShops.length, body);
+    var html = buildHtmlDoc(rangeLabel, data.keyShops.length, body, buildHero(an, data, rangeLabel), buildBrief(an, data, notes));
     var name = "周度复盘-" + (a0 || "x") + "_" + (a1 || "x") + ".html";
     var blob = new Blob([html], { type: "text/html;charset=utf-8" });
     var a = document.createElement("a");
