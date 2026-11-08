@@ -1644,6 +1644,9 @@
   var tgTotal = 0;
   var tgSel = {};
   var tgBusy = false;
+  var tgConf = "all";        // all | high | mid | low
+  var tgPending = null;      // 巡检缓存 { meta, counts }
+  var tgScanTimer = null;
 
   function tgJson(url, opt) {
     var o = { cache: "no-store" };
@@ -1659,25 +1662,38 @@
   function groupsLoad() {
     if (groupsLoading) { return Promise.resolve(); }
     groupsLoading = true;
-    return fetch(TG_HOST + "/tanyu-groups?t=" + Date.now(), { cache: "no-store" })
-      .then(function (r) { return r.json(); })
+    return tgJson("/tg/pending?page=1&size=1")
       .then(function (res) {
-        groupsCache = res || { meta: {}, list: [] };
         groupsLoading = false;
+        if (res && res.ok) {
+          tgPending = { meta: res.meta || {}, counts: res.counts || {} };
+          groupsCache = { meta: res.meta || {}, list: [] };
+        } else {
+          tgPending = null;
+          groupsCache = null;
+        }
         renderTgGroupList();
         updateTgMeta();
       })
       .catch(function () {
         groupsLoading = false;
-        groupsCache = { meta: {}, list: [] };
+        tgPending = null;
+        groupsCache = null;
         renderTgGroupList();
         updateTgMeta();
       });
   }
 
   function updateTgMeta() {
-    var n = ((groupsCache && groupsCache.list) || []).length;
-    tgNote("分组 " + tgGroups.length + " 个 · 待绑清单 " + n + " 条 · 直连探域");
+    var c = (tgPending && tgPending.counts) || null;
+    if (!c) {
+      tgNote("待绑清单未生成 · 点「↻ 重新巡检」生成（约 5~8 分钟）");
+      return;
+    }
+    var m = tgPending.meta || {};
+    tgNote("在售未绑 " + (c.total || 0) + " 条 · 高置信可直绑 " + (c.bindable || 0) +
+      " · 待确认 " + (c.mid || 0) + " · 无匹配 " + (c.low || 0) +
+      " ｜ 巡检 " + (m.generatedAt || "-"));
   }
 
   function tgLoadGroups(force) {
@@ -1799,6 +1815,20 @@
     var bb = $id("tgBindBtn");
     if (bb) { bb.addEventListener("click", openTgPicker); }
 
+    var ab = $id("tgAutoBindBtn");
+    if (ab) { ab.addEventListener("click", tgAutoBind); }
+
+    var rsb = $id("tgRescanBtn");
+    if (rsb) { rsb.addEventListener("click", tgRescan); }
+
+    var cft = $id("tgConf");
+    if (cft) {
+      cft.addEventListener("change", function () {
+        tgConf = cft.value; tgPage = 1; tgSel = {};
+        tgLoadProducts();
+      });
+    }
+
     var ub = $id("tgUnbindBtn");
     if (ub) { ub.addEventListener("click", tgUnbind); }
 
@@ -1864,9 +1894,11 @@
     var el = $id("tgGroupList");
     if (!el) { return; }
     var q = tgGroupQ;
-    var pendN = ((groupsCache && groupsCache.list) || []).length;
+    var pendN = (tgPending && tgPending.counts && tgPending.counts.total) || 0;
+    var hiN = (tgPending && tgPending.counts && tgPending.counts.bindable) || 0;
     var html = '<button class="tg-gitem tg-gitem-pend' + (tgMode === "pending" ? " active" : "") + '" data-mode="pending">' +
-      '<span class="tg-gname">📋 待绑商品</span><span class="tg-gnum">' + pendN + "</span></button>";
+      '<span class="tg-gname">📋 待绑商品' + (hiN ? ' <b class="tg-hi">' + hiN + ' 可直绑</b>' : '') + '</span>' +
+      '<span class="tg-gnum">' + pendN + "</span></button>";
 
     var gs = tgGroups.filter(function (g) {
       if (!q) { return true; }
@@ -1896,35 +1928,49 @@
     updateTgSelBar();
 
     if (tgMode === "pending") {
-      var list = ((groupsCache && groupsCache.list) || []).map(function (r, i) {
-        return {
-          spuId: String(r.spuId || r.id || r.spu || ("p" + i)),
-          title: r.title || "",
-          image: r.image || "",
-          shopName: r.shop || r.shopName || "",
-          thirdShopId: r.thirdShopId || "",
-          onSale: true,
-          heat7: r.heat7 != null ? r.heat7 : r.heat7d,
-          heat30: r.heat30 != null ? r.heat30 : r.heat30d,
-          groups: [],
-          suggest: r.suggestedGroup || r.targetGroup || "",
-          realName: r.name || r.realName || ""
-        };
+      var purl = "/tg/pending?page=" + tgPage + "&size=" + tgSize +
+        "&q=" + encodeURIComponent(tgProdQ) + "&conf=" + encodeURIComponent(tgConf) + "&sort=conf";
+      tgJson(purl).then(function (res) {
+        if (!res || !res.ok) {
+          tgRows = []; tgTotal = 0;
+          showGroupsEmpty(res && res.needScan
+            ? "待绑清单还没生成 · 点右侧「↻ 重新巡检」跑一次（约 5~8 分钟）"
+            : ("加载失败：" + ((res && res.error) || "未知错误")));
+          updateTgSelBar(); renderTgPager();
+          return;
+        }
+        tgPending = { meta: res.meta || {}, counts: res.counts || {} };
+        tgTotal = res.total || 0;
+        tgRows = (res.rows || []).map(function (r) {
+          return {
+            spuId: String(r.spuId),
+            title: r.title || "",
+            image: r.image || "",
+            shopName: r.shop || r.shopName || "",
+            thirdShopId: r.thirdShopId || "",
+            onSale: true,
+            price: r.price || "",
+            heat7: r.heat7, heat30: r.heat30,
+            groups: [],
+            suggest: r.groupName || "",
+            realName: r.outerId || "",
+            confidence: r.confidence || "low",
+            verdict: r.verdict || "",
+            reason: r.reason || "",
+            groupId: r.groupId || "",
+            name: r.name || "",
+            createdTime: r.createdTime || ""
+          };
+        });
+        tgRenderRows();
+        updateTgMeta();
+        renderTgGroupList();
+      }).catch(function (e) {
+        if (window.console) { console.error("[tg/pending] render failed", e); }
+        tgRows = []; tgTotal = 0;
+        showGroupsEmpty("连不上本机服务(8080) · 待绑巡检需在 http://127.0.0.1:8080/dashboard/ 打开");
+        updateTgSelBar(); renderTgPager();
       });
-      var q = tgProdQ.toLowerCase();
-      var f = list.filter(function (r) {
-        if (!q) { return true; }
-        return ((r.title || "") + " " + (r.shopName || "") + " " + (r.realName || "") + " " + (r.suggest || "")).toLowerCase().indexOf(q) >= 0;
-      });
-      f = f.filter(function (r) {
-        if (tgStatus === "on") { return r.onSale; }
-        if (tgStatus === "off") { return !r.onSale; }
-        return true;
-      });
-      tgTotal = f.length;
-      var start = (tgPage - 1) * tgSize;
-      tgRows = f.slice(start, start + tgSize);
-      tgRenderRows();
       return;
     }
 
@@ -1976,6 +2022,7 @@
     if (colG) { colG.textContent = tgMode === "pending" ? "建议归属" : "所属分组"; }
 
     var shown = tgRows.filter(function (r) {
+      if (tgMode === "pending") { return true; }
       if (tgStatus === "on") { return r.onSale; }
       if (tgStatus === "off") { return !r.onSale; }
       return true;
@@ -2000,7 +2047,18 @@
         ? '<span class="tg-dim">—</span>'
         : esc(String(r.heat7 == null ? "-" : r.heat7)) + ' <span class="tg-dim">/</span> ' + esc(String(r.heat30 == null ? "-" : r.heat30));
       var grp;
-      if (r.groups && r.groups.length) {
+      if (tgMode === "pending") {
+        var cf = r.confidence || "low";
+        var cfLabel = cf === "high" ? "高置信" : (cf === "mid" ? "待确认" : "无匹配");
+        var tip = esc(r.reason || "");
+        if (r.suggest) {
+          grp = '<span class="tg-conf tg-conf-' + cf + '">' + cfLabel + "</span>" +
+            '<span class="tg-tag tg-tag-sug" title="' + tip + '">' + esc(r.suggest) + "</span>";
+        } else {
+          grp = '<span class="tg-conf tg-conf-' + cf + '">' + cfLabel + "</span>" +
+            '<span class="tg-dim" title="' + tip + '">' + esc(r.reason || "无既有组") + "</span>";
+        }
+      } else if (r.groups && r.groups.length) {
         grp = r.groups.map(function (g) { return '<span class="tg-tag">' + esc(g.name) + "</span>"; }).join("");
       } else if (tgMode === "group") {
         grp = '<span class="tg-tag tg-tag-cur">' + esc(tgGname) + "</span>";
@@ -2053,6 +2111,8 @@
     if (si) { si.textContent = n ? ("已选 " + n + " 个") : "未选择商品"; }
     var bb = $id("tgBindBtn");
     if (bb) { bb.disabled = (n === 0 || tgBusy); }
+    var ab = $id("tgAutoBindBtn");
+    if (ab) { ab.disabled = !!tgBusy; }
     var ub = $id("tgUnbindBtn");
     if (ub) { ub.disabled = (n === 0 || tgBusy || tgMode !== "group"); }
   }
@@ -2166,6 +2226,141 @@
       tgBusy = false;
       tgNote(verb + "异常：" + (e.message || e));
       updateTgSelBar();
+    });
+  }
+
+  /* ---------- 高置信批量绑定（2026-11-08） ---------- */
+  function tgFetchAllHigh() {
+    var all = [], page = 1, size = 200;
+    function step() {
+      return tgJson("/tg/pending?bindable=1&page=" + page + "&size=" + size + "&sort=conf")
+        .then(function (res) {
+          if (!res || !res.ok) { return all; }
+          var rows = res.rows || [];
+          all = all.concat(rows);
+          if (all.length < (res.total || 0) && rows.length === size) { page++; return step(); }
+          return all;
+        });
+    }
+    return step();
+  }
+
+  function tgAutoBind() {
+    if (tgBusy) { return; }
+    tgNote("正在统计高置信商品…");
+    tgFetchAllHigh().then(function (rows) {
+      var items = rows.filter(function (r) { return r.groupId && r.spuId; })
+        .map(function (r) {
+          return { spuId: r.spuId, thirdShopId: r.thirdShopId, shopName: r.shop, groupId: r.groupId, groupName: r.groupName };
+        });
+      if (!items.length) {
+        updateTgMeta();
+        alert("当前没有「高置信 + 可直绑」的商品。\n\n可以先用「仅待确认」筛选，逐条人工拍板。");
+        return;
+      }
+      var byGroup = {};
+      items.forEach(function (r) { byGroup[r.groupName] = (byGroup[r.groupName] || 0) + 1; });
+      var gnames = Object.keys(byGroup).sort(function (a, b) { return byGroup[b] - byGroup[a]; });
+      var lines = gnames.slice(0, 12).map(function (k) { return "  " + k + "  ← " + byGroup[k] + " 条"; }).join("\n");
+      var more = gnames.length > 12 ? "\n  …共 " + gnames.length + " 个分组" : "";
+      var msg = "将把 " + items.length + " 个商品绑定到 " + gnames.length + " 个分组：\n\n" + lines + more +
+        "\n\n范围：在售 + 未绑任何分组 + 高置信（商品编码命中主组名）。\n" +
+        "逐条「读现有组 → 追加 → 回读校验」，不覆盖原有分组。\n\n确定执行？";
+      if (!confirm(msg)) { updateTgMeta(); return; }
+
+      var chunks = [];
+      for (var i = 0; i < items.length; i += 200) { chunks.push(items.slice(i, i + 200)); }
+      var okN = 0, failN = 0, fails = [], ci = 0;
+      tgBusy = true;
+      updateTgSelBar();
+
+      function next() {
+        if (ci >= chunks.length) { return Promise.resolve(); }
+        tgNote("批量绑定中… 第 " + (ci + 1) + "/" + chunks.length + " 批 ｜ 成功 " + okN + " · 失败 " + failN);
+        return tgJson("/tg/bind-auto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: chunks[ci] })
+        }).then(function (res) {
+          if (res && res.ok) {
+            okN += res.okCount || 0;
+            failN += res.failCount || 0;
+            (res.results || []).forEach(function (x) { if (!x.ok) { fails.push(x); } });
+          } else {
+            failN += chunks[ci].length;
+            fails.push({ spuId: "(整批)", msg: (res && res.error) || "批次失败" });
+          }
+          ci++;
+          return next();
+        }).catch(function (e) {
+          failN += chunks[ci].length;
+          fails.push({ spuId: "(整批)", msg: e.message || String(e) });
+          ci++;
+          return next();
+        });
+      }
+
+      next().then(function () {
+        tgBusy = false;
+        tgNote("批量绑定完成 · 成功 " + okN + " · 失败 " + failN);
+        tgSel = {};
+        updateTgSelBar();
+        groupsLoad();
+        tgLoadProducts();
+        if (fails.length) {
+          alert("批量绑定结果：成功 " + okN + " 个，失败 " + failN + " 个\n\n失败明细（前 10 条）：\n" +
+            fails.slice(0, 10).map(function (x) {
+              return x.spuId + " " + String(x.title || x.groupName || "").slice(0, 18) + " — " + x.msg;
+            }).join("\n"));
+        } else {
+          alert("批量绑定完成：成功 " + okN + " 个，全部回读校验通过。");
+        }
+      });
+    });
+  }
+
+  /* ---------- 重新巡检 ---------- */
+  function tgPollScan() {
+    if (tgScanTimer) { return; }
+    tgScanTimer = setInterval(function () {
+      tgJson("/tg/pending/status").then(function (st) {
+        if (!st) { return; }
+        if (st.running) {
+          var tail = (st.tail && st.tail.length) ? st.tail[st.tail.length - 1] : "扫描中…";
+          tgNote("巡检中 " + (st.elapsedSec || 0) + "s ｜ " + tail);
+          return;
+        }
+        clearInterval(tgScanTimer);
+        tgScanTimer = null;
+        if (st.error) {
+          tgNote("巡检失败：" + st.error);
+          alert("巡检失败：" + st.error);
+          return;
+        }
+        tgNote("巡检完成 · 在售未绑 " + (st.total || 0) + " 条 ｜ " + (st.generatedAt || ""));
+        tgPage = 1; tgSel = {};
+        groupsLoad();
+        tgLoadProducts();
+      }).catch(function () {});
+    }, 3000);
+  }
+
+  function tgRescan() {
+    if (!confirm("重新巡检会扫描 21 家店的在售未绑商品。\n\n首次约 5~8 分钟（探域约 4.1 万条 SKU），期间页签可继续用，完成后自动刷新。\n\n确定开始？")) { return; }
+    tgNote("正在启动巡检…");
+    tgJson("/tg/pending/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}"
+    }).then(function (res) {
+      if (!res || !res.started) {
+        tgNote("巡检未能启动：" + ((res && (res.reason || res.error)) || "未知错误"));
+        return;
+      }
+      tgNote("巡检已启动，后台扫描中…");
+      tgPollScan();
+    }).catch(function (e) {
+      tgNote("巡检启动异常：" + (e.message || e));
     });
   }
 
@@ -2391,21 +2586,26 @@
   }
 
   function ctxGroups() {
-    var list = (groupsCache && groupsCache.list) || [];
-    if (!list.length) {
-      return "【当前页面：待绑商品】清单未加载（可能同步服务未启动），没有商品数据。";
+    var c = (tgPending && tgPending.counts) || null;
+    if (!c) {
+      return "【当前页面：待绑商品】巡检清单未生成。需在 http://127.0.0.1:8080/dashboard/ 打开后点「↻ 重新巡检」生成。";
     }
-    var c = groupsCounts();
-    var out = ["【当前页面：待绑商品 · 共 " + list.length + " 条（可直绑 " + c.bindable +
-      " / 待拍板 " + c.pending + " / 脏组 " + c.dirty + " / 需建新组 " + c.newgroup + "）】",
-      "店铺|真实商品名|当前建议归属|7天热度"];
-    list.slice(0, 60).forEach(function (r) {
-      out.push([String(r.shop || "").slice(0, 10),
-        String(r.name || r.realName || r.title || "").slice(0, 40),
-        String(r.suggestedGroup || r.targetGroup || "（无）").slice(0, 30),
-        r.heat7 != null ? r.heat7 : (r.heat7d != null ? r.heat7d : "")].join("|"));
+    var m = tgPending.meta || {};
+    var out = ["【当前页面：待绑商品 · 巡检 " + (m.generatedAt || "-") + "】",
+      "在售未绑 " + (c.total || 0) + " 条：高置信可直绑 " + (c.bindable || 0) +
+      " / 待确认 " + (c.mid || 0) + " / 无匹配 " + (c.low || 0) + "。",
+      "口径：高置信=商品编码(outerId)命中既有分组名，可整批直绑；待确认=仅标题或渠道版/脏组命中，须人工拍板；无匹配=无既有组可归，需建组。",
+      "边界：只统计在售且未绑任何分组的商品，下架款不在清单内。",
+      "",
+      "当前页 " + tgRows.length + " 条：",
+      "店铺|商品编码/名称|建议归属|置信度|判定理由"];
+    tgRows.slice(0, 40).forEach(function (r) {
+      out.push([String(r.shopName || "").slice(0, 12),
+        String(r.realName || r.name || r.title || "").slice(0, 42),
+        String(r.suggest || "（无）").slice(0, 30),
+        r.confidence || "-",
+        String(r.reason || "").slice(0, 24)].join("|"));
     });
-    if (list.length > 60) { out.push("（仅列出前 60 条，共 " + list.length + " 条）"); }
     return out.join("\n");
   }
 
@@ -2478,7 +2678,8 @@
       name: "待绑商品",
       ctx: ctxGroups,
       qs: [
-        { t: "复核建议归属", q: "逐条看这些商品的建议归属，哪些明显归错了？说明理由并给出应归的组。" },
+        { t: "帮我绑高置信的", q: "先用 query_pending 查全部高置信（conf=high）且建议归属非空的商品，按建议分组统计条数，然后为每组调用 bind_products 生成待确认卡片。不要一次性输出几百条明细，只给汇总表和需要我拍板的部分。" },
+        { t: "复核建议归属", q: "逐条看这些商品的建议归属，哪些明显归错了？说明理由并给出应归的组（用 list_groups 查真实分组名和 ID）。" },
         { t: "挑出可直绑的", q: "这些商品里，哪些可以确定直接绑、哪些必须我拍板？给出两份清单和判断依据。" }
       ]
     }
@@ -2563,24 +2764,29 @@
     return s.slice(0, 4) + "****" + s.slice(-4);
   }
 
-  // 直连 OpenAI 兼容接口（DeepSeek 已实测支持浏览器跨域）
-  function aiRaw(messages, maxTokens, temperature) {
+  // 直连 OpenAI 兼容接口（DeepSeek 已实测支持浏览器跨域 + tools）
+  function aiRaw(messages, maxTokens, temperature, tools) {
     var c = aiReadCfg();
     if (!c) { return Promise.reject(new Error("尚未配置 API Key")); }
     var url = String(c.baseUrl || "https://api.deepseek.com").replace(/\/+$/, "") + "/chat/completions";
+    var payload = {
+      model: c.model || "deepseek-chat",
+      messages: messages,
+      temperature: temperature === undefined ? 0.3 : temperature,
+      max_tokens: maxTokens || 4096,
+      stream: false
+    };
+    if (tools && tools.length) {
+      payload.tools = tools;
+      payload.tool_choice = "auto";
+    }
     return fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + c.apiKey
       },
-      body: JSON.stringify({
-        model: c.model || "deepseek-chat",
-        messages: messages,
-        temperature: temperature === undefined ? 0.3 : temperature,
-        max_tokens: maxTokens || 4096,
-        stream: false
-      })
+      body: JSON.stringify(payload)
     }).then(function (r) {
       return r.text().then(function (t) {
         var j = null;
@@ -2589,14 +2795,449 @@
           var msg = (j && j.error && (j.error.message || j.error)) || ("HTTP " + r.status);
           throw new Error(msg);
         }
-        var content = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
-        if (!content) { throw new Error("接口返回内容为空"); }
-        return { content: content, model: (j && j.model) || c.model };
+        var ch = (j && j.choices && j.choices[0]) || {};
+        var msg = ch.message || {};
+        var content = msg.content || "";
+        var tcs = (msg.tool_calls && msg.tool_calls.length) ? msg.tool_calls : null;
+        if (!content && !tcs) { throw new Error("接口返回内容为空"); }
+        return { content: content, model: (j && j.model) || c.model, message: msg, finish: ch.finish_reason, toolCalls: tcs };
       });
     }, function (e) {
       throw new Error("网络请求失败：" + ((e && e.message) || e) + "（检查网络或接口地址）");
     });
   }
+
+  /* ============ AI 工具调用：能查分组/待绑清单，能发起绑定（写操作必须人工确认） ============ */
+
+  var AI_TOOL_MAX_ROUNDS = 5;
+  var aiActSeq = 0;
+  var aiActions = {};               // actionId -> 待确认动作
+  var aiPendCache = { ts: 0, rows: null, counts: null, meta: null };
+  var aiGroupCache = null;
+
+  var AI_TOOLS = [
+    {
+      type: "function",
+      function: {
+        name: "list_groups",
+        description: "列出探域全部商品分组（分组名、groupId、组内商品数、覆盖店铺数），可按名称关键词过滤。要绑定前必须先查真实 groupId，不要猜。",
+        parameters: {
+          type: "object",
+          properties: {
+            q: { type: "string", description: "分组名关键词，留空=全部" },
+            limit: { type: "integer", description: "最多返回条数，默认 40，上限 200" }
+          }
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "query_pending",
+        description: "查询「在售且未绑任何分组」的商品清单（每日巡检结果，含 spuId/thirdShopId/建议归属/置信度/判定理由）。可按店铺、置信度、关键词筛选。",
+        parameters: {
+          type: "object",
+          properties: {
+            shop: { type: "string", description: "店铺名关键词（模糊），留空=全部" },
+            conf: { type: "string", enum: ["high", "mid", "low", "all"], description: "置信度，默认 all。high=编码命中既有组名可直接绑，mid=待拍板，low=无既有组" },
+            q: { type: "string", description: "商品名 / 编码 / spuId 关键词" },
+            limit: { type: "integer", description: "最多返回条数，默认 30，上限 100" }
+          }
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "query_group_products",
+        description: "查看某个商品分组下已绑定的商品明细。",
+        parameters: {
+          type: "object",
+          properties: {
+            groupId: { type: "string", description: "分组 ID（先 list_groups 查）" },
+            q: { type: "string", description: "商品名关键词，留空=全部" },
+            limit: { type: "integer", description: "最多返回条数，默认 20，上限 60" }
+          },
+          required: ["groupId"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "bind_products",
+        description: "把商品绑定到指定分组（写操作）。调用后不会立即执行，只会生成一张待确认卡片，由用户在界面上点「确认执行」后才真正写入探域。单次最多 300 条。",
+        parameters: {
+          type: "object",
+          properties: {
+            groupId: { type: "string", description: "目标分组 ID（必须来自 list_groups 或 query_pending 返回的真实 ID）" },
+            items: {
+              type: "array",
+              description: "要绑定的商品（spuId 必填）",
+              items: {
+                type: "object",
+                properties: {
+                  spuId: { type: "string" },
+                  thirdShopId: { type: "string", description: "店铺 ID，可从 query_pending 结果带出，留空则自动匹配" }
+                },
+                required: ["spuId"]
+              }
+            },
+            note: { type: "string", description: "一句话说明为什么绑这些（会显示在确认卡片上）" }
+          },
+          required: ["groupId", "items"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "unbind_products",
+        description: "把商品移出指定分组（写操作）。同样只生成待确认卡片，需用户点「确认执行」。",
+        parameters: {
+          type: "object",
+          properties: {
+            groupId: { type: "string", description: "分组 ID" },
+            spuIds: { type: "array", items: { type: "string" }, description: "要移出的 spuId 列表，最多 300 条" },
+            note: { type: "string", description: "一句话说明原因" }
+          },
+          required: ["groupId", "spuIds"]
+        }
+      }
+    }
+  ];
+
+  var AI_TOOL_HINT = "\n\n【工具】你可以调用工具读取真实数据（list_groups / query_pending / query_group_products）" +
+    "以及发起写操作（bind_products / unbind_products）。\n" +
+    "- 需要分组名、groupId、待绑商品时先调用工具，禁止凭记忆或猜测编造 groupId 和商品。\n" +
+    "- 写操作只会生成待确认卡片，不会立即执行；在用户点确认前，不要说「已经绑定成功」，要说「已生成待确认」。\n" +
+    "- 只有 bind_products / unbind_products 的返回结果里出现 actionId，才算真的生成了卡片；没调用就不要描述卡片，也不要说已生成。\n" +
+    "- 写入必须严格按用户这次的要求限定范围：用户说「前 3 个」就只生成 3 个，不要顺手把整店高置信全绑了。\n" +
+    "- 只有用户明确要求绑定/移出时才调用写工具；分析类问题（如「今天先做什么」「谁最该干预」）只回答，不生成卡片。\n" +
+    "- 用户说「帮我绑」时，先 query_pending 取真实 spuId + groupId，再 bind_products；超过 300 条要分批并说明。\n" +
+    "- 工具失败（例如本机服务未启动）时，如实说明原因，不要伪造结果。\n";
+
+  function aiTg(path, body) {
+    var opt = { cache: "no-store" };
+    if (body) {
+      opt.method = "POST";
+      opt.headers = { "Content-Type": "application/json" };
+      opt.body = JSON.stringify(body);
+    }
+    var hint = "连不上本机服务(8080)：请从 http://127.0.0.1:8080/dashboard/ 打开工作台再问";
+    return fetch(TG_HOST + path, opt).then(function (r) {
+      return r.text().then(function (t) {
+        var j = null;
+        try { j = JSON.parse(t); } catch (e) { /* 非 JSON */ }
+        if (!j) { throw new Error(hint); }
+        return j;
+      });
+    }, function () { throw new Error(hint); });
+  }
+
+  function aiPendAll() {
+    if (aiPendCache.rows && Date.now() - aiPendCache.ts < 120000) {
+      return Promise.resolve(aiPendCache);
+    }
+    var acc = [];
+    function step(n) {
+      return aiTg("/tg/pending?page=" + n + "&size=200&sort=conf").then(function (res) {
+        if (!res || !res.ok) {
+          throw new Error((res && res.error) || "待绑清单未生成，先在「待绑商品」页点「↻ 重新巡检」");
+        }
+        acc = acc.concat(res.rows || []);
+        var total = Number(res.total || 0);
+        if (acc.length < total && n < 8) { return step(n + 1); }
+        aiPendCache = { ts: Date.now(), rows: acc, counts: res.counts || {}, meta: res.meta || {} };
+        return aiPendCache;
+      });
+    }
+    return step(1);
+  }
+
+  function aiGroupList(force) {
+    if (aiGroupCache && !force && Date.now() - aiGroupCache.ts < 120000) {
+      return Promise.resolve(aiGroupCache.rows);
+    }
+    return aiTg("/tg/groups").then(function (res) {
+      if (!res || !res.ok) { throw new Error("读取分组失败：" + ((res && res.error) || "本机服务异常")); }
+      var rows = res.groups || [];
+      aiGroupCache = { ts: Date.now(), rows: rows };
+      return rows;
+    });
+  }
+
+  function aiMakeBind(a) {
+    var gid = String(a.groupId || "").trim();
+    var raw = a.items || [];
+    if (!gid) { return Promise.reject(new Error("缺少 groupId，请先调用 list_groups 查真实分组 ID")); }
+    if (!raw.length) { return Promise.reject(new Error("items 为空")); }
+    if (raw.length > 300) { return Promise.reject(new Error("单次最多 300 条，当前 " + raw.length + " 条，请分批")); }
+    return Promise.all([aiGroupList(), aiPendAll().catch(function () { return { rows: [] }; })]).then(function (rs) {
+      var gs = rs[0];
+      var pend = rs[1];
+      var target = gs.filter(function (g) { return g.id === gid; })[0];
+      if (!target) {
+        var hintWord = String(a.groupName || "").slice(0, 6);
+        var near = hintWord ? gs.filter(function (g) { return String(g.name || "").indexOf(hintWord) >= 0; }).slice(0, 5)
+          .map(function (g) { return g.name + "（" + g.id + "）"; }) : [];
+        throw new Error("分组 ID 不存在：" + gid + (near.length ? "；相近的有：" + near.join("、") : "；请先 list_groups"));
+      }
+      var bySpu = {};
+      (pend.rows || []).forEach(function (x) { bySpu[String(x.spuId)] = x; });
+      var items = [];
+      var seen = {};
+      raw.forEach(function (it) {
+        var spu = String((it && it.spuId) || it || "");
+        if (!spu || seen[spu]) { return; }
+        seen[spu] = 1;
+        var src = bySpu[spu] || {};
+        items.push({
+          spuId: spu,
+          thirdShopId: String((it && it.thirdShopId) || src.thirdShopId || ""),
+          shopName: src.shop || "",
+          name: src.name || ""
+        });
+      });
+      var id = "act" + (++aiActSeq);
+      // 去重：同一分组 + 同一批商品已有未执行的卡片，直接复用，避免重复生成
+      var sig = items.map(function (x) { return x.spuId; }).sort().join(",");
+      var existId = null;
+      Object.keys(aiActions).forEach(function (k) {
+        var ex = aiActions[k];
+        if (existId || ex.type !== "bind" || ex.state !== "pending" || ex.groupId !== gid) { return; }
+        var exSig = ex.items.map(function (x) { return x.spuId; }).sort().join(",");
+        if (exSig === sig) { existId = k; }
+      });
+      if (existId) {
+        return {
+          payload: {
+            ok: true, status: "already_pending", actionId: existId,
+            groupId: gid, groupName: target.name, itemCount: items.length,
+            hint: "这批商品此前已生成过待确认卡片（" + existId + "），没有重复生成；等用户确认即可。"
+          },
+          step: { title: "复用待确认卡片", detail: items.length + " 条 → " + target.name, ok: true, actionId: existId }
+        };
+      }
+      aiActions[id] = {
+        type: "bind", groupId: gid, groupName: target.name, items: items,
+        note: String(a.note || ""), state: "pending"
+      };
+      return {
+        payload: {
+          ok: true, status: "awaiting_user_confirmation", actionId: id,
+          groupId: gid, groupName: target.name, itemCount: items.length,
+          hint: "已生成待确认卡片，用户点「确认执行」才会真正写入探域；在此之前不要声称已绑定成功。"
+        },
+        step: { title: "准备绑定", detail: items.length + " 条 → " + target.name, ok: true, actionId: id }
+      };
+    });
+  }
+
+  function aiMakeUnbind(a) {
+    var gid = String(a.groupId || "").trim();
+    var ids = (a.spuIds || []).map(function (x) { return String(x || "").trim(); }).filter(Boolean);
+    if (!gid) { return Promise.reject(new Error("缺少 groupId")); }
+    if (!ids.length) { return Promise.reject(new Error("spuIds 为空")); }
+    if (ids.length > 300) { return Promise.reject(new Error("单次最多 300 条，当前 " + ids.length + " 条")); }
+    return aiGroupList().then(function (gs) {
+      var target = gs.filter(function (g) { return g.id === gid; })[0];
+      if (!target) { throw new Error("分组 ID 不存在：" + gid + "；请先 list_groups"); }
+      var items = ids.map(function (spu) { return { spuId: spu }; });
+      var id = "act" + (++aiActSeq);
+      aiActions[id] = {
+        type: "unbind", groupId: gid, groupName: target.name, items: items,
+        note: String(a.note || ""), state: "pending"
+      };
+      return {
+        payload: {
+          ok: true, status: "awaiting_user_confirmation", actionId: id,
+          groupId: gid, groupName: target.name, itemCount: items.length,
+          hint: "已生成待确认卡片，用户点「确认执行」才会真正移出。"
+        },
+        step: { title: "准备移出", detail: items.length + " 条 ← " + target.name, ok: true, actionId: id }
+      };
+    });
+  }
+
+  var AI_TOOL_IMPL = {
+    list_groups: function (a) {
+      var q = String(a.q || "").trim().toLowerCase();
+      var lim = Math.min(200, Math.max(1, Number(a.limit) || 40));
+      return aiGroupList().then(function (all) {
+        var hit = q ? all.filter(function (g) { return String(g.name || "").toLowerCase().indexOf(q) >= 0; }) : all;
+        var rows = hit.slice(0, lim).map(function (g) {
+          return { groupId: g.id, name: g.name, products: g.productNum, shops: g.shops };
+        });
+        return {
+          payload: { ok: true, totalGroups: all.length, matched: hit.length, returned: rows.length, groups: rows },
+          step: { title: "查商品分组", detail: (q ? "「" + q + "」" : "全部") + " · 共 " + all.length + " 个，命中 " + hit.length, ok: true }
+        };
+      });
+    },
+
+    query_pending: function (a) {
+      var shop = String(a.shop || "").trim();
+      var kw = String(a.q || "").trim().toLowerCase();
+      var conf = String(a.conf || "all");
+      var lim = Math.min(100, Math.max(1, Number(a.limit) || 30));
+      return aiPendAll().then(function (c) {
+        var list = (c.rows || []).filter(function (x) {
+          if (conf !== "all" && x.confidence !== conf) { return false; }
+          if (shop && String(x.shop || "").indexOf(shop) < 0) { return false; }
+          if (kw) {
+            var hay = (x.name || "") + " " + (x.title || "") + " " + (x.outerId || "") + " " + x.spuId + " " + (x.groupName || "");
+            if (hay.toLowerCase().indexOf(kw) < 0) { return false; }
+          }
+          return true;
+        });
+        var rows = list.slice(0, lim).map(function (x) {
+          return {
+            spuId: x.spuId,
+            thirdShopId: x.thirdShopId,
+            shop: x.shop,
+            name: String(x.name || x.title || "").slice(0, 60),
+            suggestion: x.groupName || "",
+            groupId: x.groupId || "",
+            confidence: x.confidence,
+            verdict: x.verdict,
+            reason: x.reason,
+            heat7: x.heat7 || 0
+          };
+        });
+        var bits = [shop || "全部店铺", conf === "all" ? "全部置信度" : conf];
+        if (kw) { bits.push("关键词 " + kw); }
+        return {
+          payload: {
+            ok: true, scanAt: (c.meta && c.meta.generatedAt) || "",
+            matched: list.length, returned: rows.length, countsAll: c.counts || {}, rows: rows
+          },
+          step: { title: "查在售未绑清单", detail: bits.join(" · ") + " → " + list.length + " 条", ok: true }
+        };
+      });
+    },
+
+    query_group_products: function (a) {
+      var gid = String(a.groupId || "").trim();
+      if (!gid) { return Promise.reject(new Error("缺少 groupId")); }
+      var lim = Math.min(60, Math.max(1, Number(a.limit) || 20));
+      return aiTg("/tg/products?gid=" + encodeURIComponent(gid) + "&page=1&size=" + lim +
+        "&q=" + encodeURIComponent(String(a.q || ""))).then(function (res) {
+          if (!res || !res.ok) { throw new Error((res && res.error) || "读取分组商品失败"); }
+          var rows = (res.rows || []).map(function (r) {
+            return { spuId: r.spuId, name: String(r.title || "").slice(0, 56), shop: r.shopName, onSale: r.onSale, price: r.price };
+          });
+          return {
+            payload: { ok: true, groupId: gid, total: res.total || 0, returned: rows.length, rows: rows },
+            step: { title: "查分组内商品", detail: "组内 " + (res.total || 0) + " 条，返回 " + rows.length, ok: true }
+          };
+        });
+    },
+
+    bind_products: aiMakeBind,
+    unbind_products: aiMakeUnbind
+  };
+
+  function aiToolExec(tc) {
+    var name = (tc.function && tc.function.name) || "";
+    var args = {};
+    try { args = JSON.parse((tc.function && tc.function.arguments) || "{}"); } catch (e) { /* 忽略 */ }
+    var fn = AI_TOOL_IMPL[name];
+    if (!fn) {
+      return Promise.resolve({
+        payload: { ok: false, error: "未知工具：" + name },
+        step: { title: name || "工具", detail: "未实现", ok: false }
+      });
+    }
+    return fn(args).then(function (r) { return r; }, function (e) {
+      var msg = String((e && e.message) || e);
+      return {
+        payload: { ok: false, error: msg },
+        step: { title: AI_TOOL_LABEL[name] || name, detail: msg.slice(0, 60), ok: false }
+      };
+    });
+  }
+
+  var AI_TOOL_LABEL = {
+    list_groups: "查商品分组",
+    query_pending: "查在售未绑清单",
+    query_group_products: "查分组内商品",
+    bind_products: "准备绑定",
+    unbind_products: "准备移出"
+  };
+
+  function aiActionCardHtml(id) {
+    var a = aiActions[id];
+    if (!a) { return ""; }
+    var verb = a.type === "bind" ? "绑定到分组" : "移出分组";
+    var head = '<div class="ai-act-head"><b>' + esc(verb) + "</b> · " + esc(a.groupName) +
+      ' · <span class="ai-act-n">' + a.items.length + " 条</span></div>";
+    var note = a.note ? '<div class="ai-act-note">' + esc(a.note) + "</div>" : "";
+    if (a.state === "done") {
+      var r = a.result || {};
+      var bad = (r.ok === false) || r.failCount > 0;
+      var txt = r.ok === false
+        ? ("失败：" + esc(r.error || "未知错误"))
+        : ("成功 " + (r.okCount || 0) + " 条" + (r.failCount ? " · 失败 " + r.failCount + " 条" : ""));
+      return '<div class="ai-act ai-act-done' + (bad ? " ai-act-warn" : "") + '">' + head + note +
+        '<div class="ai-act-res">' + txt + "</div></div>";
+    }
+    if (a.state === "running") {
+      return '<div class="ai-act ai-act-running">' + head + note + '<div class="ai-act-res">正在写入探域…</div></div>';
+    }
+    if (a.state === "skipped") {
+      return '<div class="ai-act ai-act-skip">' + head + note + '<div class="ai-act-res">已取消 · 未写入探域</div></div>';
+    }
+    return '<div class="ai-act">' + head + note +
+      '<div class="ai-act-btns"><button class="ai-act-run" data-ai-act="' + esc(id) + '">确认执行</button>' +
+      '<button class="ai-act-cancel" data-ai-act-skip="' + esc(id) + '">取消</button></div></div>';
+  }
+
+  function aiRunAction(id) {
+    var a = aiActions[id];
+    if (!a || a.state === "running" || a.state === "done") { return Promise.resolve(); }
+    a.state = "running";
+    renderAiMessages();
+    var body = a.type === "bind"
+      ? { items: a.items.map(function (x) { return { spuId: x.spuId, thirdShopId: x.thirdShopId, shopName: x.shopName, groupId: a.groupId }; }) }
+      : { groupId: a.groupId, items: a.items };
+    return aiTg(a.type === "bind" ? "/tg/bind-auto" : "/tg/unbind", body).then(function (res) {
+      a.state = "done";
+      a.result = {
+        ok: !!(res && res.ok),
+        okCount: (res && res.okCount) || 0,
+        failCount: (res && res.failCount) || 0,
+        error: (res && res.error) || ""
+      };
+      return a.result;
+    }, function (e) {
+      a.state = "done";
+      a.result = { ok: false, okCount: 0, failCount: a.items.length, error: String((e && e.message) || e) };
+      return a.result;
+    }).then(function (r) {
+      aiPendCache = { ts: 0, rows: null, counts: null, meta: null };
+      aiGroupCache = null;
+      try { groupsLoad(); } catch (e) { /* 忽略 */ }
+      try { if (typeof tgLoadProducts === "function") { tgLoadProducts(); } } catch (e) { /* 忽略 */ }
+      renderAiMessages();
+      toast(r.ok ? ("已执行 · 成功 " + (r.okCount || 0) + " 条" + (r.failCount ? " / 失败 " + r.failCount + " 条" : ""))
+        : ("执行失败：" + (r.error || "")));
+      return r;
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    if (!t || !t.closest) { return; }
+    var run = t.closest("[data-ai-act]");
+    if (run) { e.preventDefault(); aiRunAction(run.dataset.aiAct); return; }
+    var skip = t.closest("[data-ai-act-skip]");
+    if (skip) {
+      e.preventDefault();
+      var a = aiActions[skip.dataset.aiActSkip];
+      if (a && a.state === "pending") { a.state = "skipped"; renderAiMessages(); toast("已取消，未写入探域"); }
+    }
+  });
 
   function aiMd(src) {
     function inline(s) {
@@ -2647,6 +3288,23 @@
     } catch (e) { /* 忽略 */ }
   }
 
+  function aiStepsHtml(m) {
+    var st = m && m.steps;
+    if (!st || !st.length) { return ""; }
+    return '<div class="ai-steps">' + st.map(function (s) {
+      return '<div class="ai-step' + (s.ok === false ? " ai-step-bad" : "") + '">' +
+        '<span class="ai-step-ico">' + (s.ok === false ? "!" : "✓") + "</span>" +
+        '<span class="ai-step-t">' + esc(s.title || "工具") + "</span>" +
+        '<span class="ai-step-d">' + esc(s.detail || "") + "</span></div>";
+    }).join("") + "</div>";
+  }
+
+  function aiActsHtml(m) {
+    var ids = (m && m.actions) || [];
+    if (!ids.length) { return ""; }
+    return '<div class="ai-acts">' + ids.map(aiActionCardHtml).join("") + "</div>";
+  }
+
   function renderAiMessages() {
     var box = $id("aiMessages");
     if (!box) { return; }
@@ -2654,6 +3312,7 @@
       var pn = aiPage && AI_PAGE[aiPage] ? AI_PAGE[aiPage].name : "";
       box.innerHTML = '<div class="ai-empty">' +
         "<p>已接入工作台数据（" + (shopLibrary || []).length + " 家店 · 近 7 天指标 · 达标线）。</p>" +
+        "<p>也能直接操作「商品分组」：查分组、查在售未绑、按建议批量绑定（绑定前会生成确认卡片，你点确认才执行）。</p>" +
         (pn ? "<p>当前带上「" + esc(pn) + "」这一页的数据。</p>" : "") +
         "<p>也可以在各页面点右上角 <b>✦ AI</b>，自动带上那一页的数据提问。</p>" +
         "</div>";
@@ -2663,13 +3322,18 @@
       if (m.role === "user") {
         return '<div class="ai-msg ai-msg-user"><div class="ai-bubble">' + esc(m.content).replace(/\n/g, "<br>") + "</div></div>";
       }
+      var stepsHtml = aiStepsHtml(m);
+      var actsHtml = aiActsHtml(m);
       if (m.pending) {
-        return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble ai-waiting" id="aiWaiting">正在生成… 0s</div></div>';
+        return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble">' + stepsHtml +
+          '<div class="ai-waiting" id="aiWaiting">' + (stepsHtml ? "继续处理… 0s" : "正在生成… 0s") + "</div></div></div>";
       }
       if (m.error) {
         return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble ai-err">' + esc(m.content) + "</div></div>";
       }
-      return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble">' + aiMd(m.content) +
+      return '<div class="ai-msg ai-msg-bot"><div class="ai-bubble">' + stepsHtml +
+        (m.content ? aiMd(m.content) : "") +
+        actsHtml +
         (m.ms ? '<div class="ai-meta">' + esc(m.model || "") + " · " + (m.ms / 1000).toFixed(1) + "s</div>" : "") +
         "</div></div>";
     }).join("");
@@ -2732,17 +3396,82 @@
     history.push({ role: "user", content: text });
 
     aiMsgs.push({ role: "user", content: text });
-    aiMsgs.push({ role: "assistant", content: "", pending: true });
+    aiMsgs.push({ role: "assistant", content: "", pending: true, steps: [] });
     renderAiMessages();
     aiSetBusy(true);
     var t0 = Date.now();
+    var idx = aiMsgs.length - 1;
+    var steps = [];
+    var nudged = false;
+    var convo = [{ role: "system", content: AI_SYS + aiContextText() + AI_TOOL_HINT }].concat(history);
 
-    aiRaw([{ role: "system", content: AI_SYS + aiContextText() }].concat(history), 4096, 0.3).then(function (r) {
-      aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: r.content, ms: Date.now() - t0, model: r.model || "" };
+    function hasAction() {
+      for (var i = 0; i < steps.length; i++) { if (steps[i].actionId) { return true; } }
+      return false;
+    }
+
+    function runRound(n, last) {
+      return aiRaw(convo, 4096, 0.3, AI_TOOLS).then(function (r) {
+        if (r.toolCalls && n < AI_TOOL_MAX_ROUNDS) {
+          convo.push({ role: "assistant", content: r.content || "", tool_calls: r.toolCalls });
+          aiMsgs[idx] = { role: "assistant", content: "", pending: true, steps: steps.slice() };
+          renderAiMessages();
+          return Promise.all(r.toolCalls.map(function (tc) {
+            return aiToolExec(tc).then(function (o) {
+              return { id: tc.id, out: o };
+            });
+          })).then(function (outs) {
+            outs.forEach(function (x) {
+              convo.push({ role: "tool", tool_call_id: x.id, content: JSON.stringify(x.out.payload) });
+              steps.push({
+                title: x.out.step.title || "工具",
+                detail: x.out.step.detail || "",
+                ok: x.out.step.ok !== false,
+                actionId: x.out.step.actionId || ""
+              });
+            });
+            aiMsgs[idx] = { role: "assistant", content: "", pending: true, steps: steps.slice() };
+            renderAiMessages();
+            return runRound(n + 1, r);
+          });
+        }
+        // 防幻觉：声称生成了卡片但实际没调用写工具 → 回推一次强制纠正
+        var txt = String(r.content || "");
+        var claims = /待确认卡片|已生成卡片|已绑定|已经绑/.test(txt);
+        if (claims && !hasAction() && !nudged && n < AI_TOOL_MAX_ROUNDS) {
+          nudged = true;
+          convo.push({ role: "assistant", content: txt });
+          convo.push({
+            role: "user",
+            content: "[系统提示] 用户这次的要求是：" + text + "。你上一条回复里描述了绑定的结果，但你并没有调用 bind_products，" +
+              "界面上不存在任何待确认卡片。请严格按用户这次要求的范围，用工具完成：先 query_pending 拿真实 spuId 与 groupId，" +
+              "再调用 bind_products 生成卡片；如果数据不足，就直接说明缺什么，不要描述不存在的卡片，也不要把范围扩大到用户没要求的商品。"
+          });
+          aiMsgs[idx] = { role: "assistant", content: "", pending: true, steps: steps.slice() };
+          renderAiMessages();
+          return runRound(n + 1, r);
+        }
+        return r;
+      });
+    }
+
+    runRound(0, null).then(function (r) {
+      var content = String(r.content || "").trim();
+      if (!content) {
+        content = steps.length ? "（工具已执行，但我没有补充说明。可以追问具体某一项。）" : "（模型没有返回文字内容）";
+      }
+      var actions = steps.map(function (s) { return s.actionId; }).filter(Boolean);
+      aiMsgs[idx] = {
+        role: "assistant", content: content, ms: Date.now() - t0,
+        model: r.model || "", steps: steps.slice(), actions: actions
+      };
       aiSaveMsgs();
       renderAiMessages();
     }).catch(function (e) {
-      aiMsgs[aiMsgs.length - 1] = { role: "assistant", content: "调用失败：" + String((e && e.message) || e), error: true };
+      aiMsgs[idx] = {
+        role: "assistant", content: "调用失败：" + String((e && e.message) || e),
+        error: true, steps: steps.slice()
+      };
       renderAiMessages();
     }).then(function () {
       aiSetBusy(false);
@@ -2771,7 +3500,7 @@
     var st = $id("aiStatusText");
     if (st) {
       st.textContent = aiCfg.configured
-        ? (aiCfg.name || "AI") + " · " + (aiCfg.model || "") + " · 已读取工作台数据"
+        ? (aiCfg.name || "AI") + " · " + (aiCfg.model || "") + " · 已读取工作台数据 · 可操作商品分组"
         : "未配置接口 · 点右上角「接口设置」填写 Key";
     }
   }

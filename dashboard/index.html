@@ -20,8 +20,8 @@
         document.documentElement.dataset.accent = ["emerald", "ocean", "iris", "amber", "sakura"].includes(accent) ? accent : "ocean";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260822y" />
-    <link rel="stylesheet" href="workbench.css?v=20260822y" />
+    <link rel="stylesheet" href="styles.css?v=20260822z" />
+    <link rel="stylesheet" href="workbench.css?v=20260822z" />
   </head>
   <body>
     <svg class="svg-sprite" aria-hidden="true">
@@ -299,7 +299,7 @@
             <div class="section-heading"><h2>商品分组</h2><span id="groupsMeta">待绑商品 · 分组浏览 · 一键绑定</span></div>
             <div class="workbench-toolbar">
               <button id="groupsRefreshBtn" class="pill-btn quiet" aria-label="刷新分组">↻ 刷新</button>
-              <button class="pill-btn ai-page-btn" data-ai-page="groups" title="复核建议归属，找出该改组的商品">✦ AI 复核归属</button>
+              <button class="pill-btn ai-page-btn" data-ai-page="groups" title="让 AI 查分组、查在售未绑、按建议批量绑定（需从本机 8080 打开）">✦ AI 处理分组</button>
             </div>
           </header>
 
@@ -322,9 +322,17 @@
                   <option value="on">仅在售</option>
                   <option value="off">仅下架</option>
                 </select>
+                <select id="tgConf" class="tg-sel" title="按建议归属的可信度筛选">
+                  <option value="all">全部可信度</option>
+                  <option value="high">仅高置信可直绑</option>
+                  <option value="mid">仅待确认</option>
+                  <option value="low">仅无匹配</option>
+                </select>
                 <span id="tgSelInfo" class="tg-selinfo">未选择商品</span>
+                <button id="tgAutoBindBtn" class="pill-btn tg-act tg-auto" title="把当前筛选下所有高置信商品按建议分组批量绑定">⚡ 一键绑高置信</button>
                 <button id="tgBindBtn" class="pill-btn tg-act" disabled>绑定到分组…</button>
                 <button id="tgUnbindBtn" class="pill-btn quiet tg-act" disabled>移出当前组</button>
+                <button id="tgRescanBtn" class="pill-btn quiet tg-act" title="重新扫描 21 店在售未绑（约 5~8 分钟）">↻ 重新巡检</button>
               </div>
               <div class="tg-crumb" id="tgCrumb">选择左侧分组，或查看「待绑商品」清单</div>
               <div id="groupsTableWrap" class="groups-table-wrap tg-table-wrap">
@@ -363,7 +371,7 @@
 
         <section id="aiView" class="workbench-view panel" hidden>
           <header class="workbench-head">
-            <div class="section-heading"><h2>AI 助手</h2><span id="aiStatusText">读取工作台数据 · 接口由本地服务代理</span></div>
+            <div class="section-heading"><h2>AI 助手</h2><span id="aiStatusText">读取工作台数据 · 可查分组、可按建议绑定</span></div>
             <div class="workbench-toolbar">
               <button id="aiConfigToggle" class="pill-btn quiet">⚙ 接口设置</button>
               <button id="aiClearBtn" class="pill-btn quiet">清空对话</button>
@@ -575,8 +583,8 @@
       </div>
     </div>
 
-    <script src="workbench.js?v=20260822y"></script>
-    <script src="weekly-review.js?v=20260822y"></script>
-    <script type="module" src="app.js?v=20260822y"></script>
+    <script src="workbench.js?v=20260822z"></script>
+    <script src="weekly-review.js?v=20260822z"></script>
+    <script type="module" src="app.js?v=20260822z"></script>
   </body>
 </html>

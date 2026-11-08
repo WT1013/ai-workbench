@@ -750,6 +750,46 @@ html, body { overflow-x: hidden; }
 .ai-waiting { color: var(--muted); font-size: 12px; }
 .ai-err { border-color: rgba(239,68,68,.45) !important; color: #fca5a5; font-size: 12px; }
 .ai-meta { margin-top: 6px; font-size: 10.5px; color: var(--muted); opacity: .8; }
+
+/* 工具调用步骤（AI 真的去查数据/准备绑定时显示） */
+.ai-steps { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.ai-step {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  padding: 4px 8px; border-radius: 7px; font-size: 11px;
+  background: rgb(var(--accent-rgb) / .07); border: 1px solid rgb(var(--accent-rgb) / .22);
+}
+.ai-step-ico { color: var(--accent-300); font-weight: 700; font-size: 10px; }
+.ai-step-t { color: var(--fg); font-weight: 600; }
+.ai-step-d { color: var(--muted); font-size: 10.5px; }
+.ai-step-bad { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.3); }
+.ai-step-bad .ai-step-ico { color: #fca5a5; }
+
+/* 写操作待确认卡片：AI 只能"提议"，必须人工点确认 */
+.ai-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.ai-act {
+  border: 1px solid rgb(var(--accent-rgb) / .35); border-radius: 10px;
+  background: rgb(var(--accent-rgb) / .07); padding: 9px 11px; font-size: 11.5px;
+}
+.ai-act-head { font-size: 11.5px; color: var(--fg); }
+.ai-act-head b { color: var(--accent-300); }
+.ai-act-n { color: var(--muted); }
+.ai-act-note { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.ai-act-btns { display: flex; gap: 8px; margin-top: 8px; }
+.ai-act-run, .ai-act-cancel {
+  border-radius: 7px; padding: 4px 12px; font-size: 11.5px; cursor: pointer;
+  border: 1px solid rgb(var(--accent-rgb) / .5); background: rgb(var(--accent-rgb) / .18);
+  color: var(--fg); transition: background .15s ease;
+}
+.ai-act-run:hover { background: rgb(var(--accent-rgb) / .3); }
+.ai-act-cancel { border-color: var(--line); background: transparent; color: var(--muted); }
+.ai-act-cancel:hover { color: var(--fg); }
+.ai-act-running { border-style: dashed; }
+.ai-act-done { border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.07); }
+.ai-act-warn { border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.07); }
+.ai-act-skip { opacity: .65; }
+.ai-act-res { margin-top: 6px; font-size: 11px; color: var(--muted); }
+.ai-act-done .ai-act-res { color: #86efac; }
+.ai-act-warn .ai-act-res { color: #fca5a5; }
 .ai-pre {
   background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 8px;
   padding: 8px 10px; font-size: 11.5px; overflow-x: auto; margin: 6px 0;
@@ -985,6 +1025,37 @@ html, body { overflow-x: hidden; }
   color: var(--text);
 }
 .tg-tag-sug { color: var(--accent-300); border-color: rgb(var(--accent-rgb) / .4); background: rgb(var(--accent-rgb) / .08); }
+
+/* 置信度徽标（2026-11-08 待绑巡检） */
+.tg-conf {
+  display: inline-block;
+  font-size: 10.5px;
+  line-height: 1.5;
+  padding: 1px 5px;
+  margin: 0 5px 3px 0;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.tg-conf-high { color: #1f9d55; border-color: rgba(31, 157, 85, .42); background: rgba(31, 157, 85, .12); }
+.tg-conf-mid { color: #c98a1b; border-color: rgba(201, 138, 27, .42); background: rgba(201, 138, 27, .12); }
+.tg-conf-low { color: var(--muted); border-color: var(--line); background: var(--panel-2); }
+.tg-hi {
+  font-size: 10px;
+  font-weight: 600;
+  color: #1f9d55;
+  background: rgba(31, 157, 85, .14);
+  border-radius: 5px;
+  padding: 0 4px;
+  margin-left: 4px;
+}
+.tg-auto:not(:disabled) {
+  color: #1f9d55;
+  border-color: rgba(31, 157, 85, .45);
+  background: rgba(31, 157, 85, .1);
+}
+.tg-auto:not(:disabled):hover { background: rgba(31, 157, 85, .18); }
 
 .groups-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
 .tg-pager { display: inline-flex; align-items: center; gap: 4px; }
