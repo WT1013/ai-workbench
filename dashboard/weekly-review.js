@@ -494,42 +494,42 @@
       setSaveTip(container, "已保存 · " + tsLabel(last.updatedAt), ta.getAttribute("data-note"));
     }, true);
 
-    container.addEventListener("click", function (e) {
-      var btn = e.target && e.target.closest ? e.target.closest("[data-wk-draft]") : null;
-      if (!btn) { return; }
-      var cx = container._wkCtx;
-      if (!cx) { return; }
-      var rk = curRangeKey(container);
-      var n = readNote(rk);
-      var blank = NOTE_FIELDS.filter(function (k) { return !String(n[k] || "").trim(); });
-      if (!blank.length) {
-        if (!window.confirm("五栏都已有内容，要用 AI 初稿覆盖吗？")) { return; }
-      }
-      btn.disabled = true;
-      btn.textContent = "生成中…";
-      aiDraft(factsTextOf(cx.data, cx.an), function (err, out) {
-        btn.disabled = false;
-        btn.textContent = "✦ AI 拟稿";
-        if (err) { toast("AI 拟稿失败：" + err.message); return; }
-        var now = readNote(rk);
-        var filled = 0;
-        NOTE_FIELDS.forEach(function (k) {
-          var hasOld = String(now[k] || "").trim();
-          var gen = String(out[k] || "").trim();
-          if (gen && (!hasOld || !blank.length)) { now[k] = gen; filled++; }
-        });
-        if (!filled) { toast("AI 未返回可用内容，请重试"); return; }
-        saveNote(rk, now, true);
-        NOTE_FIELDS.forEach(function (k) {
-          var ta = container.querySelector('textarea[data-note="' + k + '"]');
-          if (ta) { ta.value = now[k] || ""; }
-        });
-        if (container._wkAutoGrow) { container._wkAutoGrow(); }
-        setSaveTip(container, "AI 初稿 · 已保存，可继续修改");
-        toast("AI 已生成初稿 · " + filled + " 栏");
+  // AI 拟稿：有旧内容就明确告知会覆盖，生成后五栏全量写入（不再只补空栏）
+  container.addEventListener("click", function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest("[data-wk-draft]") : null;
+    if (!btn) { return; }
+    var cx = container._wkCtx;
+    if (!cx) { return; }
+    var rk = curRangeKey(container);
+    var n = readNote(rk);
+    var oldCnt = NOTE_FIELDS.filter(function (k) { return String(n[k] || "").trim(); }).length;
+    if (oldCnt) {
+      if (!window.confirm("已有 " + oldCnt + " 栏内容，AI 初稿会覆盖它们，继续吗？")) { return; }
+    }
+    btn.disabled = true;
+    btn.textContent = "生成中…";
+    aiDraft(factsTextOf(cx.data, cx.an), function (err, out) {
+      btn.disabled = false;
+      btn.textContent = "✦ AI 拟稿";
+      if (err) { toast("AI 拟稿失败：" + err.message); return; }
+      var now = readNote(rk);
+      var filled = 0;
+      NOTE_FIELDS.forEach(function (k) {
+        var gen = String(out[k] || "").trim();
+        if (gen) { now[k] = gen; filled++; }
       });
+      if (!filled) { toast("AI 未返回可用内容，请重试"); return; }
+      saveNote(rk, now, true);
+      NOTE_FIELDS.forEach(function (k) {
+        var ta = container.querySelector('textarea[data-note="' + k + '"]');
+        if (ta) { ta.value = now[k] || ""; }
+      });
+      if (container._wkAutoGrow) { container._wkAutoGrow(); }
+      setSaveTip(container, "AI 初稿 · 已保存，可继续修改");
+      toast("AI 已生成初稿 · " + filled + " 栏" + (oldCnt ? "（已覆盖）" : ""));
     });
-  }
+  });
+}
 
   function render(container, opts) {
     opts = opts || {};
@@ -1085,12 +1085,42 @@
     return { name: name, size: html.length };
   }
 
+  /* ---------- AI 助手联动：读事实底稿 / 把 AI 写的复盘刷进当前输入框 ---------- */
+  // 当前界面选中的区间键；没选或格式不对就用「最近有数据的一天往前 7 天」
+  function defaultNoteRangeKey() {
+    var sEl = document.getElementById("weeklyStart");
+    var eEl = document.getElementById("weeklyEnd");
+    var s = sEl ? String(sEl.value || "").trim() : "";
+    var e = eEl ? String(eEl.value || "").trim() : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !/^\d{4}-\d{2}-\d{2}$/.test(e)) {
+      var ctx = getWorkbenchData();
+      e = latestDayKey(ctx);
+      s = shiftKey(e, -6);
+    }
+    return { start: s, end: e, key: rangeKeyOf(s, e) };
+  }
+
+  // 外部（AI 助手）写完笔记后，若周度复盘正显示同一区间，直接刷新输入框
+  function applyNote(rk, note) {
+    var container = document.getElementById("weeklyContent");
+    if (!container || !container._wkCtx || container._wkCtx.rk !== rk) { return false; }
+    var n = normNote(note);
+    NOTE_FIELDS.forEach(function (k) {
+      var ta = container.querySelector('textarea[data-note="' + k + '"]');
+      if (ta) { ta.value = n[k] || ""; }
+    });
+    if (container._wkAutoGrow) { container._wkAutoGrow(); }
+    setSaveTip(container, "AI 助手已写入 · " + tsLabel(n.updatedAt || Date.now()));
+    return true;
+  }
+
   window.WeeklyReview = {
     render: render, collect: collect, analyze: analyze, buildText: buildText,
     getWorkbenchData: getWorkbenchData, exportCsv: exportCsv, exportHtml: exportHtml,
     latestDayKey: latestDayKey, shiftKey: shiftKey, todayKey: todayKey,
     readNote: readNote, saveNote: saveNote, rangeKeyOf: rangeKeyOf, noteFilled: noteFilled,
     hydrateNotes: hydrateNotes, NOTE_FIELDS: NOTE_FIELDS,
+    factsTextOf: factsTextOf, defaultNoteRangeKey: defaultNoteRangeKey, applyNote: applyNote,
     METRICS: METRICS, TASKS: TASKS, toast: toast
   };
 
