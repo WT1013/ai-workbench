@@ -1132,24 +1132,16 @@
       '<tbody>' + rows + '</tbody></table></section>';
   }
 
-  // 收紧长句：超长截到句末并加省略号，避免整段堆在汇报稿里
-  function trimSentence(t, limit) {
-    var s = String(t || "").trim();
-    if (s.length <= limit) { return s; }
-    var cut = s.slice(0, limit);
-    var p = Math.max(cut.lastIndexOf("。"), cut.lastIndexOf("；"), cut.lastIndexOf("，"));
-    if (p > limit * 0.55) { cut = cut.slice(0, p); }
-    return cut.replace(/[，、；：\s]+$/, "") + "…";
-  }
-
+  // 收紧长句：只在句子边界收（完整句子，不加省略号）；⑤ 方案与下周计划属行动项，必须全文保留
   function compactProse(root) {
     var pts = root.querySelectorAll(".rpt-pt");
     for (var i = 0; i < pts.length; i++) {
       var pt = pts[i];
-      var inCol = !!(pt.closest && pt.closest(".wk-note-grid, .wk-field-plan"));
-      var limit = inCol ? 46 : 78;
+      if (pt.closest && pt.closest(".wk-note-grid, .wk-field-plan")) { continue; }
       var body = pt.querySelector(".rpt-pt-t");
-      if (body) { body.textContent = trimSentence(body.textContent, limit); }
+      if (!body) { continue; }
+      var sents = String(body.textContent || "").match(/[^。！？]*[。！？]|[^。！？]+$/g) || [];
+      if (sents.length > 2) { body.textContent = sents.slice(0, 2).join("").trim(); }
     }
   }
 
