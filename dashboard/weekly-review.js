@@ -179,13 +179,16 @@
     } catch (e) { return null; }
   }
   var DRAFT_SYS = "你是拼多多客服 AI 运营的数据分析助手。只依据给定事实写周复盘结论，禁止编造店铺名、数字或未发生的事。" +
+    "语言必须是大白话，给非技术的领导看的：少用行业黑话（如触发器、归因、同向、兜底、闭环、链路、pct），" +
+    "术语第一次出现就用一句括号解释（如「纯智能体占比（AI 自己独立答完、不转人工的比例）」），" +
+    "数字一律用「个百分点」不用 pct；句子说人话，比如不写「三项变化同向」而写「这三项一起变差」。" +
     "下面五个标签必须全部输出，缺一不可；每个标签下写 1~3 句具体、可执行的中文，不要空话套话，不要照抄事实原文。\n" +
     "严格按此格式输出，标签独占一行，标签后直接写内容，不要任何额外说明：\n" +
-    "【思考】根因判断与依据\n" +
+    "【思考】根因判断与依据（用「因为…所以…」讲清楚）\n" +
     "【止血】本周已做或立即要做的止损动作\n" +
     "【治本】针对根因的永久修复（改哪一处配置/补哪个场景）\n" +
     "【防复发】巡检或校验机制，让同类问题下次能被提前发现\n" +
-    "【下周计划】2~4 条，每条一行，写清做什么、做到什么程度";
+    "【下周计划】2~4 条，每条一行，写清做什么、做到什么程度（可带责任人和验证方式）";
 
   function parseDraft(text) {
     var out = { think: "", stop: "", fix: "", prevent: "", plan: "" };
@@ -366,7 +369,7 @@
     if (an.drops.length) {
       an.drops.forEach(function (x) {
         L.push("· " + x.shop + " " + x.label + "：" + fmt(x.first, x.unit) + " → " + fmt(x.last, x.unit) +
-          "（" + (x.delta > 0 ? "+" : "") + (Math.round(x.delta * 100) / 100) + (x.unit === "%" ? "pct" : "") +
+          "（" + (x.delta > 0 ? "+" : "") + (Math.round(x.delta * 100) / 100) + (x.unit === "%" ? " 个百分点" : "") +
           "），周均 " + fmt(x.avg, x.unit) + (x.target != null ? "，目标 " + x.target + (x.unit === "%" ? "%" : "") : ""));
       });
     } else {
@@ -613,7 +616,7 @@
         html.push('<tr' + isGrp + '><td>' + nameCell + '</td><td>' + ico("alert", "row-alert", 12) + esc(x.label) + (tgt ? ' <span class="wk-target">' + tgt + '</span>' : '') +
           '</td><td class="num">' + fmt(x.first, x.unit) + ' → ' + fmt(x.last, x.unit) + '</td>' +
           '<td class="num mov"><i class="ar">' + (x.delta > 0 ? "▲" : (x.delta < 0 ? "▼" : "—")) + '</i>' + mag +
-          (x.unit === "%" ? "pct" : "") + '</td><td class="num">' + fmt(x.avg, x.unit) + '</td></tr>');
+          (x.unit === "%" ? " 个百分点" : "") + '</td><td class="num">' + fmt(x.avg, x.unit) + '</td></tr>');
       });
       html.push('</tbody></table></div>');
     } else {
@@ -636,7 +639,7 @@
       html.push('<tr><td>' + esc(x.shop) + '</td><td>' + esc(x.label) + (tgt ? ' <span class="wk-target">' + tgt + '</span>' : '') +
         '</td><td class="num">' + fmt(x.first, x.unit) + '</td><td class="num">' + fmt(x.last, x.unit) +
         '</td><td class="num">' + fmt(x.avg, x.unit) + '</td><td class="num ' + cls + '">' + arrow + ' ' +
-        (Math.round(x.delta * 100) / 100) + (x.unit === "%" ? "pct" : "") + (x.drop ? ' ⚠' : '') + '</td></tr>');
+        (Math.round(x.delta * 100) / 100) + (x.unit === "%" ? " 个百分点" : "") + (x.drop ? ' ⚠' : '') + '</td></tr>');
     });
     html.push('</tbody></table></div></details>');
 
@@ -667,7 +670,7 @@
     if (summJoined) { facts.push('<b>日报配置总结</b>：' + esc(clip(summJoined, 200))); }
 
     html.push('<div class="wk-card wk-note-card" data-wk-note="' + esc(rk) + '">');
-    html.push('<h3><span class="wk-ico">' + ico("bolt", "", 13) + '</span>④ 分析与思考 <span class="tag">归因 · 判断</span>' +
+    html.push('<h3><span class="wk-ico">' + ico("bolt", "", 13) + '</span>④ 分析与思考 <span class="tag">找原因 · 判断</span>' +
       '<button class="wk-ai-btn" data-wk-draft="1" title="按本周事实生成初稿，生成后可自行修改">✦ AI 拟稿</button></h3>');
     html.push('<div class="wk-facts"><div class="wk-facts-h">事实底稿（按本周数据自动汇总，只读）</div>' +
       facts.map(function (f) { return '<div class="wk-facts-row">' + f + '</div>'; }).join("") + '</div>');
@@ -860,8 +863,8 @@
       var worse = mt.higher === false ? (g.delta > 0.005) : (g.delta < -0.005);
       var better = mt.higher === false ? (g.delta < -0.005) : (g.delta > 0.005);
       var dCls = worse ? "is-bad" : (better ? "is-good" : "");
-      var dTxt = g.delta > 0.005 ? "上升 " + num2(Math.abs(g.delta)) + (mt.unit === "%" ? "pct" : "")
-        : (g.delta < -0.005 ? "下降 " + num2(Math.abs(g.delta)) + (mt.unit === "%" ? "pct" : "") : "与首日持平");
+      var dTxt = g.delta > 0.005 ? "上升 " + num2(Math.abs(g.delta)) + (mt.unit === "%" ? " 个百分点" : "")
+        : (g.delta < -0.005 ? "下降 " + num2(Math.abs(g.delta)) + (mt.unit === "%" ? " 个百分点" : "") : "与首日持平");
       tiles.push('<div class="rpt-kpi' + (bad ? " is-bad" : "") + '">' +
         '<div class="rpt-kpi-h">' + esc(mt.label) +
         (mt.target != null ? '<span>目标 ' + (mt.higher === false ? "≤" : "≥") + mt.target + (mt.unit === "%" ? "%" : "") + '</span>' : '') +
@@ -902,8 +905,8 @@
       t1 += "核心指标<span class=\"ok\">全部达标</span>。";
     }
     if (adp && adp.delta < -0.005) {
-      t1 += "采纳率由 " + num2(adp.first) + "% 降至 <span class=\"hi\">" + num2(adp.last) + "%</span>（" +
-        num2(Math.abs(adp.delta)) + "pct）";
+      t1 += "采纳率由 " + num2(adp.first) + "% 降至 <span class=\"hi\">" + num2(adp.last) + "%</span>（降了 " +
+        num2(Math.abs(adp.delta)) + " 个百分点）";
       if (pure && pure.delta < -0.005) {
         t1 += "，纯智能体占比同步由 " + num2(pure.first) + "% 降至 " + num2(pure.last) + "%";
       }
@@ -924,7 +927,7 @@
         k: "风险", cls: "is-risk",
         t: "下滑幅度最大：" + ds.map(function (x) {
           return "<b>" + esc(shortShop(x.shop)) + "</b> " + esc(x.label) + " " +
-            (x.delta > 0 ? "+" : "-") + num2(Math.abs(x.delta)) + (x.unit === "%" ? "pct" : "");
+            (x.delta > 0 ? "+" : "-") + num2(Math.abs(x.delta)) + (x.unit === "%" ? " 个百分点" : "");
         }).join("；") + "。共 <span class=\"hi\">" + an.drops.length + " 项</span>指标环比走弱。"
       });
     }
@@ -1005,7 +1008,7 @@
       var better = mt.higher === false ? delta < -0.005 : delta > 0.005;
       var dTxt = delta > 0.005 ? "+" + num2(delta) : (delta < -0.005 ? "-" + num2(Math.abs(delta)) : "持平");
       return '<div class="rpt-line-card"><div class="rpt-line-h"><b>' + esc(mt.label) + '</b>' +
-        '<i class="ld ' + (worse ? "is-bad" : (better ? "is-good" : "")) + '">' + dTxt + (mt.unit === "%" ? "pct" : "") + '</i>' +
+        '<i class="ld ' + (worse ? "is-bad" : (better ? "is-good" : "")) + '">' + dTxt + (mt.unit === "%" ? " 个百分点" : "") + '</i>' +
         '<span class="lv">' + num2(avg) + (mt.unit === "%" ? "%" : "") + '</span></div>' +
         svgLine(vals, mt.target, METRIC_COLORS[k] || CHART_INK, 260, 74, false) +
         '<div class="rpt-line-t">目标 ' + (mt.higher === false ? "≤" : "≥") + mt.target + (mt.unit === "%" ? "%" : "") + ' · 虚线</div></div>';
@@ -1125,7 +1128,7 @@
     var rows = ds.map(function (x) {
       return '<tr><td>' + esc(shortShop(x.shop)) + '</td><td>' + esc(x.label) + '</td>' +
         '<td class="num">' + num2(x.first) + ' → ' + num2(x.last) + '</td>' +
-        '<td class="num bad">' + (x.delta > 0 ? "+" : "-") + num2(Math.abs(x.delta)) + (x.unit === "%" ? "pct" : "") + '</td></tr>';
+        '<td class="num bad">' + (x.delta > 0 ? "+" : "-") + num2(Math.abs(x.delta)) + (x.unit === "%" ? " 个百分点" : "") + '</td></tr>';
     }).join("");
     return '<section class="rpt-risks"><div class="rpt-risks-h">需要盯的 6 项下滑 <em>按跌幅排序 · 全周共 ' + an.drops.length + ' 项</em></div>' +
       '<table><thead><tr><th>店铺</th><th>指标</th><th class="num">首日 → 末日</th><th class="num">变化</th></tr></thead>' +
