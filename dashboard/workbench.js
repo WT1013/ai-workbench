@@ -2924,17 +2924,15 @@
       type: "function",
       function: {
         name: "save_weekly_note",
-        description: "把周度复盘写入「周度复盘」板块的五栏（④分析与思考 / 止血 / 治本 / 防复发 / 下周计划），本地+云端持久化。用户让你写周度复盘、保存复盘、把复盘放进周度复盘时，必须调用本工具，不要只在聊天里输出文字。",
+        description: "把周报写入「周度复盘」板块的三段式三栏（本周结果 / 卡点与尝试 / 资源支持），本地+云端持久化。用户让你写周报、写周度复盘、保存复盘、把复盘放进周度复盘时，必须调用本工具，不要只在聊天里输出文字。",
         parameters: {
           type: "object",
           properties: {
             start: { type: "string", description: "开始日期 YYYY-MM-DD，留空=当前区间" },
             end: { type: "string", description: "结束日期 YYYY-MM-DD，留空=当前区间" },
-            think: { type: "string", description: "④ 分析与思考：根因判断和依据（数据说话）" },
-            stop: { type: "string", description: "⑤ 止血：本周立即做的止损动作" },
-            fix: { type: "string", description: "⑤ 治本：针对根因的永久修复" },
-            prevent: { type: "string", description: "⑤ 防复发：巡检/校验机制" },
-            plan: { type: "string", description: "下周计划：一行一条，带可验证目标和数字" }
+            result: { type: "string", description: "本周结果：核心指标达成情况（带数字）+ 完成了哪些事，条目化" },
+            block: { type: "string", description: "卡点与尝试：卡在哪 + 试过什么办法（问题、原因、已试/在试的对策），条目化" },
+            support: { type: "string", description: "资源支持：需要上级拍板或协调的事（人/决策/口径/工具/预算），一行一条；没有就写「本周无需额外支持」" }
           }
         }
       }
@@ -2950,7 +2948,7 @@
     "- 只有用户明确要求绑定/移出时才调用写工具；分析类问题（如「今天先做什么」「谁最该干预」）只回答，不生成卡片。\n" +
     "- 用户说「帮我绑」时，先 query_pending 取真实 spuId + groupId，再 bind_products；超过 300 条要分批并说明。\n" +
     "- 用户让你写/生成/保存周度复盘（或「把复盘写进周度复盘」）时：先调 get_weekly_facts 拿本周真实事实，" +
-    "再按五栏（think 分析与思考 / stop 止血 / fix 治本 / prevent 防复发 / plan 下周计划）组织内容，" +
+    "再按三段式三栏（result 本周结果 / block 卡点与尝试 / support 资源支持）组织内容，" +
     "最后必须调 save_weekly_note 写入板块；写入成功后只简短确认已写入哪几栏，不要在聊天里重复全文。\n" +
     "- save_weekly_note 只覆盖你传入的栏，没传的栏保持原样；不要把寒暄、原始表格数据塞进复盘。\n" +
     "- 写周度复盘必须用大白话给非技术领导看：少用行业黑话（触发器/归因/同向/兜底/闭环/链路/pct），" +
@@ -3213,7 +3211,7 @@
           merged[k] = a[k].trim();
         }
       });
-      if (!saved.length) { return Promise.reject(new Error("没有可写入的内容（五栏都为空）")); }
+      if (!saved.length) { return Promise.reject(new Error("没有可写入的内容（三栏都为空）")); }
       merged.updatedAt = Date.now();
       W.saveNote(rk, merged, true);
       W.applyNote(rk, merged);

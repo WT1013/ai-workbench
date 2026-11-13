@@ -108,11 +108,11 @@
     try { return JSON.parse(localStorage.getItem("csa-report-draft") || "{}") || {}; } catch (e) { return {}; }
   }
 
-  /* ---------- 周度笔记：分析与思考 / 止血 / 治本 / 防复发 / 下周计划 ----------
+  /* ---------- 周度笔记：三段式（本周结果 / 卡点与尝试 / 资源支持） ----------
    * 存 localStorage(csa-weekly-note-v1) + 云端 state.days.__library__.weekly[区间键]
    * 两端按 updatedAt 取新，换设备能看到 */
   var NOTE_KEY = "csa-weekly-note-v1";
-  var NOTE_FIELDS = ["think", "stop", "fix", "prevent", "plan"];
+  var NOTE_FIELDS = ["result", "block", "support"];
 
   function rangeKeyOf(start, end) { return String(start || "") + "_" + String(end || ""); }
 
@@ -120,13 +120,29 @@
     try { return JSON.parse(localStorage.getItem(NOTE_KEY) || "{}") || {}; } catch (e) { return {}; }
   }
   function emptyNote() {
-    return { think: "", stop: "", fix: "", prevent: "", plan: "", updatedAt: 0 };
+    return { result: "", block: "", support: "", updatedAt: 0 };
   }
   function normNote(n) {
     var o = emptyNote();
     if (n && typeof n === "object") {
       NOTE_FIELDS.forEach(function (k) { if (n[k] != null) { o[k] = String(n[k]); } });
       o.updatedAt = Number(n.updatedAt) || 0;
+      // 旧版五栏（思考/止血/治本/防复发/下周计划）自动并入三段式，内容不丢
+      if (!o.result && !o.block && !o.support) {
+        var hasLegacy = ["think", "stop", "fix", "prevent", "plan"]
+          .some(function (k) { return String(n[k] || "").trim(); });
+        if (hasLegacy) {
+          var rp = [];
+          if (String(n.think || "").trim()) { rp.push(String(n.think).trim()); }
+          if (String(n.stop || "").trim()) { rp.push(String(n.stop).trim()); }
+          o.result = rp.join("\n\n");
+          if (String(n.plan || "").trim()) { o.result += "\n\n下周安排：\n" + String(n.plan).trim(); }
+          var bp = [];
+          if (String(n.fix || "").trim()) { bp.push(String(n.fix).trim()); }
+          if (String(n.prevent || "").trim()) { bp.push(String(n.prevent).trim()); }
+          o.block = bp.join("\n\n");
+        }
+      }
     }
     return o;
   }
@@ -178,25 +194,24 @@
       return (c && c.apiKey) ? c : null;
     } catch (e) { return null; }
   }
-  var DRAFT_SYS = "你是拼多多客服 AI 运营的数据分析助手。只依据给定事实写周复盘结论，禁止编造店铺名、数字或未发生的事。" +
-    "语言必须是大白话，给非技术的领导看的：少用行业黑话（如触发器、归因、同向、兜底、闭环、链路、pct），" +
+  var DRAFT_SYS = "你是拼多多客服 AI 运营的数据分析助手。只依据给定事实写周报，禁止编造店铺名、数字或未发生的事。" +
+    "语言必须是大白话，给非技术的领导看：少用行业黑话（如触发器、归因、同向、兜底、闭环、链路、pct），" +
     "术语第一次出现就用一句括号解释（如「纯智能体占比（AI 自己独立答完、不转人工的比例）」），" +
-    "数字一律用「个百分点」不用 pct；句子说人话，比如不写「三项变化同向」而写「这三项一起变差」。" +
-    "下面五个标签必须全部输出，缺一不可；每个标签下写 1~3 句具体、可执行的中文，不要空话套话，不要照抄事实原文。\n" +
+    "数字一律用「个百分点」不用 pct；句子说人话，比如不写「三项变化同向」而写「这三项一起变差」。\n" +
+    "周报固定三段式（本周结果 → 卡点与尝试 → 资源支持），三个标签必须全部输出，缺一不可；" +
+    "每个标签下写具体、可执行的中文，不要空话套话，不要照抄事实原文，条目化一事一行。\n" +
     "严格按此格式输出，标签独占一行，标签后直接写内容，不要任何额外说明：\n" +
-    "【思考】根因判断与依据（用「因为…所以…」讲清楚）\n" +
-    "【止血】本周已做或立即要做的止损动作\n" +
-    "【治本】针对根因的永久修复（改哪一处配置/补哪个场景）\n" +
-    "【防复发】巡检或校验机制，让同类问题下次能被提前发现\n" +
-    "【下周计划】2~4 条，每条一行，写清做什么、做到什么程度（可带责任人和验证方式）";
+    "【本周结果】这周到底做得怎么样：核心指标达成情况（带数字）+ 完成了哪些事\n" +
+    "【卡点与尝试】卡在哪 + 试过什么办法：问题是什么、为什么、已试或正在试的对策\n" +
+    "【资源支持】需要上级拍板或协调的事（人、决策、口径、工具、预算），一行一条写清要什么和为什么；没有就写「本周无需额外支持」";
 
   function parseDraft(text) {
-    var out = { think: "", stop: "", fix: "", prevent: "", plan: "" };
-    var map = { "思考": "think", "止血": "stop", "治本": "fix", "防复发": "prevent", "下周计划": "plan" };
-    var re = /【(思考|止血|治本|防复发|下周计划)】/g;
+    var out = { result: "", block: "", support: "" };
+    var map = { "本周结果": "result", "卡点与尝试": "block", "资源支持": "support" };
+    var re = /【(本周结果|卡点与尝试|资源支持)】/g;
     var marks = [], m;
     while ((m = re.exec(text))) { marks.push({ key: map[m[1]], at: m.index, after: re.lastIndex }); }
-    if (!marks.length) { out.think = String(text || "").trim(); return out; }
+    if (!marks.length) { out.result = String(text || "").trim(); return out; }
     marks.forEach(function (x, i) {
       var seg = text.slice(x.after, i + 1 < marks.length ? marks[i + 1].at : text.length);
       out[x.key] = String(seg).replace(/^[\s:：]+/, "").trim();
@@ -228,7 +243,7 @@
           if (!r.ok) { throw new Error((j && j.error && j.error.message) || ("HTTP " + r.status)); }
           var t = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
           var parsed = parseDraft(t || "");
-          if (!(parsed.think || parsed.stop || parsed.fix || parsed.prevent || parsed.plan)) {
+          if (!(parsed.result || parsed.block || parsed.support)) {
             throw new Error("接口返回内容为空");
           }
           return parsed;
@@ -377,17 +392,16 @@
     }
     data.texts.forEach(function (t) { if (t.feedback) { L.push("· " + t.date + " 问题反馈：" + t.feedback); } });
     L.push("");
-    L.push("二、分析与思考");
-    L.push(n.think ? n.think : "（待补充：根因判断与依据）");
+    L.push("二、本周结果");
+    L.push(n.result || "（待补充）");
     L.push("");
-    L.push("三、解决方案与下周计划");
+    L.push("三、卡点与尝试");
     var summJoined = data.texts.map(function (t) { return t.summary; }).filter(Boolean).join("；");
     var toms = data.texts.map(function (t) { return t.tomorrow; }).filter(Boolean);
-    L.push("· 止血：" + (n.stop || summJoined || "（待补充）"));
-    L.push("· 治本：" + (n.fix || "（待补充）"));
-    L.push("· 防复发：" + (n.prevent || "（待补充）"));
-    L.push("· 下周计划：" + (n.plan || (toms.length ? toms.join("；") : "（待补充）")));
-    L.push("· 验证：下周同区间复查，回到目标线或环比改善即通过（T-3 / T-1 观察）。");
+    L.push(n.block || (summJoined ? "· " + summJoined : "（待补充）"));
+    L.push("");
+    L.push("四、资源支持");
+    L.push(n.support || (toms.length ? toms.join("；") : "（待补充）"));
     return L.join("\n");
   }
 
@@ -643,7 +657,7 @@
     });
     html.push('</tbody></table></div></details>');
 
-    // ④ 分析与思考（归因）：事实底稿自动汇总 + 结论自己写，存本地与云端
+    // 三段式周报：④ 本周结果 / ⑤ 卡点与尝试 / ⑥ 资源支持（存本地与云端，导出稿同结构）
     var rk = rangeKeyOf(opts.start, opts.end);
     var note = readNote(rk);
     var summJoined = data.texts.map(function (t) { return t.summary; }).filter(Boolean).join("；");
@@ -670,36 +684,35 @@
     if (summJoined) { facts.push('<b>日报配置总结</b>：' + esc(clip(summJoined, 200))); }
 
     html.push('<div class="wk-card wk-note-card" data-wk-note="' + esc(rk) + '">');
-    html.push('<h3><span class="wk-ico">' + ico("bolt", "", 13) + '</span>④ 分析与思考 <span class="tag">找原因 · 判断</span>' +
-      '<button class="wk-ai-btn" data-wk-draft="1" title="按本周事实生成初稿，生成后可自行修改">✦ AI 拟稿</button></h3>');
+    html.push('<h3><span class="wk-ico">' + ico("chart", "", 13) + '</span>④ 本周结果 <span class="tag">达成 · 已完成</span>' +
+      '<button class="wk-ai-btn" data-wk-draft="1" title="按本周事实生成三段式初稿，生成后可自行修改">✦ AI 拟稿</button></h3>');
     html.push('<div class="wk-facts"><div class="wk-facts-h">事实底稿（按本周数据自动汇总，只读）</div>' +
       facts.map(function (f) { return '<div class="wk-facts-row">' + f + '</div>'; }).join("") + '</div>');
-    html.push('<textarea class="wk-ta wk-ta-think" data-note="think" rows="4" placeholder="' +
-      esc('为什么会出现这些下滑或反馈？判断属于哪一类：口径变化 / 历史配置回退 / 场景未覆盖 / 能力边界。写下你的判断和依据，1~3 句即可。') +
-      '">' + esc(note.think) + '</textarea>');
-    html.push('<div class="wk-note-save" data-save-tip="think">' + (note.think ? '已保存 · ' + tsLabel(note.updatedAt) : '未填写 · 输入后自动保存') + '</div>');
+    html.push('<textarea class="wk-ta wk-ta-think" data-note="result" rows="4" placeholder="' +
+      esc('这周到底做得怎么样？核心指标达成情况（带数字）+ 完成了哪些事，一事一行写清楚。') +
+      '">' + esc(note.result) + '</textarea>');
+    html.push('<div class="wk-note-save" data-save-tip="result">' + (note.result ? '已保存 · ' + tsLabel(note.updatedAt) : '未填写 · 输入后自动保存') + '</div>');
     html.push('</div>');
 
-    // ⑤ 解决方案与下周计划
     html.push('<div class="wk-card wk-note-card" data-wk-note="' + esc(rk) + '">');
-    html.push('<h3><span class="wk-ico">' + ico("target", "", 13) + '</span>⑤ 解决方案与下周计划 <span class="tag">止血 / 治本 / 防复发</span></h3>');
-    html.push('<div class="wk-note-grid">');
-    html.push('<label class="wk-field"><span>止血</span><textarea class="wk-ta" data-note="stop" rows="3" placeholder="' +
-      esc('这周马上做什么先止损？（可参照上方日报配置总结）') + '">' + esc(note.stop) + '</textarea></label>');
-    html.push('<label class="wk-field"><span>治本</span><textarea class="wk-ta" data-note="fix" rows="3" placeholder="' +
-      esc('针对上面的根因，改哪一处配置 / 补哪个场景，能永久解决？') + '">' + esc(note.fix) + '</textarea></label>');
-    html.push('<label class="wk-field"><span>防复发</span><textarea class="wk-ta" data-note="prevent" rows="3" placeholder="' +
-      esc('加什么巡检或校验，让同类问题下次能被提前发现？') + '">' + esc(note.prevent) + '</textarea></label>');
-    html.push('</div>');
-    html.push('<div class="wk-field wk-field-plan"><span>下周计划</span><textarea class="wk-ta" data-note="plan" rows="4" placeholder="' +
-      esc('一行一条，写清做什么、做到什么程度、什么时候验证') + '">' + esc(note.plan) + '</textarea></div>');
-    html.push('<div class="wk-note-save" data-save-tip="plan">' + (noteFilled(note) ? '已保存 · ' + tsLabel(note.updatedAt) : '未填写 · 输入后自动保存') + '</div>');
-    html.push('<div class="wk-note">验证：下周同区间复查，回到目标线或环比改善即通过（T-3 / T-1 观察）' +
-      (an.drops.length ? '；复发预警 ' + an.drops.length + ' 项优先排期' : '') + '。</div>');
+    html.push('<h3><span class="wk-ico">' + ico("bolt", "", 13) + '</span>⑤ 卡点与尝试 <span class="tag">卡点 · 对策</span></h3>');
+    html.push('<textarea class="wk-ta wk-ta-think" data-note="block" rows="4" placeholder="' +
+      esc('卡在哪里 + 试过什么办法：问题是什么、为什么、已试或正在试的对策，一事一行（可参考下方日报反馈与风险榜）。') +
+      '">' + esc(note.block) + '</textarea>');
+    html.push('<div class="wk-note-save" data-save-tip="block">' + (note.block ? '已保存 · ' + tsLabel(note.updatedAt) : '未填写 · 输入后自动保存') + '</div>');
     html.push('</div>');
 
-    // ⑥ 每日日报原文（默认折叠，仅在页面查看；导出稿已含问题反馈，不重复带出）
-    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3><span class="wk-ico">' + ico("doc", "", 13) + '</span>⑥ 每日日报原文 <span class="tag">' + data.texts.length + ' 天</span></h3></summary>');
+    html.push('<div class="wk-card wk-note-card" data-wk-note="' + esc(rk) + '">');
+    html.push('<h3><span class="wk-ico">' + ico("target", "", 13) + '</span>⑥ 资源支持 <span class="tag">需要 · 协调</span></h3>');
+    html.push('<textarea class="wk-ta wk-ta-think" data-note="support" rows="4" placeholder="' +
+      esc('需要上级拍板或协调的事：要什么、为什么、建议谁来做，一行一条；没有就写「本周无需额外支持」。') +
+      '">' + esc(note.support) + '</textarea>');
+    html.push('<div class="wk-note-save" data-save-tip="support">' + (noteFilled(note) ? '已保存 · ' + tsLabel(note.updatedAt) : '未填写 · 输入后自动保存') + '</div>');
+    html.push('<div class="wk-note">三段式沉淀：每周同结构存档，跨周对比即可看到改进轨迹。</div>');
+    html.push('</div>');
+
+    // ⑦ 每日日报原文（默认折叠，仅在页面查看；导出稿已含问题反馈，不重复带出）
+    html.push('<details class="wk-card" data-skip-export="1"><summary class="wk-summary"><h3><span class="wk-ico">' + ico("doc", "", 13) + '</span>⑦ 每日日报原文 <span class="tag">' + data.texts.length + ' 天</span></h3></summary>');
     data.texts.forEach(function (t) {
       var has = t.summary || t.feedback || t.weekFocus || t.tomorrow;
       html.push('<div class="wk-day"><div class="wk-day-head">' + t.date + '（' + weekday(t.date) + '）' +
@@ -1187,8 +1200,12 @@
       }
       if (no === "①") { card.className += " wk-card--sum"; }
       else if (no === "③") { card.className += " wk-card--warn"; }
-      else if (no === "④" || no === "⑤") { card.className += " wk-card--note"; }
+      else if (no === "④" || no === "⑤" || no === "⑥") { card.className += " wk-card--note"; }
     }
+    // 导出稿删掉前面几卡后，把剩余分区重排成 ①②③，保持三段式阅读顺序
+    var pills = root.querySelectorAll(".rpt-no");
+    var seq = "①②③④⑤⑥⑦⑧⑨";
+    for (var r = 0; r < pills.length && r < 9; r++) { pills[r].textContent = seq.charAt(r); }
   }
 
   function buildHtmlDoc(rangeLabel, keyShopCount, bodyHtml, hero, brief, charts) {
@@ -1231,12 +1248,6 @@
     var a1 = data.dayKeys[data.dayKeys.length - 1] || end || "";
     var rangeLabel = a0 + " ~ " + a1;
     var an = analyze(data);
-    // 覆盖前先取输入框当前值（执行摘要的「下一步」直接用下周计划首行）
-    var notes = {};
-    var ntas = el.querySelectorAll("textarea[data-note]");
-    for (var ni = 0; ni < ntas.length; ni++) {
-      notes[ntas[ni].getAttribute("data-note")] = String(ntas[ni].value || "").trim();
-    }
     // 展开所有折叠块，收件人直接看到全部内容
     var body = el.innerHTML.replace(/<details(?![^>]*\sopen[\s=>])/g, "<details open");
     // 发给他人时剔除「自己看」的内容：全店明细、方法速查、日报里的配置总结/本周重点
@@ -1253,6 +1264,18 @@
     var dropRows = tmp.querySelectorAll('.wk-day-row[data-row="sum"], .wk-day-row[data-row="focus"]');
     for (var di = 0; di < dropRows.length; di++) { if (dropRows[di].parentNode) { dropRows[di].parentNode.removeChild(dropRows[di]); } }
     // 可编辑框 → 静态文本；去掉「保存中」提示与 AI 按钮
+    // 关键：textarea 的当前值只存在 .value 属性里，innerHTML 序列化不带——先从页面上
+    // 同一位置的输入框把最新值写回克隆副本（按 区间键+字段名 配对），否则导出的是旧值
+    var liveTas = el.querySelectorAll("textarea[data-note]");
+    var tmpTas0 = tmp.querySelectorAll("textarea[data-note]");
+    for (var si0 = 0; si0 < tmpTas0.length; si0++) {
+      var t0 = tmpTas0[si0];
+      var card0 = t0.closest ? t0.closest("[data-wk-note]") : null;
+      if (!card0) { continue; }
+      var live0 = el.querySelector('[data-wk-note="' + card0.getAttribute("data-wk-note") + '"] textarea[data-note="' + t0.getAttribute("data-note") + '"]');
+      if (live0) { t0.textContent = String(live0.value || ""); }
+    }
+    void liveTas;
     var tas = tmp.querySelectorAll("textarea[data-note]");
     for (var ti = 0; ti < tas.length; ti++) {
       var ta = tas[ti];
@@ -1289,7 +1312,7 @@
     body = tmp.innerHTML;
     body = tidyTables(body);
     body = tidyEmptyDays(body);
-    var html = buildHtmlDoc(rangeLabel, data.keyShops.length, body, buildHero(an, data, rangeLabel), buildBrief(an, data, notes), buildCharts(data) + buildRisks(an));
+    var html = buildHtmlDoc(rangeLabel, data.keyShops.length, body, buildHero(an, data, rangeLabel), "", buildCharts(data) + buildRisks(an));
     var name = "周度复盘-" + (a0 || "x") + "_" + (a1 || "x") + ".html";
     var blob = new Blob([html], { type: "text/html;charset=utf-8" });
     var a = document.createElement("a");
