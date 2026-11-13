@@ -1140,6 +1140,26 @@
     tmp.innerHTML = body;
     var skips = tmp.querySelectorAll("[data-skip-export]");
     for (var si = 0; si < skips.length; si++) { if (skips[si].parentNode) { skips[si].parentNode.removeChild(skips[si]); } }
+    // 日清（日报反馈逐日原文）不出现在汇报稿里：③ 卡内 .fb 整段删，③ 标签与①概览的「问题反馈」计数一并清掉
+    var fbs = tmp.querySelectorAll(".fb");
+    for (var fi = 0; fi < fbs.length; fi++) { if (fbs[fi].parentNode) { fbs[fi].parentNode.removeChild(fbs[fi]); } }
+    // 注意：wk-card--warn 类是后面 decorateCards 才加的，这里只能按标题文字找③卡
+    var allCards = tmp.querySelectorAll(".wk-card");
+    for (var wi = 0; wi < allCards.length; wi++) {
+      var wh = allCards[wi].querySelector("h3");
+      if (wh && String(wh.textContent || "").indexOf("需要关注") >= 0) {
+        var wTag = wh.querySelector(".tag");
+        if (wTag) { wTag.textContent = String(wTag.textContent || "").replace(/｜\s*日报反馈\s*\d+\s*天/, ""); }
+        break;
+      }
+    }
+    var kvs = tmp.querySelectorAll(".kv");
+    for (var ki = 0; ki < kvs.length; ki++) {
+      var kspan = kvs[ki].querySelector("span");
+      if (kspan && String(kspan.textContent || "").indexOf("问题反馈") >= 0 && kvs[ki].parentNode) {
+        kvs[ki].parentNode.removeChild(kvs[ki]);
+      }
+    }
     decorateCards(tmp);
     var dropRows = tmp.querySelectorAll('.wk-day-row[data-row="sum"], .wk-day-row[data-row="focus"]');
     for (var di = 0; di < dropRows.length; di++) { if (dropRows[di].parentNode) { dropRows[di].parentNode.removeChild(dropRows[di]); } }
